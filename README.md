@@ -135,6 +135,28 @@ A：**设置 → 基本设置 → 清空本地**（请谨慎操作）。
 
 本仓库按原样提供；使用 AI 功能产生的费用由使用者自行承担。
 
+## 发布到 GitHub
+
+本地已初始化 Git 仓库。首次推送到你的 GitHub 账号：
+
+```powershell
+# 1. 安装并登录 GitHub CLI：https://cli.github.com/
+gh auth login
+
+# 2. 在项目根目录执行（默认创建私有仓库 ganshale）
+.\scripts\publish-github.ps1
+
+# 或指定仓库名与公开/私有
+.\scripts\publish-github.ps1 -RepoName ganshale -Visibility public
+```
+
+也可在 GitHub 网页手动新建空仓库后：
+
+```bash
+git remote add origin https://github.com/<你的用户名>/ganshale.git
+git push -u origin main
+```
+
 ## 参与与反馈
 
-欢迎通过 [Issues](https://github.com/PLACEHOLDER/ganshale/issues) 提交问题与建议（请将上方链接替换为实际仓库地址）。
+欢迎通过 GitHub Issues 提交问题与建议。
