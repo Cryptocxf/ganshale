@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>干啥了 · 小回顾</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          'Segoe UI',
+          'PingFang SC',
+          'Microsoft YaHei',
+          system-ui,
+          sans-serif;
+        background: linear-gradient(165deg, #faf8ff 0%, #f3f6ff 45%, #fef6f8 100%);
+        color: #2d2a32;
+        min-height: 100vh;
+        padding: 1.1rem 1.25rem 1rem;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        max-width: 28rem;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 1rem;
+        padding: 1rem 1.1rem 0.85rem;
+        box-shadow: 0 8px 28px rgba(80, 60, 120, 0.08);
+      }
+      h1 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.45;
+        margin: 0 0 0.65rem;
+        letter-spacing: 0.02em;
+      }
+      .meta {
+        font-size: 0.68rem;
+        color: #7a7385;
+        margin-bottom: 0.55rem;
+        word-break: break-all;
+      }
+      textarea {
+        width: 100%;
+        min-height: 4.5rem;
+        resize: vertical;
+        border-radius: 0.65rem;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 0.55rem 0.65rem;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        background: rgba(255, 255, 255, 0.95);
+        color: #2d2a32;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.45);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+      }
+      .hint {
+        font-size: 0.68rem;
+        color: #8b8498;
+        margin: 0.4rem 0 0.75rem;
+        line-height: 1.4;
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      button {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.85rem;
+        border-radius: 0.55rem;
+        cursor: pointer;
+        border: 1px solid transparent;
+        font-weight: 500;
+      }
+      .btn-skip {
+        background: transparent;
+        color: #6b6574;
+        border-color: rgba(0, 0, 0, 0.08);
+      }
+      .btn-skip:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+      .btn-save {
+        background: #3f3d56;
+        color: #fff;
+      }
+      .btn-save:hover {
+        background: #2f2d42;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 id="headline">…</h1>
+      <div class="meta" id="meta"></div>
+      <textarea id="note" placeholder="随便写两句就好，不记也没关系～"></textarea>
+      <p class="hint" id="subhint">告诉我，方便生成更准确的日报哦！</p>
+      <div class="actions">
+        <button type="button" class="btn-skip" id="skip">先跳过</button>
+        <button type="button" class="btn-save" id="save">温柔地记下</button>
+      </div>
+    </div>
+    <script>
+      const headlineEl = document.getElementById('headline')
+      const metaEl = document.getElementById('meta')
+      const noteEl = document.getElementById('note')
+      const subhintEl = document.getElementById('subhint')
+      const skipBtn = document.getElementById('skip')
+      const saveBtn = document.getElementById('save')
+
+      let meta = {}
+
+      function applyPayload(p) {
+        meta = p && typeof p === 'object' ? p : {}
+        headlineEl.textContent = meta.headline || '刚才那段时间，主要在忙什么呀？'
+        const bits = []
+        if (meta.app) bits.push('应用：' + meta.app)
+        if (meta.title) bits.push('窗口：' + meta.title)
+        if (meta.durationLabel) bits.push('大约 ' + meta.durationLabel)
+        metaEl.textContent = bits.join(' · ') || ''
+        if (meta.subhint) subhintEl.textContent = meta.subhint
+        noteEl.value = ''
+        noteEl.focus()
+      }
+
+      if (window.reflectPrompt && typeof window.reflectPrompt.onInit === 'function') {
+        window.reflectPrompt.onInit(applyPayload)
+      }
+
+      skipBtn.addEventListener('click', () => {
+        if (window.reflectPrompt && window.reflectPrompt.skip) window.reflectPrompt.skip()
+      })
+      saveBtn.addEventListener('click', () => {
+        const text = noteEl.value.trim()
+        if (window.reflectPrompt && window.reflectPrompt.submit) {
+          window.reflectPrompt.submit({ text, meta })
+        }
+      })
+    </script>
+  </body>
+</html>

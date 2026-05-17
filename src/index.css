@@ -1,0 +1,365 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Noto Serif SC', 'Noto Sans SC', serif;
+
+  /* Light, editorial neutrals — restrained contrast */
+  --color-ganshale-page: #ebeaf0;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #f5f4f8;
+  --color-ganshale-elevated: #f0eff4;
+  --color-ganshale-track: #dfdee6;
+  --color-ganshale-border: #d9d8e0;
+  --color-ganshale-muted: #5f5f68;
+  --color-ganshale-text: #121214;
+  --color-ganshale-subtle: #8f8f99;
+  /* Single restrained accent (zinc family) */
+  --color-ganshale-accent: #404040;
+  --color-ganshale-gold: #3f3f46;
+  --color-ganshale-amber: #52525c;
+  --color-ganshale-mint: #64748b;
+  --color-ganshale-sky: #64748b;
+  --color-ganshale-coral: #94a3b8;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    background-color: #ffffff;
+    color: var(--color-ganshale-text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .gs-app-bg {
+    min-height: 100dvh;
+    background-color: #ffffff;
+    background-image: none;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  /** 统一卡片：小圆角、低对比描边、极轻阴影（避免「模板感」大圆角 + 重投影） */
+  .gs-card {
+    border-radius: 0.75rem;
+    border: 1px solid rgb(0 0 0 / 0.06);
+    background-color: rgb(255 255 255 / 0.94);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.045),
+      inset 0 1px 0 rgb(255 255 255 / 0.65);
+  }
+
+  /** 日报弹窗等 Markdown 正文 */
+  .gs-markdown {
+    text-align: left;
+  }
+
+  .gs-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .gs-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .gs-markdown h1,
+  .gs-markdown h2,
+  .gs-markdown h3,
+  .gs-markdown h4 {
+    margin: 1em 0 0.5em;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-ganshale-text);
+  }
+
+  .gs-markdown h1 {
+    font-size: 1.125rem;
+  }
+
+  .gs-markdown h2 {
+    font-size: 1rem;
+  }
+
+  .gs-markdown h3,
+  .gs-markdown h4 {
+    font-size: 0.875rem;
+  }
+
+  .gs-markdown p {
+    margin: 0.5em 0;
+    line-height: 1.65;
+    color: var(--color-ganshale-text);
+  }
+
+  .gs-markdown ul,
+  .gs-markdown ol {
+    margin: 0.5em 0;
+    padding-left: 1.25em;
+  }
+
+  .gs-markdown li {
+    margin: 0.2em 0;
+    line-height: 1.6;
+  }
+
+  .gs-markdown li > p {
+    margin: 0.25em 0;
+  }
+
+  .gs-markdown blockquote {
+    margin: 0.65em 0;
+    border-left: 3px solid rgb(0 0 0 / 0.12);
+    padding-left: 0.75em;
+    color: var(--color-ganshale-muted);
+  }
+
+  .gs-markdown code {
+    border-radius: 0.25rem;
+    background: rgb(0 0 0 / 0.05);
+    padding: 0.1em 0.35em;
+    font-size: 0.92em;
+    font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  }
+
+  .gs-markdown pre {
+    margin: 0.65em 0;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(0 0 0 / 0.06);
+    background: rgb(0 0 0 / 0.04);
+    padding: 0.65em 0.75em;
+  }
+
+  .gs-markdown pre code {
+    padding: 0;
+    background: transparent;
+    font-size: 0.85em;
+  }
+
+  .gs-markdown a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .gs-markdown hr {
+    margin: 1em 0;
+    border: none;
+    border-top: 1px solid rgb(0 0 0 / 0.08);
+  }
+
+  .gs-markdown table {
+    margin: 0.65em 0;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92em;
+  }
+
+  .gs-markdown th,
+  .gs-markdown td {
+    border: 1px solid rgb(0 0 0 / 0.08);
+    padding: 0.35em 0.5em;
+    text-align: left;
+  }
+
+  .gs-markdown th {
+    background: rgb(0 0 0 / 0.03);
+    font-weight: 600;
+  }
+}
+
+/* 启动页：Logo + 从左到右闪光 */
+@keyframes splash-shine-sweep {
+  0% {
+    transform: translateX(-140%) skewX(-12deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(240%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
+.splash-logo-shine {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.splash-logo-shine::after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 22%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.55) 18%,
+    #ffffff 42%,
+    #ffffff 58%,
+    rgb(255 255 255 / 0.55) 82%,
+    transparent 100%
+  );
+  transform: translateX(-140%) skewX(-12deg);
+  opacity: 0;
+  animation: splash-shine-sweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 0 24px 4px rgb(255 255 255 / 0.65);
+}
+
+.splash-logo-mark img {
+  background-color: #ffffff;
+  box-shadow: none;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo-shine::after {
+    display: none;
+  }
+}
+
+/* 采集中状态指示灯：扩散 + 呼吸缩放 */
+@keyframes gs-collection-dot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.45);
+    opacity: 0.72;
+  }
+}
+
+.gs-collection-dot-live {
+  animation: gs-collection-dot-breathe 1.15s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-collection-dot-live {
+    animation: none;
+  }
+}
+
+/* 外观：背景预设（由 AppearanceProvider 设置 html[data-bg]） */
+html[data-bg='gray'] .gs-app-bg {
+  background-color: #ebeaf0;
+  background-image: radial-gradient(
+    ellipse 110% 85% at 50% -22%,
+    rgba(255, 255, 255, 0.55),
+    transparent 58%
+  );
+}
+
+html[data-bg='red'] .gs-app-bg {
+  background-color: #f6e8e8;
+  background-image: radial-gradient(
+    ellipse 100% 80% at 50% -20%,
+    rgba(220, 120, 120, 0.18),
+    transparent 55%
+  );
+}
+
+html[data-bg='orange'] .gs-app-bg {
+  background-color: #f8eee4;
+  background-image: radial-gradient(
+    ellipse 100% 78% at 72% -14%,
+    rgba(230, 155, 90, 0.2),
+    transparent 54%
+  );
+}
+
+html[data-bg='yellow'] .gs-app-bg {
+  background-color: #f7f2e0;
+  background-image: radial-gradient(
+    ellipse 105% 82% at 40% -18%,
+    rgba(220, 190, 80, 0.2),
+    transparent 52%
+  );
+}
+
+html[data-bg='green'] .gs-app-bg {
+  background-color: #e8f2ea;
+  background-image: radial-gradient(
+    ellipse 100% 80% at 60% -16%,
+    rgba(100, 170, 120, 0.16),
+    transparent 54%
+  );
+}
+
+html[data-bg='cyan'] .gs-app-bg {
+  background-color: #e6f3f4;
+  background-image: radial-gradient(
+    ellipse 108% 80% at 50% -22%,
+    rgba(80, 175, 190, 0.16),
+    transparent 55%
+  );
+}
+
+html[data-bg='blue'] .gs-app-bg {
+  background-color: #e6eef8;
+  background-image: radial-gradient(
+    ellipse 100% 82% at 50% -24%,
+    rgba(90, 140, 210, 0.18),
+    transparent 55%
+  );
+}
+
+html[data-bg='purple'] .gs-app-bg {
+  background-color: #efe8f5;
+  background-image: radial-gradient(
+    ellipse 98% 75% at 58% -18%,
+    rgba(150, 110, 190, 0.15),
+    transparent 50%
+  );
+}
+
+html[data-bg='white'] .gs-app-bg {
+  background-color: #ffffff;
+  background-image: none;
+}
+
+html[data-bg='black'] .gs-app-bg {
+  background-color: #121214;
+  background-image: radial-gradient(
+    ellipse 100% 82% at 50% -28%,
+    rgba(255, 255, 255, 0.06),
+    transparent 55%
+  );
+}
+
+html.ganshale-font-serif body,
+html.ganshale-font-serif {
+  font-family: 'Noto Serif SC', 'Noto Sans SC', ui-serif, Georgia, serif;
+}
+
+html.ganshale-font-mono body,
+html.ganshale-font-mono {
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+}

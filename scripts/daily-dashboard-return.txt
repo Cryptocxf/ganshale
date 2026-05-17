@@ -1,0 +1,201 @@
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+      <section className="grid shrink-0 grid-cols-1 gap-2 lg:grid-cols-12 lg:items-stretch lg:gap-3">
+        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-8">
+          <div className="gs-card flex min-h-0 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-black/[0.06] px-2 py-1.5">
+              <h2 className="font-display text-xs font-semibold text-ganshale-text">实时窗口记录</h2>
+              {ready && allRows.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setWindowLogModalOpen(true)}
+                  className="shrink-0 rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text shadow-sm transition hover:bg-ganshale-page"
+                >
+                  查看大图
+                </button>
+              ) : null}
+            </div>
+            <div className="min-h-0 min-w-0 overflow-x-hidden">
+              {!ready ? (
+                <p className="px-3 py-4 text-center text-xs text-ganshale-muted">加载中…</p>
+              ) : allRows.length === 0 ? (
+                <p className="px-3 py-4 text-center text-xs text-ganshale-muted">
+                  {collectionPausedByUser
+                    ? '今日已下班，前台采集已暂停。'
+                    : windowTrackingActive
+                      ? '尚无窗口记录，切换几个前台应用后会出现在这里。'
+                      : '前台采集未启动，打开桌面客户端并开始上班后记录窗口。'}
+                </p>
+              ) : (
+                <div
+                  className="overflow-y-auto overflow-x-hidden"
+                  style={{ maxHeight: WINDOW_TABLE_BODY_MAX_PX + 28 }}
+                >
+                  <table className="w-full table-fixed border-collapse text-left">
+                    {WINDOW_TABLE_COLGROUP}
+                    <WindowTableHead />
+                    <WindowEventTableBody rows={allRows} remarks={remarks} setRemarks={setRemarks} />
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-col lg:col-span-4">
+          <div className="gs-card flex h-full min-h-[10rem] flex-col p-2.5 sm:p-3">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="font-display text-sm font-semibold text-ganshale-text">今日打工时长</h2>
+              <input
+                type="date"
+                value={toYmdLocal(day)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (!v) return
+                  setDay(new Date(v + 'T12:00:00'))
+                }}
+                className="shrink-0 rounded-lg border border-black/[0.08] bg-white px-2 py-1 font-mono text-[11px] text-ganshale-text shadow-sm"
+                aria-label="选择日期"
+              />
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-1 py-3 text-center sm:py-4">
+              <p className="font-display text-2xl font-semibold tabular-nums tracking-tight text-ganshale-text sm:text-3xl md:text-4xl lg:text-[1.65rem] xl:text-4xl">
+                {formatDurationHmsZh(sessionElapsedSec)}
+              </p>
+              {!isSelectedToday ? (
+                <p className="max-w-[14rem] text-[10px] leading-snug text-ganshale-muted">
+                  显示该自然日内已计入监控的窗口累计时长。切回「今天」查看当日累计。
+                </p>
+              ) : collectionPausedByUser ? (
+                <p className="text-[10px] text-ganshale-muted">
+                  今日已下班，前台采集已暂停；次日 0 点或点击「上班中」后继续累计。
+                </p>
+              ) : patterns.length === 0 ? (
+                <p className="max-w-[14rem] text-[10px] leading-snug text-amber-800">尚未加入监控应用，时长为 0。</p>
+              ) : (
+                <p className="max-w-[14rem] text-[10px] leading-snug text-ganshale-muted">
+                  统计已加入监控的窗口片段；左侧为全部窗口记录。
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="gs-card shrink-0 p-2.5 sm:p-3">
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-1.5 font-display text-sm font-semibold text-ganshale-text">
+              <Clock3 className="h-3.5 w-3.5 shrink-0 text-ganshale-accent" strokeWidth={1.6} />
+              时间分布
+            </h2>
+            <p className="mt-0.5 text-[10px] text-ganshale-muted">
+              {ready ? '8:00 — 24:00，按应用着色' : '加载中…'}
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full border border-black/[0.06] bg-white/70 px-1.5 py-0.5 text-[9px] text-ganshale-subtle sm:px-2 sm:text-[10px]">
+            08:00 — 24:00
+          </span>
+        </div>
+        {!ready || timelineWorkday.length === 0 ? (
+          <p className="py-5 text-center text-xs text-ganshale-muted">
+            {!ready
+              ? '加载中…'
+              : patterns.length === 0
+                ? '尚未加入监控应用，时间轴暂无数据。'
+                : '暂无 8:00—24:00 内的窗口数据。'}
+          </p>
+        ) : (
+          <>
+            <div className="relative h-9 w-full overflow-hidden rounded-xl bg-ganshale-track/90 ring-1 ring-black/[0.04] sm:h-10">
+              {WORKDAY_HOUR_MARKS.map((h) => {
+                const isWorkStart = h === 9
+                const isWorkEnd = h === 18
+                const left = timelinePctFromMin(h * 60)
+                if (h === TIMELINE_END_HOUR) {
+                  return (
+                    <span
+                      key={h}
+                      className="pointer-events-none absolute bottom-0 top-0 z-[2] w-px bg-black/10"
+                      style={{ left: '100%', transform: 'translateX(-100%)' }}
+                      aria-hidden
+                    />
+                  )
+                }
+                return (
+                  <span
+                    key={h}
+                    className={[
+                      'pointer-events-none absolute bottom-0 top-0 z-[2] w-px',
+                      isWorkStart || isWorkEnd ? 'bg-emerald-500/70' : 'bg-black/10',
+                    ].join(' ')}
+                    style={{ left: `${left}%` }}
+                    aria-hidden
+                  />
+                )
+              })}
+              {timelineWorkday.map((seg) => {
+                const left = timelinePctFromMin(seg.start)
+                const width = timelinePctFromMin(seg.end) - left
+                return (
+                  <button
+                    key={seg.id}
+                    type="button"
+                    title={seg.label}
+                    style={{
+                      left: `${left}%`,
+                      width: `${Math.max(width, 0.2)}%`,
+                      backgroundColor: seg.color,
+                    }}
+                    className="group absolute bottom-0 top-0 min-w-[2px] border-r border-black/[0.05] transition hover:brightness-95"
+                  >
+                    <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-black/[0.08] bg-white/95 px-1.5 py-0.5 text-[9px] text-ganshale-text opacity-0 shadow-md transition group-hover:opacity-100">
+                      {seg.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="relative mt-1 h-9 w-full">
+              {WORKDAY_HOUR_MARKS.map((h) => {
+                const isWorkStart = h === 9
+                const isWorkEnd = h === 18
+                const left = h === TIMELINE_END_HOUR ? 100 : timelinePctFromMin(h * 60)
+                return (
+                  <span
+                    key={`label-${h}`}
+                    className={[
+                      'absolute top-0 flex -translate-x-1/2 flex-col items-center leading-none',
+                      isWorkStart || isWorkEnd
+                        ? 'text-[9px] font-semibold text-emerald-800'
+                        : 'text-[8px] tabular-nums text-ganshale-subtle',
+                    ].join(' ')}
+                    style={{ left: `${left}%` }}
+                  >
+                    <span>{`${h}:00`}</span>
+                    {isWorkStart ? <span className="mt-0.5 text-[8px]">上班</span> : null}
+                    {isWorkEnd ? <span className="mt-0.5 text-[8px]">下班</span> : null}
+                  </span>
+                )
+              })}
+            </div>
+            <div className="mt-1 flex max-h-7 flex-wrap gap-x-2 gap-y-0.5 overflow-hidden">
+              {[...new Map(timeline.map((s) => [s.label, s.color])).entries()].map(([label, color]) => (
+                <span key={label} className="inline-flex items-center gap-1 text-[10px] text-ganshale-muted">
+                  <span className="h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="grid min-h-0 min-h-[18rem] flex-1 grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2 lg:items-stretch lg:gap-3">
+        <div className="gs-card flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <AppCategoryOverview day={day} events={allRows} ready={ready} />
+        </div>
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1">
+          <DailyReportAiPanel day={day} events={allRows} remarks={remarks} />
+        </div>
+      </section>
