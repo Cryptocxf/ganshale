@@ -9,7 +9,7 @@
     "dev:web": "vite",
     "build": "tsc -b && vite build",
     "gen:dashboard": "node scripts/write-daily-dashboard.mjs",
-    "pack": "npm run build && electron-builder --win portable",
+    "pack": "npm run build && electron-builder --win nsis",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -52,14 +52,21 @@
     "asarUnpack": [
       "**/node_modules/active-win/**/*"
     ],
-    "electronRebuildConfig": {
-      "onlyModules": []
-    },
+    "npmRebuild": false,
     "win": {
       "target": [
-        "portable"
+        "nsis"
       ],
       "icon": "public/ganshale-logo-app.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "language": "2052",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "干啥了",
+      "installerHeaderIcon": "public/ganshale-logo-app.png"
     }
   }
 }
