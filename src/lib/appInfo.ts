@@ -1,5 +1,5 @@
 /** 应用展示信息（版本号由 Vite 在构建时注入） */
-export const APP_DISPLAY_NAME = '干啥了'
+export { APP_DISPLAY_NAME } from '../constants/brand'
 export const APP_PRODUCT_NAME = 'Ganshale'
 export const APP_TAGLINE = '一款拯救你于日报、周报、月报水火的工具'
 
@@ -37,7 +37,7 @@ export const APP_FEATURES: { title: string; items: string[] }[] = [
       '今日工作记录：手动填写与系统自动记录',
       'AI 自动总结：按间隔或定时将窗口活动压缩为工作记录',
       '一键生成日报、周报，支持自定义提示词与模型网关',
-      '每天 18:00 可自动触发日报生成（可在日报页配置）',
+      '可在设置 → 时间中配置日报、周报的自动生成时间',
     ],
   },
   {

@@ -5,6 +5,7 @@ import {
   brandOrNeutralHex,
   normalizeAppKey,
 } from '../lib/appBrandIcons'
+import { isDocTypeIdentityKey } from '../lib/windowAppDisplay'
 
 type Phase = 'native' | 'brand' | 'letter'
 
@@ -12,23 +13,29 @@ type Phase = 'native' | 'brand' | 'letter'
 export function AppBrandIcon({
   app,
   appPath,
+  brandKey,
   size = 22,
   className = '',
 }: {
   app: string
   /** 可执行文件完整路径，仅 Electron 有效 */
   appPath?: string
+  /** 展示/图标键（如 word、excel）；默认用进程名 */
+  brandKey?: string
   size?: number
   className?: string
 }) {
-  const brandUrl = brandIconUrl(app)
-  const letter = brandFallbackLetter(app)
-  const bg = app ? brandOrNeutralHex(app) : '#a1a1aa'
+  const iconKey = (brandKey?.trim() || app).trim()
+  const useDocTypeIcon = isDocTypeIdentityKey(normalizeAppKey(iconKey))
+  const brandUrl = brandIconUrl(iconKey)
+  const letter = brandFallbackLetter(iconKey)
+  const bg = iconKey ? brandOrNeutralHex(iconKey) : '#a1a1aa'
 
   const trimmedPath = appPath?.trim() ?? ''
+  const skipNative = useDocTypeIcon && Boolean(brandUrl)
 
   const [phase, setPhase] = useState<Phase>(() =>
-    trimmedPath ? 'native' : brandUrl ? 'brand' : 'letter',
+    skipNative ? 'brand' : trimmedPath ? 'native' : brandUrl ? 'brand' : 'letter',
   )
   const [nativeSrc, setNativeSrc] = useState<string | null>(null)
 
@@ -38,7 +45,7 @@ export function AppBrandIcon({
       if (cancelled) return
       const hasBridge =
         typeof window !== 'undefined' && Boolean(window.ganshaleDesktop?.getFileIcon)
-      if (!trimmedPath || !hasBridge) {
+      if (skipNative || !trimmedPath || !hasBridge) {
         setNativeSrc(null)
         setPhase(brandUrl ? 'brand' : 'letter')
         return
@@ -61,7 +68,7 @@ export function AppBrandIcon({
     return () => {
       cancelled = true
     }
-  }, [trimmedPath, brandUrl])
+  }, [trimmedPath, brandUrl, skipNative])
 
   const showNative = phase === 'native' && Boolean(nativeSrc)
   const showBrand =
@@ -73,7 +80,7 @@ export function AppBrandIcon({
   return (
     <span
       className={[
-        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-black/[0.06]',
+        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ganshale-surface ring-1 ring-ganshale-border',
         className,
       ].join(' ')}
       style={{ width: size, height: size }}

@@ -19,6 +19,10 @@ import {
   hasTodayClockOutPersisted,
   persistWorkdayClockOut,
 } from '../lib/clientSessionClock'
+import {
+  applyLocalMidnightRollover,
+  createLocalMidnightWatcher,
+} from '../lib/localMidnight'
 import * as store from '../lib/idbStore'
 import {
   BUCKET_AFK,
@@ -61,6 +65,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const lastCountableForegroundRef = useRef<LiveForegroundSample | null>(null)
   /** 离开可统计前台后，下次心跳须新开事件，避免把中间空白时间并入上一条 */
   const splitNextCountableHeartbeatRef = useRef(false)
+  const dayRef = useRef(day)
+  dayRef.current = day
 
   const load = useCallback(async () => {
     const start = startOfLocalDay(day).toISOString()
@@ -89,21 +95,25 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     setDaysWithTimingData(timingDays)
   }, [day])
 
+  const initialHydrateRef = useRef(false)
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        setReady(false)
+        if (!initialHydrateRef.current) setReady(false)
         await seedIfEmpty()
         if (!cancelled) await load()
         if (!cancelled) {
           setReady(true)
           setError(null)
+          initialHydrateRef.current = true
         }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))
           setReady(true)
+          initialHydrateRef.current = true
         }
       }
     })()
@@ -255,16 +265,18 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   }, [ready, load, collectionPausedByUser])
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      const y = toYmdLocal(new Date())
-      if (y !== lastLocalYmdRef.current) {
-        lastLocalYmdRef.current = y
-        clearWorkdayClockOutPersist()
-        setCollectionPausedByUser(false)
+    return createLocalMidnightWatcher((detail) => {
+      lastLocalYmdRef.current = detail.ymd
+      const wasViewingToday = toYmdLocal(dayRef.current) === detail.prevYmd
+      applyLocalMidnightRollover(detail)
+      setCollectionPausedByUser(false)
+      splitNextCountableHeartbeatRef.current = true
+      if (wasViewingToday) {
+        setDay(startOfLocalDay(new Date()))
       }
-    }, 1000)
-    return () => window.clearInterval(id)
-  }, [])
+      void load()
+    })
+  }, [load])
 
   const clockOutCollection = useCallback(() => {
     persistWorkdayClockOut()

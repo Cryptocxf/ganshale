@@ -18,6 +18,8 @@ export type WorkRecordRow = {
 const STORAGE_PREFIX = 'ganshale-work-records:'
 const DISMISSED_SYSTEM_PREFIX = 'ganshale-work-records-dismissed-system:'
 
+export const WORK_RECORDS_UPDATED_EVENT = 'ganshale-work-records-updated'
+
 function storageKey(day: Date): string {
   return `${STORAGE_PREFIX}${toYmdLocal(day)}`
 }
@@ -165,6 +167,29 @@ export function reconcileWorkRecordsWithSystem(
   const hasEditable = nonSystem.some((r) => r.source === 'draft' || r.source === 'manual')
   const tail = hasEditable ? nonSystem : [...nonSystem, createEmptyWorkRecordRow()]
   return sortWorkRecordsByTimeDesc([...systemRows, ...tail])
+}
+
+/** 追加一条已保存的手动记录（如应用停留弹窗提交） */
+export function appendManualWorkRecord(day: Date, content: string): WorkRecordRow | null {
+  const text = content.trim()
+  if (!text) return null
+
+  const row: WorkRecordRow = {
+    id: crypto.randomUUID(),
+    content: text,
+    source: 'manual',
+    saved: true,
+    recordedAt: new Date().toISOString(),
+  }
+
+  const current = loadWorkRecords(day)
+  const systemRows = current.filter((r) => r.source === 'system')
+  const nonSystem = current.filter((r) => r.source !== 'system')
+  const hasEditable = nonSystem.some((r) => r.source === 'draft' || r.source === 'manual')
+  const tail = hasEditable ? nonSystem : [...nonSystem, createEmptyWorkRecordRow()]
+  const next = sortWorkRecordsByTimeDesc([row, ...systemRows, ...tail])
+  saveWorkRecords(day, next)
+  return row
 }
 
 /** 追加一条 AI 自动总结行（保留历史 system 行） */

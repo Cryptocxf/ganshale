@@ -7,12 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { normalizeSkin, type SkinKey } from '../lib/skins'
 
 const STORAGE = 'ganshale-appearance-v1'
 
 export type FontFamilyKey = 'sans' | 'serif' | 'mono'
 
-/** 客户端背景预设 */
+/** 页面背景预设（内部默认 white，设置页已隐藏） */
 export const BG_PRESETS = [
   { key: 'gray', label: '浅灰', swatch: '#ebeaf0' },
   { key: 'red', label: '赤', swatch: '#e8b4b4' },
@@ -59,12 +60,21 @@ export interface AppearanceConfig {
   fontScale: number
   fontFamily: FontFamilyKey
   bgPreset: BgPresetKey
+  skin: SkinKey
 }
 
 const defaultConfig: AppearanceConfig = {
   fontScale: 1,
   fontFamily: 'sans',
   bgPreset: 'white',
+  skin: 'default',
+}
+
+function applyToDocument(config: AppearanceConfig): void {
+  const root = document.documentElement
+  root.dataset.skin = config.skin
+  root.dataset.bg = config.bgPreset
+  root.style.fontSize = `${16 * config.fontScale}px`
 }
 
 function load(): AppearanceConfig {
@@ -73,7 +83,6 @@ function load(): AppearanceConfig {
     if (!t) return defaultConfig
     const j = JSON.parse(t) as Partial<AppearanceConfig>
     let bgPreset = normalizeBgPreset(j.bgPreset)
-    /** 外观设置已移除，旧默认浅灰统一迁为纯白 */
     if (bgPreset === 'gray') bgPreset = 'white'
     const config: AppearanceConfig = {
       fontScale:
@@ -83,6 +92,7 @@ function load(): AppearanceConfig {
       fontFamily:
         j.fontFamily === 'serif' || j.fontFamily === 'mono' ? j.fontFamily : 'sans',
       bgPreset,
+      skin: normalizeSkin(j.skin),
     }
     if (j.bgPreset === 'gray') {
       localStorage.setItem(STORAGE, JSON.stringify(config))
@@ -93,22 +103,17 @@ function load(): AppearanceConfig {
   }
 }
 
-/** 在 React 挂载前同步 html[data-bg]，避免先白后灰闪一下 */
+/** 在 React 挂载前同步 html[data-skin] / data-bg，避免闪烁 */
 export function applyAppearanceFromStorage(): void {
   if (typeof document === 'undefined') return
-  const config = load()
-  const root = document.documentElement
-  root.dataset.bg = config.bgPreset
-  root.style.fontSize = `${16 * config.fontScale}px`
-  root.classList.remove('ganshale-font-serif', 'ganshale-font-mono')
-  if (config.fontFamily === 'serif') root.classList.add('ganshale-font-serif')
-  if (config.fontFamily === 'mono') root.classList.add('ganshale-font-mono')
+  applyToDocument(load())
 }
 
 type Ctx = {
   config: AppearanceConfig
   setFontFamily: (k: FontFamilyKey) => void
   setBgPreset: (k: BgPresetKey) => void
+  setSkin: (k: SkinKey) => void
 }
 
 const AppearanceContext = createContext<Ctx | null>(null)
@@ -131,19 +136,15 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     [patch],
   )
   const setBgPreset = useCallback((bgPreset: BgPresetKey) => patch({ bgPreset }), [patch])
+  const setSkin = useCallback((skin: SkinKey) => patch({ skin }), [patch])
 
   useEffect(() => {
-    const root = document.documentElement
-    root.style.fontSize = `${16 * config.fontScale}px`
-    root.dataset.bg = config.bgPreset
-    root.classList.remove('ganshale-font-serif', 'ganshale-font-mono')
-    if (config.fontFamily === 'serif') root.classList.add('ganshale-font-serif')
-    if (config.fontFamily === 'mono') root.classList.add('ganshale-font-mono')
+    applyToDocument(config)
   }, [config])
 
   const value = useMemo(
-    () => ({ config, setFontFamily, setBgPreset }),
-    [config, setFontFamily, setBgPreset],
+    () => ({ config, setFontFamily, setBgPreset, setSkin }),
+    [config, setFontFamily, setBgPreset, setSkin],
   )
 
   return (

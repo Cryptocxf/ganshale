@@ -1,6 +1,5 @@
 import type { AwEvent } from './awTypes'
 import { chartColorFromMap, chartColorMapForApps } from './appBrandIcons'
-import { readTodayFrozenTimerSec } from './clientSessionClock'
 import type { LiveForegroundSample } from './liveForeground'
 import {
   isLiveForegroundSkippedForStats,
@@ -13,11 +12,14 @@ import {
   liveForegroundSegmentSec,
   sameForegroundApp,
 } from './windowForegroundMatch'
+import { identityFromEventData, identityFromLiveForeground } from './windowAppDisplay'
 import {
+  daysInLocalWeek,
   endOfLocalDay,
   formatClock,
   parseIso,
   startOfLocalDay,
+  startOfWeekMondayLocal,
 } from './timeutil'
 
 export { colorForAppLabel } from './appPalette'
@@ -35,8 +37,11 @@ function minutesSinceMidnight(d: Date, dayStart: Date): number {
 }
 
 function windowLabel(ev: AwEvent): string {
-  const app = String(ev.data.app ?? 'unknown')
-  return app.replace(/\.exe$/i, '')
+  return identityFromEventData(ev.data).displayName
+}
+
+function windowColorKey(ev: AwEvent): string {
+  return identityFromEventData(ev.data).identityKey
 }
 
 export function timelineFromWindowEvents(
@@ -53,7 +58,7 @@ export function timelineFromWindowEvents(
     (a, b) => parseIso(a.timestamp) - parseIso(b.timestamp),
   )
 
-  const colorMap = chartColorMapForApps(appTotalsForDay(day, events).map((r) => r.app))
+  const colorMap = chartColorMapForApps(appTotalsForDay(day, events).map((r) => r.identityKey))
 
   for (const ev of sorted) {
     if (shouldSkipWindowEventForStats(ev)) continue
@@ -63,7 +68,7 @@ export function timelineFromWindowEvents(
     const clipEnd = Math.min(end, t1)
     if (clipEnd <= clipStart) continue
     const label = windowLabel(ev)
-    const appRaw = String(ev.data.app ?? 'unknown')
+    const colorKey = windowColorKey(ev)
     const sm = minutesSinceMidnight(new Date(clipStart), day0)
     const em = minutesSinceMidnight(new Date(clipEnd), day0)
     segs.push({
@@ -71,7 +76,7 @@ export function timelineFromWindowEvents(
       label,
       startMin: sm,
       endMin: em,
-      color: chartColorFromMap(colorMap, appRaw),
+      color: chartColorFromMap(colorMap, colorKey),
     })
   }
   return segs
@@ -136,18 +141,18 @@ export function timelineFromWindowEventsLive(
   const clipEnd = Math.min(nowMs, t1)
   if (clipEnd <= clipStart) return segs
 
-  const appRaw = String(live.app ?? 'unknown')
-  const apps = appTotalsForDay(day, events).map((r) => r.app)
-  if (!apps.includes(appRaw)) apps.push(appRaw)
+  const liveId = identityFromLiveForeground(live)
+  const apps = appTotalsForDay(day, events).map((r) => r.identityKey)
+  if (!apps.includes(liveId.identityKey)) apps.push(liveId.identityKey)
   const colorMap = chartColorMapForApps(apps)
   const sm = minutesSinceMidnight(new Date(clipStart), day0)
   const em = minutesSinceMidnight(new Date(clipEnd), day0)
   segs.push({
     id: `live-${nowMs}`,
-    label: appRaw.replace(/\.exe$/i, ''),
+    label: liveId.displayName,
     startMin: sm,
     endMin: em,
-    color: chartColorFromMap(colorMap, appRaw),
+    color: chartColorFromMap(colorMap, liveId.identityKey),
   })
   return segs.sort((a, b) => a.startMin - b.startMin)
 }
@@ -242,8 +247,7 @@ export function totalActiveSecondsWindowLive(
   if (!extrapolate || !live) return base
 
   if (isLiveForegroundSkippedForStats(live)) {
-    const frozen = readTodayFrozenTimerSec()
-    return frozen != null ? Math.max(base, frozen) : base
+    return base
   }
 
   const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
@@ -284,33 +288,78 @@ export function currentForegroundSegmentLive(
   return { event: latest, seconds: Math.max(0, Math.round((nowMs - segStart) / 1000)) }
 }
 
-export function appTotalsForDay(
-  day: Date,
-  events: AwEvent[],
-): { app: string; seconds: number; appPath?: string }[] {
+export type AppTotalRow = {
+  /** 进程名（图标匹配） */
+  app: string
+  displayName: string
+  identityKey: string
+  seconds: number
+  appPath?: string
+}
+
+export function appTotalsForDay(day: Date, events: AwEvent[]): AppTotalRow[] {
   const day0 = startOfLocalDay(day)
   const day1 = endOfLocalDay(day)
   const t0 = day0.getTime()
   const t1 = day1.getTime()
-  const map = new Map<string, { seconds: number; appPath?: string }>()
+  const map = new Map<
+    string,
+    { seconds: number; appPath?: string; app: string; displayName: string }
+  >()
   for (const ev of events) {
     if (shouldSkipWindowEventForStats(ev)) continue
-    const app = String(ev.data.app ?? 'unknown')
+    const id = identityFromEventData(ev.data)
     const start = parseIso(ev.timestamp)
     const end = start + ev.duration * 1000
     const clipStart = Math.max(start, t0)
     const clipEnd = Math.min(end, t1)
     if (clipEnd <= clipStart) continue
     const add = (clipEnd - clipStart) / 1000
-    const prev = map.get(app) ?? { seconds: 0 }
+    const prev = map.get(id.identityKey) ?? {
+      seconds: 0,
+      app: id.processApp,
+      displayName: id.displayName,
+    }
     prev.seconds += add
     const ap = String(ev.data.appPath ?? '').trim()
     if (ap && !prev.appPath) prev.appPath = ap
-    map.set(app, prev)
+    map.set(id.identityKey, prev)
   }
   return [...map.entries()]
-    .map(([app, v]) => ({
-      app,
+    .map(([identityKey, v]) => ({
+      app: v.app,
+      displayName: v.displayName,
+      identityKey,
+      seconds: Math.round(v.seconds),
+      ...(v.appPath ? { appPath: v.appPath } : {}),
+    }))
+    .sort((a, b) => b.seconds - a.seconds)
+}
+
+/** 整周各应用前台时长合计（周一至周日） */
+export function appTotalsForWeek(weekStartMonday: Date, events: AwEvent[]): AppTotalRow[] {
+  const map = new Map<
+    string,
+    { seconds: number; appPath?: string; app: string; displayName: string }
+  >()
+  for (const day of daysInLocalWeek(startOfWeekMondayLocal(weekStartMonday))) {
+    for (const row of appTotalsForDay(day, events)) {
+      const prev = map.get(row.identityKey) ?? {
+        seconds: 0,
+        app: row.app,
+        displayName: row.displayName,
+        appPath: row.appPath,
+      }
+      prev.seconds += row.seconds
+      if (row.appPath && !prev.appPath) prev.appPath = row.appPath
+      map.set(row.identityKey, prev)
+    }
+  }
+  return [...map.entries()]
+    .map(([identityKey, v]) => ({
+      app: v.app,
+      displayName: v.displayName,
+      identityKey,
       seconds: Math.round(v.seconds),
       ...(v.appPath ? { appPath: v.appPath } : {}),
     }))
@@ -376,6 +425,17 @@ export function formatDuration(sec: number): string {
   const h = Math.floor(m / 60)
   const rm = m % 60
   return rm > 0 ? `${h} 小时 ${rm} 分` : `${h} 小时`
+}
+
+/** 列表简短时长：≥1 小时为「x时x分」，否则 ≥1 分为「x分x秒」，否则「x秒」 */
+export function formatDurationCompactSec(totalSec: number): string {
+  const s0 = Math.max(0, Math.round(totalSec))
+  if (s0 < 60) return `${s0}秒`
+  const h = Math.floor(s0 / 3600)
+  const m = Math.floor((s0 % 3600) / 60)
+  const sec = s0 % 60
+  if (h > 0) return `${h}时${m}分`
+  return `${m}分${sec}秒`
 }
 
 /** 中文时长，精确到秒、无空格（如 `5分30秒`、`2小时5分30秒`） */

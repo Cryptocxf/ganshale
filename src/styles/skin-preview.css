@@ -1,0 +1,128 @@
+/* 客户端风格缩略图（继承 [data-skin] 设计令牌） */
+.skin-preview-scene {
+  position: relative;
+  width: 4.75rem;
+  height: 3rem;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-ganshale-border);
+  background-color: var(--color-ganshale-page);
+  font-family: var(--font-sans);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+  pointer-events: none;
+  user-select: none;
+}
+
+.skin-preview-scene__chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  height: 0.7rem;
+  padding: 1px 3px;
+  border-bottom: 1px solid var(--gs-chrome-border);
+  background: var(--gs-chrome-bg);
+}
+
+.skin-preview-scene__nav {
+  display: flex;
+  gap: 1px;
+  min-width: 0;
+}
+
+.skin-preview-scene__pill {
+  display: block;
+  height: 3px;
+  width: 7px;
+  border-radius: 1px;
+  background: var(--gs-nav-hover-bg);
+}
+
+.skin-preview-scene__pill--active {
+  background: var(--gs-nav-active-bg);
+  box-shadow: var(--gs-nav-active-shadow);
+}
+
+.skin-preview-scene__toolbar {
+  display: block;
+  height: 3px;
+  width: 10px;
+  border-radius: 1px;
+  border: 1px solid var(--gs-btn-border);
+  background: var(--gs-btn-bg);
+}
+
+.skin-preview-scene__body {
+  position: relative;
+  height: calc(100% - 0.7rem);
+  padding: 2px 3px 3px;
+}
+
+.skin-preview-scene__row {
+  display: flex;
+  gap: 2px;
+}
+
+.skin-preview-scene__row--timeline {
+  margin-top: 2px;
+}
+
+.skin-preview-scene__card {
+  flex: 1;
+  min-width: 0;
+  height: 0.55rem;
+  border-radius: calc(var(--gs-card-radius) * 0.35);
+  border: 1px solid var(--gs-card-border);
+  background: var(--gs-card-bg);
+  box-shadow: var(--gs-card-shadow);
+}
+
+.skin-preview-scene__card--wide {
+  flex: 1.35;
+}
+
+.skin-preview-scene__bar {
+  display: block;
+  width: 100%;
+  height: 0.45rem;
+  border-radius: calc(var(--gs-card-radius) * 0.3);
+  border: 1px solid var(--gs-card-border);
+  background: var(--gs-card-bg);
+}
+
+/* 琥珀暮光：暖光晕 */
+.skin-preview-scene--ember .skin-preview-scene__body {
+  background-image: radial-gradient(ellipse 90% 70% at 20% 0%, rgb(234 88 12 / 0.14), transparent 70%);
+}
+
+/* 樱暮薄雾：粉点纹理 */
+.skin-preview-scene--sakura .skin-preview-scene__body::before {
+  content: '';
+  position: absolute;
+  inset: 2px 3px 3px;
+  opacity: 0.45;
+  background-image: radial-gradient(circle, rgb(244 114 182 / 0.35) 0 1px, transparent 2px);
+  background-size: 7px 7px;
+  pointer-events: none;
+}
+
+.skin-preview-scene--sakura .skin-preview-scene__row,
+.skin-preview-scene--sakura .skin-preview-scene__row--timeline {
+  position: relative;
+  z-index: 1;
+}
+
+/* 墨纸：纸纹 */
+.skin-preview-scene--paper .skin-preview-scene__body {
+  background-image: radial-gradient(ellipse 80% 60% at 20% 0%, rgb(184 74 31 / 0.06), transparent 70%);
+}
+
+/* 极光紫 */
+.skin-preview-scene--aurora .skin-preview-scene__body {
+  background-image: radial-gradient(ellipse 90% 70% at 30% 0%, rgb(99 102 241 / 0.12), transparent 65%);
+}
+
+/* 霓虹 */
+.skin-preview-scene--neon .skin-preview-scene__pill--active {
+  box-shadow: 0 0 4px rgb(236 72 153 / 0.45);
+}

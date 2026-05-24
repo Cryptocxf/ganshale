@@ -72,7 +72,7 @@ export function hasTodayClockOutPersisted(): boolean {
   return readWorkdayClockOut() !== null
 }
 
-const FROZEN_TIMER_STORAGE_KEY = 'ganshale-workday-timer-frozen-v1'
+const FROZEN_TIMER_STORAGE_KEY = 'ganshale-workday-timer-frozen-v2'
 const FROZEN_TIMER_MAX_DAYS = 120
 
 function readFrozenTimerMap(): Record<string, number> {

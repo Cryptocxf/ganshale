@@ -1,4 +1,11 @@
 import { Copy, Download, FileText, Loader2, MessageCircle, Square, Trash2, X } from 'lucide-react'
+import {
+  DASHBOARD_HEADER_ACTION_BTN_CLASS,
+  GS_FIELD_INPUT_MD_CLASS,
+  GS_MODAL_FOOTER_DIVIDER_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
+} from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
@@ -493,8 +500,7 @@ export function DailyReportAiPanel({
     window.setTimeout(() => setToast(null), 3000)
   }, [messages, day])
 
-  const selectBase =
-    'rounded-md border border-black/[0.08] bg-white py-1 pl-1.5 pr-6 text-[11px] text-ganshale-text shadow-sm focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10'
+  const selectBase = `${GS_FIELD_INPUT_MD_CLASS} py-1 pl-1.5 pr-6 shadow-sm`
   const selectEqualCls = `${selectBase} w-[10.5rem]`
 
   const editorTitle =
@@ -523,11 +529,13 @@ export function DailyReportAiPanel({
       <>
         <section
           aria-label="今日工作总结"
-          className="gs-card flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden bg-white p-2 sm:p-2.5"
+          className="gs-card flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden p-2 sm:p-2.5"
         >
           <DashboardSectionTitle icon={FileText}>今日工作总结</DashboardSectionTitle>
 
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-black/[0.06] bg-ganshale-page/40 px-2.5 py-2">
+          <div
+            className={`gs-dashboard-modal__inset min-h-0 flex-1 overflow-y-auto rounded-lg px-2.5 py-2`}
+          >
             {reportStreamingEmpty ? (
               <p className="flex items-center gap-1.5 text-[11px] text-ganshale-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
@@ -623,8 +631,8 @@ export function DailyReportAiPanel({
         aria-label="日报生成与对话"
         className={
           chatExpanded
-            ? 'gs-card flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-white p-2.5 sm:p-3'
-            : 'flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-white px-3 py-3'
+            ? 'gs-card flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2.5 sm:p-3'
+            : 'gs-card flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-3 py-3'
         }
       >
         {chatExpanded ? (
@@ -643,7 +651,7 @@ export function DailyReportAiPanel({
               type="button"
               onClick={onExportTxt}
               disabled={messages.length === 0 || streaming}
-              className="inline-flex items-center gap-1 rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text disabled:cursor-not-allowed disabled:opacity-40 hover:bg-ganshale-page/80"
+              className={`${DASHBOARD_HEADER_ACTION_BTN_CLASS} inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40`}
             >
               <Download className="h-3 w-3" strokeWidth={2} />
               导出 TXT
@@ -651,7 +659,9 @@ export function DailyReportAiPanel({
           </div>
         ) : null}
         {chatExpanded ? (
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-black/[0.06] bg-ganshale-page/40 px-2 py-2">
+      <div
+        className={`gs-dashboard-modal__inset min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg px-2 py-2`}
+      >
         {messages.length === 0 ? (
           <p className="px-2 py-4 text-center text-[11px] text-ganshale-subtle">暂无消息。</p>
         ) : (
@@ -775,7 +785,7 @@ export function DailyReportAiPanel({
             disabled={streaming}
             aria-label="附带提示词与窗口记录"
             title="附带提示词与窗口记录"
-            className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-black/[0.2] text-ganshale-accent focus:ring-ganshale-text/20 disabled:cursor-not-allowed"
+            className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-ganshale-border text-ganshale-accent focus:ring-ganshale-text/20 disabled:cursor-not-allowed"
           />
           <select
             id="daily-report-prompt-preset"
@@ -832,7 +842,7 @@ export function DailyReportAiPanel({
               ? '可选：补充说明、当日重点、希望强调的内容…（可不填，仍会生成日报）'
               : '输入要向模型说的话…（提问模式下为必填）'
           }
-          className="min-h-[2.75rem] w-full min-w-0 shrink resize-y rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-xs leading-relaxed text-ganshale-text placeholder:text-ganshale-subtle focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10 disabled:opacity-50 sm:flex-1"
+          className={`min-h-[2.75rem] w-full min-w-0 shrink resize-y rounded-lg px-3 py-2 text-xs leading-relaxed ${GS_FIELD_INPUT_MD_CLASS} disabled:opacity-50 sm:flex-1`}
         />
         <button
           type="button"
@@ -867,21 +877,17 @@ export function DailyReportAiPanel({
       ) : null}
 
       {promptEditorOpen ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-end bg-black/45 p-2 sm:p-3"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setPromptEditorOpen(false)
-          }}
+        <DashboardModalRoot
+          open
+          onClose={() => setPromptEditorOpen(false)}
+          zIndex={100}
+          labelledBy="daily-prompt-editor-title"
+          overlayClassName="items-end justify-end p-2 sm:p-3"
+          dialogClassName="max-h-[46vh] w-full max-w-sm"
         >
-          <div
-            className="flex max-h-[46vh] w-full max-w-sm flex-col rounded-xl border border-black/[0.08] bg-white shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="daily-prompt-editor-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-black/[0.06] px-2.5 py-2 sm:px-3">
+            <div
+              className={`flex items-center justify-between px-2.5 py-2 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+            >
               <h3
                 id="daily-prompt-editor-title"
                 className="font-display text-xs font-semibold text-ganshale-text"
@@ -902,28 +908,29 @@ export function DailyReportAiPanel({
                 value={draftPrompt}
                 onChange={(e) => setDraftPrompt(e.target.value)}
                 rows={9}
-                className="w-full resize-y rounded-lg border border-black/[0.08] bg-ganshale-page/50 p-2 font-mono text-[11px] leading-relaxed text-ganshale-text placeholder:text-ganshale-subtle focus:border-ganshale-text/25 focus:outline-none focus:ring-2 focus:ring-ganshale-text/10"
+                className={`w-full resize-y rounded-lg p-2 font-mono text-[11px] leading-relaxed ${GS_FIELD_INPUT_MD_CLASS}`}
                 placeholder={editorPlaceholder}
               />
             </div>
-            <div className="flex flex-wrap justify-end gap-1.5 border-t border-black/[0.06] px-2.5 py-2 sm:px-3">
+            <div
+              className={`flex flex-wrap justify-end gap-1.5 px-2.5 py-2 sm:px-3 ${GS_MODAL_FOOTER_DIVIDER_CLASS}`}
+            >
               <button
                 type="button"
                 onClick={() => setPromptEditorOpen(false)}
-                className="rounded-lg border border-black/[0.08] bg-white px-3 py-1.5 text-xs font-medium text-ganshale-text transition hover:bg-ganshale-page"
+                className={DASHBOARD_HEADER_ACTION_BTN_CLASS}
               >
                 取消
               </button>
               <button
                 type="button"
                 onClick={savePromptAndClose}
-                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
+                className="gs-toolbar-btn gs-toolbar-btn--accent px-3 py-1.5 text-xs"
               >
                 保存
               </button>
             </div>
-          </div>
-        </div>
+        </DashboardModalRoot>
       ) : null}
     </>
   )

@@ -1,44 +1,97 @@
 import { Eye, FileText, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useDailyReportOptional } from '../context/DailyReportContext'
+import { useGanshaleData } from '../context/useGanshaleData'
+import {
+  formatDailyAutoTriggerLabel,
+  loadReportScheduleSettings,
+  REPORT_SCHEDULE_SETTINGS_CHANGED_EVENT,
+} from '../lib/reportScheduleSettings'
+import { compareLocalCalendarDay } from '../lib/timeutil'
+import { DAILY_CHROME_HEADER_TOOLBAR_MIN_H_CLASS } from './dashboardLayout'
 
-/** 顶栏「生成日报」「查看」（仅每日页且 Provider 存在时渲染） */
+/** 与「查看日报」并排时等高（容纳生成日报两行文案） */
+const BTN_TOOLBAR_H = 'h-11 min-h-11 max-h-11'
+
+const BTN_BASE = 'gs-toolbar-btn text-[11px]'
+
+const BTN_VIEW_PAST = 'gs-toolbar-btn gs-toolbar-btn--past text-[11px]'
+const BTN_GENERATE_ACTIVE =
+  'gs-toolbar-btn gs-toolbar-btn--accent flex flex-col items-center justify-center gap-0.5 text-center text-[11px] font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50'
+
+/** 顶栏「生成日报」「查看日报」（仅每日页且 Provider 存在时渲染） */
 export function DailyReportHeaderActions() {
   const report = useDailyReportOptional()
+  const { day } = useGanshaleData()
+  const [autoLabel, setAutoLabel] = useState<string | null>(() => formatDailyAutoTriggerLabel())
+
+  useEffect(() => {
+    const sync = () => setAutoLabel(formatDailyAutoTriggerLabel(loadReportScheduleSettings()))
+    window.addEventListener(REPORT_SCHEDULE_SETTINGS_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(REPORT_SCHEDULE_SETTINGS_CHANGED_EVENT, sync)
+  }, [])
+
   if (!report) return null
 
-  const { streaming, toast, onGenerate, openReportModal } = report
+  const { streaming, toast, onGenerate, openHistoryModal } = report
+  const dayKind = compareLocalCalendarDay(day)
+  const isFuture = dayKind === 'future'
+  const isPast = dayKind === 'past'
+  const viewDisabled = isFuture
+  const generateDisabled = dayKind !== 'today'
 
   return (
-    <div className="relative flex items-center gap-1.5">
+    <div
+      className={[
+        'relative flex items-center gap-1.5',
+        DAILY_CHROME_HEADER_TOOLBAR_MIN_H_CLASS,
+      ].join(' ')}
+    >
       <button
         type="button"
-        onClick={() => openReportModal()}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.1] bg-white px-3 py-1.5 text-[11px] font-medium text-ganshale-text shadow-sm transition hover:bg-ganshale-page"
+        onClick={() => openHistoryModal()}
+        className={[BTN_BASE, BTN_TOOLBAR_H, isPast && !viewDisabled ? BTN_VIEW_PAST : ''].join(
+          ' ',
+        )}
+        disabled={viewDisabled}
       >
-        <Eye className="h-3.5 w-3.5 text-ganshale-muted" strokeWidth={1.8} />
-        查看
+        <Eye
+          className={[
+            'h-3.5 w-3.5',
+            viewDisabled ? 'opacity-50' : isPast ? 'opacity-90' : 'text-ganshale-muted',
+          ].join(' ')}
+          strokeWidth={1.8}
+        />
+        查看日报
       </button>
       <button
         type="button"
         onClick={() => onGenerate()}
-        disabled={streaming}
-        className="inline-flex flex-col items-center justify-center gap-0 rounded-lg border border-blue-900/20 bg-blue-900 px-3 py-1 text-[11px] font-semibold leading-tight text-white shadow-sm transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:opacity-50"
+        className={[BTN_GENERATE_ACTIVE, BTN_TOOLBAR_H].join(' ')}
+        disabled={generateDisabled || streaming}
       >
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px]">
           {streaming ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" strokeWidth={2} />
           ) : (
-            <FileText className="h-3.5 w-3.5 opacity-90" strokeWidth={1.8} />
+            <FileText className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={1.8} />
           )}
           生成日报
         </span>
-        <span className="text-[9px] font-normal leading-none text-white/75">
-          每天 18:00 自动触发
-        </span>
+        {autoLabel ? (
+          <span
+            className={[
+              'whitespace-nowrap text-[9px] font-normal leading-tight',
+              generateDisabled ? 'text-ganshale-subtle' : 'text-white/75',
+            ].join(' ')}
+          >
+            {autoLabel}
+          </span>
+        ) : null}
       </button>
       {toast ? (
         <p
-          className="absolute right-0 top-full z-10 mt-1 max-w-[14rem] rounded-md border border-black/[0.08] bg-white px-2 py-1 text-[10px] text-ganshale-muted shadow-sm"
+          className="gs-popover-surface absolute right-0 top-full z-10 mt-1 max-w-[14rem] rounded-lg px-2 py-1 text-[10px] text-ganshale-muted"
           role="status"
         >
           {toast}

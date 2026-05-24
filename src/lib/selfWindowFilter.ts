@@ -26,7 +26,7 @@ export function isGanshaleSelfWindowRecord(
 
   if (a === 'ganshale.exe') return true
   if (p.includes('ganshale') && a.includes('electron')) return true
-  if (t.includes('干啥了') && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
+  if ((t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
   return false
 }
 

@@ -25,15 +25,36 @@ const DIRECT_ICON_URL: Record<string, string> = {
   'txmeeting.exe': 'https://meeting.tencent.com/favicon.ico',
 }
 
+/** Office 文档类型图标（Iconify / VS Code Icons 文件类型） */
+const DOC_TYPE_ICONIFY: Record<string, string> = {
+  word: 'vscode-icons:file-type-word',
+  excel: 'vscode-icons:file-type-excel',
+  ppt: 'vscode-icons:file-type-powerpoint',
+  pdf: 'vscode-icons:file-type-pdf',
+}
+
+const DOC_TYPE_BRANDS: Record<string, Brand> = {
+  word: { slug: 'microsoftword', hex: '2B579A' },
+  excel: { slug: 'microsoftexcel', hex: '217346' },
+  ppt: { slug: 'microsoftpowerpoint', hex: 'D24726' },
+  pdf: { slug: 'adobeacrobatreader', hex: 'EC1C24' },
+}
+
 /** Iconify `集合:图标名`（不含 .svg），见 https://icon-sets.iconify.design/ */
 const DIRECT_ICONIFY: Record<string, string> = {
   'dingtalk.exe': 'arcticons:dingtalk',
   'dingtalklauncher.exe': 'arcticons:dingtalk',
+  ...DOC_TYPE_ICONIFY,
 }
 
 /** 图表条颜色（与 Simple Icons slug 解耦，避免 slug 仅作占位时串色） */
 const CHART_HEX_OVERRIDE: Record<string, string> = {
   'dingtalk.exe': '#0089FF',
+  vscode: '#007ACC',
+  word: '#2B579A',
+  excel: '#217346',
+  ppt: '#D24726',
+  pdf: '#E60012',
   'wps.exe': '#E60012',
   'et.exe': '#217346',
   'wpp.exe': '#D71345',
@@ -43,6 +64,7 @@ const CHART_HEX_OVERRIDE: Record<string, string> = {
 
 /** Known apps → Simple Icons slug + brand hex（图表着色；图标经 {@link brandIconUrl}）。 */
 const BRANDS: Record<string, Brand> = {
+  vscode: { slug: 'visualstudiocode', hex: '007ACC' },
   'code.exe': { slug: 'visualstudiocode', hex: '007ACC' },
   'code - insiders.exe': { slug: 'visualstudiocode', hex: '24bfa5' },
   'code-insiders.exe': { slug: 'visualstudiocode', hex: '24bfa5' },
@@ -96,7 +118,7 @@ const BRANDS: Record<string, Brand> = {
 
 export function getBrandForApp(app: string): Brand | null {
   const key = normalizeAppKey(app)
-  return BRANDS[key] ?? null
+  return DOC_TYPE_BRANDS[key] ?? BRANDS[key] ?? null
 }
 
 function iconifyUrlWithBrandColor(app: string, baseUrl: string): string {
@@ -162,6 +184,11 @@ export function chartColorFromMap(colorMap: Map<string, string>, app: string): s
 
 export function brandFallbackLetter(app: string): string {
   const key = normalizeAppKey(app)
+  if (key === 'word') return 'W'
+  if (key === 'excel') return 'E'
+  if (key === 'ppt') return 'P'
+  if (key === 'pdf') return 'D'
+  if (key === 'vscode') return 'V'
   const name = key.replace(/\.exe$/i, '').replace(/64$/i, '')
   return (name[0] ?? '?').toUpperCase()
 }

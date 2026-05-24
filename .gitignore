@@ -21,6 +21,9 @@ release
 # Cursor / 本地 IDE
 .cursor/
 
+# 本地下载的 GitHub CLI（scripts/ensure-gh.ps1）
+tools/gh/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

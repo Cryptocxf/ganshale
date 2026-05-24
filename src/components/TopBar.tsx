@@ -35,7 +35,7 @@ export function TopBar({
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-ganshale-border bg-ganshale-page px-3 py-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
             <span className="text-xs font-medium text-ganshale-text">
-              {windowTrackingActive ? '采集中' : '记录中'}
+              {windowTrackingActive ? '正在记录' : '记录中'}
             </span>
             <span className="hidden text-xs text-ganshale-subtle sm:inline">·</span>
             <span className="hidden text-xs text-ganshale-subtle sm:inline">仅本地</span>

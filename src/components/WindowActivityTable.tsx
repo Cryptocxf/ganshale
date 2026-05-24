@@ -3,6 +3,7 @@ import { useGanshaleData } from '../context/useGanshaleData'
 import { formatClock, parseIso } from '../lib/timeutil'
 import { formatDuration } from '../lib/aggregations'
 import { excludeGanshaleSelfWindowEvents } from '../lib/selfWindowFilter'
+import { identityFromEventData } from '../lib/windowAppDisplay'
 
 /** 今日窗口桶：时间、应用、标题/内容、停留时长（与 ActivityWatch currentwindow 一致）。 */
 export function WindowActivityTable({ compact = false }: { compact?: boolean }) {
@@ -34,7 +35,7 @@ export function WindowActivityTable({ compact = false }: { compact?: boolean }) 
 
       <div
         className={[
-          'overflow-hidden rounded-3xl border border-black/[0.06] bg-white/85 shadow-sm',
+          'gs-card overflow-hidden rounded-3xl shadow-sm',
           compact ? 'flex min-h-0 flex-1 flex-col rounded-2xl' : '',
         ].join(' ')}
       >
@@ -82,7 +83,8 @@ export function WindowActivityTable({ compact = false }: { compact?: boolean }) 
                   const t = new Date(parseIso(ev.timestamp))
                   const appRaw = String(ev.data.app ?? '').trim()
                   const appPath = String(ev.data.appPath ?? '').trim()
-                  const appLabel = appRaw || '—'
+                  const appLabel =
+                    identityFromEventData(ev.data).displayName || appRaw.replace(/\.exe$/i, '') || '—'
                   const title = String(ev.data.title ?? '')
                   const iconSize = compact ? 22 : 28
                   const cellY = compact ? 'py-1.5' : 'py-2'
@@ -91,6 +93,7 @@ export function WindowActivityTable({ compact = false }: { compact?: boolean }) 
                       <td className={`px-2 align-middle ${cellY}`}>
                         <AppBrandIcon
                           app={appRaw}
+                          brandKey={identityFromEventData(ev.data).identityKey}
                           appPath={appPath || undefined}
                           size={iconSize}
                           className="rounded-lg"

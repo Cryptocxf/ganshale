@@ -82,7 +82,7 @@ export function DailyDatePicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-2 py-1 font-mono text-[11px] text-ganshale-text shadow-sm transition hover:bg-ganshale-page"
+        className="gs-toolbar-btn h-11 min-h-11 max-h-11 gap-1.5 px-2 font-mono text-[11px] tabular-nums"
         aria-label="选择日期"
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -93,7 +93,7 @@ export function DailyDatePicker({
 
       {open ? (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-[15.5rem] rounded-xl border border-black/[0.08] bg-white p-2 shadow-xl"
+          className="gs-card absolute right-0 top-full z-50 mt-1.5 w-[15.5rem] p-2 shadow-xl"
           role="dialog"
           aria-label="日历"
           onMouseDown={(e) => e.stopPropagation()}
@@ -143,11 +143,11 @@ export function DailyDatePicker({
                   className={[
                     'flex h-7 items-center justify-center rounded-md text-[11px] tabular-nums transition',
                     selected
-                      ? 'bg-zinc-900 font-semibold text-white'
+                      ? 'bg-slate-900 font-semibold text-white shadow-sm'
                       : hasData
-                        ? 'font-semibold text-emerald-700 hover:bg-emerald-50'
-                        : 'text-ganshale-text hover:bg-ganshale-page',
-                    !selected && isToday ? 'ring-1 ring-emerald-500/60 ring-inset' : '',
+                        ? 'font-semibold text-sky-700 hover:bg-sky-50'
+                        : 'text-ganshale-text hover:bg-slate-100',
+                    !selected && isToday ? 'ring-1 ring-sky-400/60 ring-inset' : '',
                   ].join(' ')}
                   aria-label={`${ymd}${hasData ? '，有计时数据' : ''}`}
                   aria-pressed={selected}

@@ -48,6 +48,17 @@ interface GanshaleDesktopBridge {
   getDownloadPath: () => Promise<{ ok: boolean; path?: string; error?: string }>
   /** 在资源管理器中打开目录 */
   openPathInFolder: (targetPath: string) => Promise<{ ok: boolean; error?: string }>
+  /** 当前 userData 目录（Electron 数据根路径） */
+  getStoragePath: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  pickStorageDirectory: () => Promise<{
+    ok: boolean
+    path?: string
+    cancelled?: boolean
+    error?: string
+  }>
+  setStorageDirectory: (
+    nextPath: string,
+  ) => Promise<{ ok: boolean; needsRestart?: boolean; error?: string }>
   /** 主进程 `app.getFileIcon`，返回 PNG data URL */
   getFileIcon: (filePath: string) => Promise<string | null>
   onForegroundWindow: (cb: (payload: LiveForegroundSample | null) => void) => () => void

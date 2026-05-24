@@ -38,12 +38,18 @@ export function AppsView() {
                 const max = rows[0]?.seconds ?? 1
                 const pct = Math.round((r.seconds / max) * 100)
                 return (
-                  <tr key={r.app} className="hover:bg-ganshale-page">
+                  <tr key={r.identityKey} className="hover:bg-ganshale-page">
                     <td className="px-3 py-3 align-middle">
-                      <AppBrandIcon app={r.app} appPath={r.appPath} size={32} className="rounded-lg" />
+                      <AppBrandIcon
+                        app={r.app}
+                        brandKey={r.identityKey}
+                        appPath={r.appPath}
+                        size={32}
+                        className="rounded-lg"
+                      />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-ganshale-text">
-                      {r.app}
+                    <td className="px-4 py-3 text-xs text-ganshale-text">
+                      {r.displayName}
                     </td>
                     <td className="px-4 py-3 text-ganshale-muted">
                       {formatDuration(r.seconds)}
@@ -54,7 +60,7 @@ export function AppsView() {
                           className="h-full rounded-full opacity-90"
                           style={{
                             width: `${pct}%`,
-                            backgroundColor: brandOrNeutralHex(r.app),
+                            backgroundColor: brandOrNeutralHex(r.identityKey),
                           }}
                         />
                       </div>

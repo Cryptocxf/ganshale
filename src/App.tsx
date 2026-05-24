@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DailyDashboard } from './components/DailyDashboard'
 import { MonthlyDashboard } from './components/MonthlyDashboard'
-import { RawDataView } from './components/RawDataView'
+import { DataRecordsView } from './components/data/DataRecordsView'
 import { SettingsView } from './components/SettingsView'
 import { SplashScreen } from './components/brand/SplashScreen'
 import { AppChrome } from './components/shell/AppChrome'
 import { WeeklyDashboard } from './components/WeeklyDashboard'
 import { WindowDwellPrompt } from './components/WindowDwellPrompt'
-import { YearlyDashboard } from './components/YearlyDashboard'
 import { useGanshaleData } from './context/useGanshaleData'
 import { markClientWorkSessionStart } from './lib/clientSessionClock'
-import { APP_DOCUMENT_TITLE } from './constants/brand'
+import { APP_WINDOW_TITLE } from './constants/brand'
 import type { NavKey } from './data/mock'
 
 function isDesktopClient(): boolean {
@@ -21,28 +20,46 @@ const pageTitle: Record<NavKey, string> = {
   daily: '每日',
   weekly: '每周',
   monthly: '每月',
-  yearly: '每年',
   data: '数据',
   settings: '设置',
 }
 
-function ActivePage({ active }: { active: NavKey }) {
-  switch (active) {
-    case 'daily':
-      return <DailyDashboard />
-    case 'weekly':
-      return <WeeklyDashboard />
-    case 'monthly':
-      return <MonthlyDashboard />
-    case 'yearly':
-      return <YearlyDashboard />
-    case 'data':
-      return <RawDataView />
-    case 'settings':
-      return <SettingsView />
-    default:
-      return null
-  }
+const OVERVIEW_NAV: NavKey[] = ['daily', 'weekly', 'monthly']
+
+function overviewPaneClass(active: NavKey, key: NavKey): string {
+  return active === key ? 'flex min-h-0 flex-1 flex-col' : 'hidden'
+}
+
+function ActivePage({
+  active,
+  onNavigate,
+  mountedOverviews,
+}: {
+  active: NavKey
+  onNavigate: (key: NavKey) => void
+  mountedOverviews: ReadonlySet<NavKey>
+}) {
+  return (
+    <>
+      {mountedOverviews.has('daily') ? (
+        <div className={overviewPaneClass(active, 'daily')} aria-hidden={active !== 'daily'}>
+          <DailyDashboard />
+        </div>
+      ) : null}
+      {mountedOverviews.has('weekly') ? (
+        <div className={overviewPaneClass(active, 'weekly')} aria-hidden={active !== 'weekly'}>
+          <WeeklyDashboard />
+        </div>
+      ) : null}
+      {mountedOverviews.has('monthly') ? (
+        <div className={overviewPaneClass(active, 'monthly')} aria-hidden={active !== 'monthly'}>
+          <MonthlyDashboard onNavigate={onNavigate} />
+        </div>
+      ) : null}
+      {active === 'data' ? <DataRecordsView /> : null}
+      {active === 'settings' ? <SettingsView /> : null}
+    </>
+  )
 }
 
 function App() {
@@ -51,11 +68,26 @@ function App() {
     markClientWorkSessionStart()
     setShowSplash(false)
   }, [])
-  const [active, setActive] = useState<NavKey>('daily')
+  const [active, setActiveRaw] = useState<NavKey>('daily')
+  const [mountedOverviews, setMountedOverviews] = useState<ReadonlySet<NavKey>>(
+    () => new Set(['daily']),
+  )
   const { error } = useGanshaleData()
 
+  const setActive = useCallback((key: NavKey) => {
+    if (OVERVIEW_NAV.includes(key)) {
+      setMountedOverviews((prev) => {
+        if (prev.has(key)) return prev
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      })
+    }
+    setActiveRaw(key)
+  }, [])
+
   useEffect(() => {
-    document.title = APP_DOCUMENT_TITLE
+    document.title = APP_WINDOW_TITLE
   }, [])
 
   if (showSplash) {
@@ -68,12 +100,11 @@ function App() {
         {error ? (
           <div
             className={[
-              'rounded-xl border border-red-200/75 bg-red-50/95 px-4 py-3 text-sm text-red-900 shadow-[0_1px_2px_rgb(0_0_0_/_0.04)]',
+              'rounded-xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm text-rose-950 shadow-sm',
               active === 'daily' ||
               active === 'settings' ||
               active === 'weekly' ||
               active === 'monthly' ||
-              active === 'yearly' ||
               active === 'data'
                 ? 'mb-2 shrink-0'
                 : 'mb-6',
@@ -83,7 +114,7 @@ function App() {
             {error}
           </div>
         ) : null}
-        <ActivePage active={active} />
+        <ActivePage active={active} onNavigate={setActive} mountedOverviews={mountedOverviews} />
         <WindowDwellPrompt />
       </>
     </AppChrome>

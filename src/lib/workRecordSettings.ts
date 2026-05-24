@@ -35,6 +35,10 @@ export const AI_SUMMARY_PERIOD_OPTIONS = SYSTEM_RECORD_PERIOD_OPTIONS.filter(
   (o) => o.id !== 'none',
 )
 
+export function systemRecordPeriodLabel(id: SystemRecordPeriodId): string {
+  return SYSTEM_RECORD_PERIOD_OPTIONS.find((o) => o.id === id)?.label ?? id
+}
+
 const STORAGE_KEY_V2 = 'ganshale-work-record-settings-v2'
 const STORAGE_KEY_V1 = 'ganshale-work-record-settings-v1'
 
@@ -65,6 +69,10 @@ function defaultSettings(): WorkRecordSettings {
     aiAutoSummaryEnabled: true,
     systemRecordPeriod: '30m',
   }
+}
+
+export function defaultWorkRecordSettings(): WorkRecordSettings {
+  return defaultSettings()
 }
 
 function normalizePeriodForEnabled(
@@ -127,6 +135,7 @@ function migrateFromV1(): WorkRecordSettings | null {
     if (j.systemRecordPeriod === 'custom') {
       const mins = j.customPeriodMinutes
       if (mins === 10) systemRecordPeriod = '10m'
+      else if (mins === 30) systemRecordPeriod = '30m'
       else if (mins === 60) systemRecordPeriod = '1h'
       else if (mins === 120) systemRecordPeriod = '2h'
       else if (mins === 300) systemRecordPeriod = '5h'

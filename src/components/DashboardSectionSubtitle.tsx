@@ -10,7 +10,7 @@ export function DashboardSectionSubtitle({
   return (
     <p
       className={[
-        'mt-0.5 pl-6 text-[10px] leading-snug text-ganshale-muted sm:pl-[1.625rem]',
+        'mt-0.5 pl-6 text-[11px] leading-snug text-ganshale-muted sm:pl-[1.625rem]',
         className,
       ]
         .filter(Boolean)

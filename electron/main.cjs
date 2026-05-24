@@ -1,6 +1,26 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, shell } = require('electron')
+const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
+
+function storageBootstrapFile() {
+  return path.join(app.getPath('appData'), 'Ganshale', 'storage-path.json')
+}
+
+function applyCustomUserDataPath() {
+  try {
+    const bootstrap = storageBootstrapFile()
+    if (!fs.existsSync(bootstrap)) return
+    const parsed = JSON.parse(fs.readFileSync(bootstrap, 'utf8'))
+    const custom = String(parsed.userDataPath ?? '').trim()
+    if (!custom) return
+    fs.mkdirSync(custom, { recursive: true })
+    app.setPath('userData', custom)
+  } catch (err) {
+    console.warn('[ganshale] storage bootstrap failed', err)
+  }
+}
+
+applyCustomUserDataPath()
 
 /** @type {BrowserWindow | null} */
 let mainBrowserWindow = null
@@ -33,7 +53,7 @@ function isGanshaleSelfWindow(app, title, appPath) {
     .toLowerCase()
     .replace(/\\/g, '/')
   if (p.includes('ganshale') && a.includes('electron')) return true
-  if (t.includes('干啥了') && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
+  if ((t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
   return false
 }
 
@@ -296,12 +316,15 @@ function stopWindowTracking() {
   reflectLastTickMinimized = false
 }
 
-/** @param {{ app: string }} mapped */
+const { resolveForegroundIdentityKey } = require('./windowAppDisplay.cjs')
+
+/** @param {{ app: string; title?: string; appPath?: string }} mapped */
 function trackingForegroundKey(mapped) {
-  return String(mapped.app ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\.exe$/i, '')
+  return resolveForegroundIdentityKey(
+    mapped.app,
+    mapped.title ?? '',
+    mapped.appPath ?? '',
+  )
 }
 
 /**
@@ -683,6 +706,55 @@ ipcMain.handle('ganshale:get-download-path', async () => {
   }
 })
 
+ipcMain.handle('ganshale:get-storage-path', async () => {
+  try {
+    return { ok: true, path: app.getPath('userData') }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+})
+
+ipcMain.handle('ganshale:pick-storage-directory', async () => {
+  try {
+    const win = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showOpenDialog(win ?? undefined, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: '选择数据存储目录',
+    })
+    if (result.canceled || !result.filePaths?.[0]) {
+      return { ok: false, cancelled: true }
+    }
+    return { ok: true, path: result.filePaths[0] }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+})
+
+ipcMain.handle('ganshale:set-storage-directory', async (_event, nextPath) => {
+  try {
+    const p = String(nextPath ?? '').trim()
+    if (!p) return { ok: false, error: '路径为空' }
+    fs.mkdirSync(path.dirname(storageBootstrapFile()), { recursive: true })
+    fs.writeFileSync(
+      storageBootstrapFile(),
+      JSON.stringify({ userDataPath: p }, null, 2),
+      'utf8',
+    )
+    return { ok: true, needsRestart: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+})
+
 ipcMain.handle('ganshale:open-path-in-folder', async (_event, targetPath) => {
   try {
     const p = String(targetPath ?? '').trim()
@@ -700,13 +772,13 @@ ipcMain.handle('ganshale:open-path-in-folder', async (_event, targetPath) => {
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1320,
-    height: 860,
-    minWidth: 960,
-    minHeight: 640,
+    width: 1120,
+    height: 760,
+    minWidth: 1120,
+    minHeight: 760,
     show: false,
-    title: '干啥了 · 一款拯救你于日报、周报、月报水火的工具',
-    backgroundColor: '#f0f0f2',
+    title: '干啥了',
+    backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),
     webPreferences: {

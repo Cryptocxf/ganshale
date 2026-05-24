@@ -1,0 +1,796 @@
+﻿/**
+ * 客户端风格：通过 html[data-skin] 覆盖设计令牌与 .gs-* 组件样式。
+ * 缩略预览使用 [data-skin].skin-preview-scene 继承同一套令牌。
+ */
+
+/* —— 默认（技能前原版） —— */
+html[data-skin='default'],
+html:not([data-skin]),
+[data-skin='default'].skin-preview-scene {
+  --font-sans: 'Times New Roman', Times, 'Microsoft YaHei', '微软雅黑', 'PingFang SC', sans-serif;
+  --font-display: 'Times New Roman', Times, 'Microsoft YaHei', '微软雅黑', 'PingFang SC', serif;
+
+  --color-ganshale-page: #ebeaf0;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #f5f4f8;
+  --color-ganshale-elevated: #f0eff4;
+  --color-ganshale-track: #dfdee6;
+  --color-ganshale-border: #d9d8e0;
+  --color-ganshale-muted: #5f5f68;
+  --color-ganshale-text: #121214;
+  --color-ganshale-subtle: #8f8f99;
+  --color-ganshale-accent: #404040;
+  --color-ganshale-accent-hover: #27272a;
+  --color-ganshale-gold: #3f3f46;
+  --color-ganshale-amber: #52525c;
+  --color-ganshale-mint: #0d9488;
+  --color-ganshale-sky: #64748b;
+  --color-ganshale-coral: #94a3b8;
+
+  --gs-app-glow-a: transparent;
+  --gs-app-glow-b: transparent;
+  --gs-app-grid-opacity: 0;
+  --gs-chrome-border: rgb(0 0 0 / 0.06);
+  --gs-chrome-bg: rgb(255 255 255 / 0.72);
+  --gs-nav-hover-bg: rgb(0 0 0 / 0.04);
+  --gs-nav-active-bg: #18181b;
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  --gs-btn-border: rgb(0 0 0 / 0.08);
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: #1e3a8a;
+  --gs-btn-accent-hover-bg: #1e40af;
+  --gs-btn-accent-shadow: 0 1px 2px rgb(30 58 138 / 0.25);
+  --gs-btn-past-bg: #1e3a8a;
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(0 0 0 / 0.08);
+  --gs-card-bg: rgb(255 255 255 / 0.94);
+  --gs-card-shadow: 0 1px 2px rgb(15 23 42 / 0.045);
+  --gs-card-hover-shadow: 0 2px 4px rgb(15 23 42 / 0.06);
+  --gs-section-icon: var(--color-ganshale-accent);
+  --gs-duration-live-color: #134e4a;
+  --gs-duration-live-glow: none;
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 18% 12%, rgba(13, 148, 136, 0.1), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgba(100, 116, 139, 0.08), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 18% 12%, rgba(248, 113, 113, 0.12), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgba(251, 146, 146, 0.1), transparent 52%);
+  --gs-markdown-quote: rgb(0 0 0 / 0.12);
+  --gs-chart-toggle-border: var(--gs-btn-border);
+  --gs-chart-toggle-bg: var(--gs-btn-bg);
+  --gs-chart-toggle-active-bg: var(--gs-nav-active-bg);
+  --gs-chart-toggle-active-fg: var(--gs-nav-active-fg);
+  --gs-chart-toggle-active-shadow: var(--gs-nav-active-shadow);
+  --gs-weekly-plot-border: var(--color-ganshale-border);
+  --gs-weekly-plot-bg: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-ganshale-elevated) 95%, white),
+    color-mix(in srgb, var(--color-ganshale-surface) 90%, white)
+  );
+  --gs-weekly-plot-grid: color-mix(in srgb, var(--color-ganshale-border) 85%, transparent);
+  --gs-weekly-plot-inset: inset 0 1px 0 rgb(255 255 255 / 0.65);
+  --gs-day-tile-0-border: rgb(196 181 253 / 0.7);
+  --gs-day-tile-0-bg: rgb(245 243 255 / 0.9);
+  --gs-day-tile-1-border: rgb(125 211 252 / 0.7);
+  --gs-day-tile-1-bg: rgb(240 249 255 / 0.9);
+  --gs-day-tile-2-border: rgb(252 211 77 / 0.65);
+  --gs-day-tile-2-bg: rgb(255 251 235 / 0.9);
+  --gs-day-tile-3-border: rgb(110 231 183 / 0.65);
+  --gs-day-tile-3-bg: rgb(236 253 245 / 0.9);
+  --gs-day-tile-4-border: rgb(253 164 175 / 0.7);
+  --gs-day-tile-4-bg: rgb(255 241 242 / 0.9);
+  --gs-day-tile-active-ring-0: rgb(167 139 250 / 0.55);
+  --gs-day-tile-active-ring-1: rgb(56 189 248 / 0.55);
+  --gs-day-tile-active-ring-2: rgb(251 191 36 / 0.55);
+  --gs-day-tile-active-ring-3: rgb(52 211 153 / 0.55);
+  --gs-day-tile-active-ring-4: rgb(251 113 133 / 0.55);
+  --gs-day-tile-weekday-border: color-mix(in srgb, var(--color-ganshale-border) 88%, transparent);
+  --gs-day-tile-weekday-bg: color-mix(in srgb, var(--color-ganshale-surface) 92%, var(--color-ganshale-elevated));
+  --gs-day-tile-sat-border: color-mix(in srgb, var(--color-ganshale-sky) 72%, var(--color-ganshale-border));
+  --gs-day-tile-sun-border: color-mix(in srgb, var(--color-ganshale-coral) 72%, var(--color-ganshale-border));
+  --gs-day-tile-today-line: var(--color-ganshale-accent);
+  --gs-day-tile-active-ring: color-mix(in srgb, var(--color-ganshale-accent) 52%, transparent);
+  --gs-report-detail-bg: color-mix(in srgb, var(--color-ganshale-page) 55%, transparent);
+  --gs-report-detail-hover: rgb(0 0 0 / 0.04);
+  --gs-report-detail-expanded-bg: color-mix(in srgb, var(--color-ganshale-surface) 88%, white);
+  --gs-category-bar-plot-bg: color-mix(in srgb, var(--color-ganshale-page) 35%, transparent);
+  --gs-category-bar-plot-border: var(--color-ganshale-border);
+  --gs-modal-bg: var(--gs-card-bg);
+  --gs-modal-border: var(--gs-card-border);
+  --gs-modal-shadow: 0 16px 48px rgb(15 23 42 / 0.14), var(--gs-card-shadow);
+  --gs-field-bg: var(--color-ganshale-surface);
+  --gs-field-border: var(--color-ganshale-border);
+  --gs-field-bg-disabled: color-mix(in srgb, var(--color-ganshale-page) 75%, transparent);
+  color-scheme: light;
+}
+
+html[data-skin='default'] .gs-app-bg,
+html:not([data-skin]) .gs-app-bg {
+  background-color: #ffffff;
+  background-image: none;
+}
+
+html[data-skin='default'] .gs-app-bg::before,
+html:not([data-skin]) .gs-app-bg::before {
+  display: none;
+}
+
+html[data-skin='default'] .gs-card,
+html:not([data-skin]) .gs-card {
+  backdrop-filter: none;
+}
+
+/* —— 琥珀暮光 —— */
+html[data-skin='ember'],
+[data-skin='ember'].skin-preview-scene {
+  --font-sans: 'Georgia', 'Noto Serif SC', 'Songti SC', 'PingFang SC', 'Microsoft YaHei', serif;
+  --font-display: 'Georgia', 'Noto Serif SC', 'Songti SC', serif;
+
+  --color-ganshale-page: #f5ebe0;
+  --color-ganshale-surface: #fffcf7;
+  --color-ganshale-sidebar: #efe4d6;
+  --color-ganshale-elevated: #faf3eb;
+  --color-ganshale-track: #e8d5c4;
+  --color-ganshale-border: #ddc9b5;
+  --color-ganshale-muted: #7a5c44;
+  --color-ganshale-text: #2a1810;
+  --color-ganshale-subtle: #a68b72;
+  --color-ganshale-accent: #c2410c;
+  --color-ganshale-accent-hover: #9a3412;
+  --color-ganshale-gold: #d97706;
+  --color-ganshale-amber: #b45309;
+  --color-ganshale-mint: #15803d;
+  --color-ganshale-sky: #b45309;
+  --color-ganshale-coral: #ea580c;
+
+  --gs-app-glow-a: rgb(234 88 12 / 0.14);
+  --gs-app-glow-b: rgb(217 119 6 / 0.1);
+  --gs-app-grid-opacity: 0;
+  --gs-chrome-border: rgb(42 24 16 / 0.1);
+  --gs-chrome-bg: rgb(255 252 247 / 0.82);
+  --gs-nav-hover-bg: rgb(194 65 12 / 0.08);
+  --gs-nav-active-bg: linear-gradient(145deg, #7c2d12 0%, #c2410c 48%, #9a3412 100%);
+  --gs-nav-active-fg: #fff7ed;
+  --gs-nav-active-shadow: 0 1px 3px rgb(124 45 18 / 0.35), 0 0 20px rgb(234 88 12 / 0.18);
+  --gs-btn-border: rgb(221 201 181);
+  --gs-btn-bg: rgb(255 252 247 / 0.96);
+  --gs-btn-accent-bg: linear-gradient(145deg, #ea580c 0%, #c2410c 55%, #9a3412 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(145deg, #f97316 0%, #ea580c 55%, #c2410c 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(194 65 12 / 0.35), 0 0 18px rgb(234 88 12 / 0.15);
+  --gs-btn-past-bg: linear-gradient(145deg, #44403c 0%, #292524 100%);
+  --gs-card-radius: 0.875rem;
+  --gs-card-border: rgb(42 24 16 / 0.1);
+  --gs-card-bg: linear-gradient(168deg, rgb(255 252 247 / 0.98) 0%, rgb(250 243 235 / 0.94) 100%);
+  --gs-card-shadow: 0 1px 2px rgb(42 24 16 / 0.06), 0 8px 24px rgb(194 65 12 / 0.05);
+  --gs-card-hover-shadow: 0 12px 28px rgb(234 88 12 / 0.1);
+  --gs-section-icon: var(--color-ganshale-accent);
+  --gs-duration-live-color: #9a3412;
+  --gs-duration-live-glow: 0 0 26px rgb(234 88 12 / 0.28);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 14% 10%, rgb(234 88 12 / 0.14), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 90% 78%, rgb(217 119 6 / 0.1), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 14% 10%, rgb(180 83 9 / 0.12), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 90% 78%, rgb(194 65 12 / 0.1), transparent 52%);
+  --gs-markdown-quote: rgb(194 65 12 / 0.4);
+  color-scheme: light;
+}
+
+html[data-skin='ember'] .gs-app-bg {
+  background-image: radial-gradient(ellipse 110% 65% at 8% -5%, var(--gs-app-glow-a), transparent 52%),
+    radial-gradient(ellipse 85% 50% at 95% 15%, var(--gs-app-glow-b), transparent 48%);
+}
+
+html[data-skin='ember'] .gs-app-bg::before {
+  display: none;
+}
+
+html[data-skin='ember'] .gs-card {
+  backdrop-filter: none;
+}
+
+/* —— 极简白 —— */
+html[data-skin='minimal'],
+[data-skin='minimal'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', '微软雅黑', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #ffffff;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #fafafa;
+  --color-ganshale-elevated: #fafafa;
+  --color-ganshale-track: #f4f4f5;
+  --color-ganshale-border: #e4e4e7;
+  --color-ganshale-muted: #71717a;
+  --color-ganshale-text: #18181b;
+  --color-ganshale-subtle: #a1a1aa;
+  --color-ganshale-accent: #18181b;
+  --color-ganshale-accent-hover: #27272a;
+  --color-ganshale-mint: #059669;
+  --color-ganshale-sky: #52525b;
+
+  --gs-app-glow-a: transparent;
+  --gs-app-glow-b: transparent;
+  --gs-app-grid-opacity: 0;
+  --gs-chrome-border: #f4f4f5;
+  --gs-chrome-bg: rgb(255 255 255 / 0.9);
+  --gs-nav-hover-bg: #f4f4f5;
+  --gs-nav-active-bg: #18181b;
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: none;
+  --gs-btn-border: #e4e4e7;
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: #18181b;
+  --gs-btn-accent-hover-bg: #27272a;
+  --gs-btn-accent-shadow: none;
+  --gs-btn-past-bg: #3f3f46;
+  --gs-card-radius: 0.5rem;
+  --gs-card-border: #e4e4e7;
+  --gs-card-bg: #ffffff;
+  --gs-card-shadow: none;
+  --gs-card-hover-shadow: 0 4px 12px rgb(0 0 0 / 0.04);
+  --gs-section-icon: #71717a;
+  --gs-duration-live-color: #18181b;
+  --gs-duration-live-glow: none;
+  --gs-office-today: none;
+  --gs-office-past: none;
+  --gs-markdown-quote: #d4d4d8;
+}
+
+html[data-skin='minimal'] .gs-app-bg {
+  background-image: none;
+}
+
+html[data-skin='minimal'] .gs-app-bg::before {
+  display: none;
+}
+
+html[data-skin='minimal'] .gs-card {
+  backdrop-filter: none;
+}
+
+html[data-skin='minimal'] .gs-card:hover {
+  border-color: #d4d4d8;
+}
+
+/* —— 墨纸 —— */
+html[data-skin='paper'],
+[data-skin='paper'].skin-preview-scene {
+  --font-sans: 'LXGW WenKai', 'LXGW WenKai Screen', 'PingFang SC', 'Microsoft YaHei', '微软雅黑', sans-serif;
+  --font-display: 'LXGW WenKai', 'LXGW WenKai Screen', 'PingFang SC', serif;
+
+  --color-ganshale-page: #f3efe6;
+  --color-ganshale-surface: #fffcf7;
+  --color-ganshale-sidebar: #ebe6dc;
+  --color-ganshale-elevated: #f8f4ec;
+  --color-ganshale-track: #ddd6c8;
+  --color-ganshale-border: #d4cdc0;
+  --color-ganshale-muted: #5c564c;
+  --color-ganshale-text: #1c1915;
+  --color-ganshale-subtle: #8a8276;
+  --color-ganshale-accent: #b84a1f;
+  --color-ganshale-accent-hover: #9a3d18;
+  --color-ganshale-mint: #2d6a5f;
+  --color-ganshale-sky: #3d6b8c;
+  --color-ganshale-coral: #c45c4a;
+
+  --gs-app-glow-a: rgb(184 74 31 / 0.07);
+  --gs-app-glow-b: rgb(45 106 95 / 0.06);
+  --gs-app-grid-opacity: 0.4;
+  --gs-chrome-border: rgb(28 25 21 / 0.08);
+  --gs-chrome-bg: rgb(255 252 247 / 0.82);
+  --gs-nav-hover-bg: rgb(28 25 21 / 0.05);
+  --gs-nav-active-bg: linear-gradient(165deg, #1f1c18 0%, #2e2923 100%);
+  --gs-nav-active-fg: #faf6ef;
+  --gs-nav-active-shadow: 0 1px 2px rgb(28 25 21 / 0.18);
+  --gs-btn-border: rgb(28 25 21 / 0.1);
+  --gs-btn-bg: rgb(255 252 247 / 0.95);
+  --gs-btn-accent-bg: linear-gradient(165deg, #c45a2a 0%, #b84a1f 48%, #9a3d18 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(165deg, #d06534 0%, #c45a2a 48%, #a8441c 100%);
+  --gs-btn-accent-shadow: 0 1px 3px rgb(154 61 24 / 0.3);
+  --gs-btn-past-bg: linear-gradient(165deg, #2a2620 0%, #1c1915 100%);
+  --gs-card-radius: 0.875rem;
+  --gs-card-border: rgb(28 25 21 / 0.08);
+  --gs-card-bg: linear-gradient(168deg, rgb(255 252 247 / 0.98) 0%, rgb(252 248 240 / 0.94) 100%);
+  --gs-card-shadow: 0 1px 2px rgb(28 25 21 / 0.05), 0 8px 24px rgb(28 25 21 / 0.04);
+  --gs-card-hover-shadow: 0 12px 28px rgb(28 25 21 / 0.05);
+  --gs-section-icon: var(--color-ganshale-accent);
+  --gs-duration-live-color: #1a4d42;
+  --gs-duration-live-glow: 0 0 24px rgb(45 106 95 / 0.18);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 18% 12%, rgb(45 106 95 / 0.12), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgb(184 74 31 / 0.08), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 18% 12%, rgb(196 92 74 / 0.14), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgb(184 74 31 / 0.1), transparent 52%);
+  --gs-markdown-quote: rgb(184 74 31 / 0.35);
+}
+
+html[data-skin='paper'] .gs-app-bg {
+  background-image: radial-gradient(ellipse 120% 70% at 8% -8%, var(--gs-app-glow-a), transparent 52%),
+    radial-gradient(ellipse 90% 55% at 96% 12%, var(--gs-app-glow-b), transparent 48%);
+}
+
+html[data-skin='paper'] .gs-app-bg::before {
+  opacity: 0.42;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
+  mask-image: none;
+}
+
+html[data-skin='paper'] .gs-card {
+  backdrop-filter: none;
+}
+
+/* —— 樱暮薄雾 —— */
+html[data-skin='sakura'],
+[data-skin='sakura'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', '微软雅黑', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', 'PingFang SC', sans-serif;
+
+  --color-ganshale-page: #faf5f8;
+  --color-ganshale-surface: #fffbfd;
+  --color-ganshale-sidebar: #fdf2f8;
+  --color-ganshale-elevated: #fce7f3;
+  --color-ganshale-track: #fbcfe8;
+  --color-ganshale-border: #f9a8d4;
+  --color-ganshale-muted: #9d174d;
+  --color-ganshale-text: #500724;
+  --color-ganshale-subtle: #f472b6;
+  --color-ganshale-accent: #db2777;
+  --color-ganshale-accent-hover: #be185d;
+  --color-ganshale-gold: #ec4899;
+  --color-ganshale-amber: #f43f5e;
+  --color-ganshale-mint: #e11d48;
+  --color-ganshale-sky: #f472b6;
+  --color-ganshale-coral: #fb7185;
+
+  --gs-app-glow-a: rgb(219 39 119 / 0.12);
+  --gs-app-glow-b: rgb(244 114 182 / 0.1);
+  --gs-app-grid-opacity: 0.22;
+  --gs-chrome-border: rgb(249 168 212 / 0.55);
+  --gs-chrome-bg: rgb(255 251 253 / 0.8);
+  --gs-nav-hover-bg: rgb(219 39 119 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #9d174d 0%, #db2777 52%, #f472b6 100%);
+  --gs-nav-active-fg: #fff1f2;
+  --gs-nav-active-shadow: 0 1px 3px rgb(157 23 77 / 0.32), 0 0 22px rgb(244 114 182 / 0.22);
+  --gs-btn-border: rgb(249 168 212 / 0.65);
+  --gs-btn-bg: rgb(255 251 253 / 0.96);
+  --gs-btn-accent-bg: linear-gradient(135deg, #db2777 0%, #f472b6 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #be185d 0%, #ec4899 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(219 39 119 / 0.32), 0 0 18px rgb(244 114 182 / 0.18);
+  --gs-btn-past-bg: linear-gradient(135deg, #831843 0%, #9d174d 100%);
+  --gs-card-radius: 1rem;
+  --gs-card-border: rgb(249 168 212 / 0.55);
+  --gs-card-bg: rgb(255 251 253 / 0.92);
+  --gs-card-shadow: 0 1px 2px rgb(80 7 36 / 0.06), 0 8px 24px rgb(219 39 119 / 0.06);
+  --gs-card-hover-shadow: 0 12px 28px rgb(219 39 119 / 0.12);
+  --gs-section-icon: #db2777;
+  --gs-duration-live-color: #9d174d;
+  --gs-duration-live-glow: 0 0 26px rgb(244 114 182 / 0.32);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 16% 8%, rgb(244 114 182 / 0.16), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgb(251 113 133 / 0.12), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 16% 8%, rgb(225 29 72 / 0.12), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 88% 78%, rgb(219 39 119 / 0.1), transparent 52%);
+  --gs-markdown-quote: rgb(219 39 119 / 0.42);
+  color-scheme: light;
+}
+
+html[data-skin='sakura'] .gs-app-bg {
+  background-image: radial-gradient(ellipse 100% 58% at 22% -8%, var(--gs-app-glow-a), transparent 54%),
+    radial-gradient(ellipse 75% 48% at 92% 8%, var(--gs-app-glow-b), transparent 50%);
+}
+
+html[data-skin='sakura'] .gs-app-bg::before {
+  opacity: var(--gs-app-grid-opacity);
+  background-image: radial-gradient(circle at 20% 30%, rgb(251 207 232 / 0.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 70% 60%, rgb(244 114 182 / 0.2) 0 1px, transparent 2px);
+  background-size: 18px 18px, 24px 24px;
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 25%, black 15%, transparent 72%);
+}
+
+html[data-skin='sakura'] .gs-card:hover {
+  border-color: rgb(244 114 182 / 0.75);
+}
+
+/* —— 深空 —— */
+html[data-skin='dark'],
+[data-skin='dark'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #0b1220;
+  --color-ganshale-surface: #131b2e;
+  --color-ganshale-sidebar: #0f1628;
+  --color-ganshale-elevated: #1a2438;
+  --color-ganshale-track: #243044;
+  --color-ganshale-border: #2a3548;
+  --color-ganshale-muted: #94a3b8;
+  --color-ganshale-text: #e2e8f0;
+  --color-ganshale-subtle: #64748b;
+  --color-ganshale-accent: #06b6d4;
+  --color-ganshale-accent-hover: #0891b2;
+  --color-ganshale-mint: #22d3ee;
+  --color-ganshale-sky: #38bdf8;
+  --color-ganshale-coral: #fb7185;
+
+  --gs-app-glow-a: rgb(6 182 212 / 0.15);
+  --gs-app-glow-b: rgb(37 99 235 / 0.1);
+  --gs-app-grid-opacity: 0.22;
+  --gs-chrome-border: rgb(148 163 184 / 0.12);
+  --gs-chrome-bg: rgb(11 18 32 / 0.88);
+  --gs-nav-hover-bg: rgb(255 255 255 / 0.06);
+  --gs-nav-active-bg: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --gs-nav-active-fg: #0b1220;
+  --gs-nav-active-shadow: 0 0 20px rgb(6 182 212 / 0.35);
+  --gs-btn-border: rgb(148 163 184 / 0.2);
+  --gs-btn-bg: rgb(19 27 46 / 0.95);
+  --gs-btn-accent-bg: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #0e7490 0%, #22d3ee 100%);
+  --gs-btn-accent-shadow: 0 0 20px rgb(6 182 212 / 0.3);
+  --gs-btn-past-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(148 163 184 / 0.14);
+  --gs-card-bg: rgb(19 27 46 / 0.92);
+  --gs-card-shadow: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --gs-card-hover-shadow: 0 8px 24px rgb(6 182 212 / 0.08);
+  --gs-section-icon: #22d3ee;
+  --gs-duration-live-color: #67e8f9;
+  --gs-duration-live-glow: 0 0 32px rgb(6 182 212 / 0.45);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(6 182 212 / 0.2), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 92% 75%, rgb(37 99 235 / 0.12), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(100 116 139 / 0.18), transparent 55%);
+  --gs-markdown-quote: rgb(6 182 212 / 0.5);
+  --gs-chart-toggle-border: rgb(148 163 184 / 0.22);
+  --gs-chart-toggle-bg: rgb(26 36 56 / 0.92);
+  --gs-chart-toggle-active-bg: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --gs-chart-toggle-active-fg: #0b1220;
+  --gs-chart-toggle-active-shadow: 0 0 14px rgb(6 182 212 / 0.28);
+  --gs-weekly-plot-border: rgb(148 163 184 / 0.2);
+  --gs-weekly-plot-bg: linear-gradient(
+    to bottom,
+    rgb(30 41 59 / 0.55),
+    rgb(19 27 46 / 0.92)
+  );
+  --gs-weekly-plot-grid: rgb(148 163 184 / 0.16);
+  --gs-weekly-plot-inset: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --gs-day-tile-0-border: rgb(56 189 248 / 0.38);
+  --gs-day-tile-0-bg: rgb(8 47 73 / 0.45);
+  --gs-day-tile-1-border: rgb(34 211 238 / 0.35);
+  --gs-day-tile-1-bg: rgb(22 78 99 / 0.4);
+  --gs-day-tile-2-border: rgb(251 191 36 / 0.32);
+  --gs-day-tile-2-bg: rgb(69 49 12 / 0.42);
+  --gs-day-tile-3-border: rgb(52 211 153 / 0.32);
+  --gs-day-tile-3-bg: rgb(6 56 45 / 0.42);
+  --gs-day-tile-4-border: rgb(251 113 133 / 0.35);
+  --gs-day-tile-4-bg: rgb(76 17 48 / 0.4);
+  --gs-day-tile-active-ring-0: rgb(34 211 238 / 0.65);
+  --gs-day-tile-active-ring-1: rgb(6 182 212 / 0.65);
+  --gs-day-tile-active-ring-2: rgb(251 191 36 / 0.6);
+  --gs-day-tile-active-ring-3: rgb(52 211 153 / 0.6);
+  --gs-day-tile-active-ring-4: rgb(251 113 133 / 0.6);
+  --gs-report-detail-bg: rgb(19 27 46 / 0.55);
+  --gs-report-detail-hover: rgb(255 255 255 / 0.06);
+  --gs-report-detail-expanded-bg: rgb(26 36 56 / 0.92);
+  --gs-category-bar-plot-bg: rgb(15 23 42 / 0.45);
+  --gs-category-bar-plot-border: rgb(148 163 184 / 0.18);
+  --gs-modal-bg: rgb(19 27 46 / 0.98);
+  --gs-modal-border: rgb(148 163 184 / 0.18);
+  --gs-modal-shadow: 0 20px 56px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --gs-field-bg: rgb(26 36 56 / 0.95);
+  --gs-field-border: rgb(148 163 184 / 0.22);
+  --gs-field-bg-disabled: rgb(15 23 42 / 0.65);
+  color-scheme: dark;
+}
+
+html[data-skin='dark'] .gs-app-bg {
+  background-image: radial-gradient(ellipse 90% 55% at 50% -12%, var(--gs-app-glow-a), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, var(--gs-app-glow-b), transparent 50%);
+}
+
+html[data-skin='dark'] .gs-app-bg::before {
+  opacity: var(--gs-app-grid-opacity);
+  background-image: linear-gradient(rgb(148 163 184 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 30%, black 15%, transparent 75%);
+}
+
+html[data-skin='dark'] .gs-chrome-header {
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.04);
+}
+
+html[data-skin='dark'] .gs-card:hover {
+  border-color: rgb(6 182 212 / 0.25);
+}
+
+/* —— 极光紫 —— */
+html[data-skin='aurora'],
+[data-skin='aurora'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #f5f3ff;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #faf5ff;
+  --color-ganshale-elevated: #faf5ff;
+  --color-ganshale-track: #e9e5ff;
+  --color-ganshale-border: #ddd6fe;
+  --color-ganshale-muted: #6b7280;
+  --color-ganshale-text: #1e1b4b;
+  --color-ganshale-subtle: #a78bfa;
+  --color-ganshale-accent: #6366f1;
+  --color-ganshale-accent-hover: #4f46e5;
+  --color-ganshale-mint: #8b5cf6;
+  --color-ganshale-sky: #a855f7;
+
+  --gs-app-glow-a: rgb(99 102 241 / 0.12);
+  --gs-app-glow-b: rgb(168 85 247 / 0.1);
+  --gs-app-grid-opacity: 0.25;
+  --gs-chrome-border: rgb(167 139 250 / 0.35);
+  --gs-chrome-bg: rgb(255 255 255 / 0.78);
+  --gs-nav-hover-bg: rgb(99 102 241 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #a855f7 100%);
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 1px 3px rgb(79 70 229 / 0.35), 0 0 24px rgb(168 85 247 / 0.2);
+  --gs-btn-border: rgb(167 139 250 / 0.5);
+  --gs-btn-bg: rgb(255 255 255 / 0.95);
+  --gs-btn-accent-bg: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(99 102 241 / 0.35), 0 0 20px rgb(168 85 247 / 0.2);
+  --gs-btn-past-bg: linear-gradient(135deg, #3730a3 0%, #5b21b6 100%);
+  --gs-card-radius: 0.875rem;
+  --gs-card-border: rgb(167 139 250 / 0.45);
+  --gs-card-bg: rgb(255 255 255 / 0.9);
+  --gs-card-shadow: 0 1px 2px rgb(99 102 241 / 0.08), 0 8px 24px rgb(168 85 247 / 0.06);
+  --gs-card-hover-shadow: 0 12px 28px rgb(99 102 241 / 0.12);
+  --gs-section-icon: #7c3aed;
+  --gs-duration-live-color: #5b21b6;
+  --gs-duration-live-glow: 0 0 28px rgb(168 85 247 / 0.3);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(99 102 241 / 0.14), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 92% 75%, rgb(168 85 247 / 0.12), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(148 163 184 / 0.12), transparent 55%);
+  --gs-markdown-quote: rgb(99 102 241 / 0.45);
+}
+
+html[data-skin='aurora'] .gs-app-bg {
+  background-image: radial-gradient(ellipse 100% 60% at 20% -10%, var(--gs-app-glow-a), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 90% 10%, var(--gs-app-glow-b), transparent 50%);
+}
+
+html[data-skin='aurora'] .gs-app-bg::before {
+  opacity: var(--gs-app-grid-opacity);
+  background-image: linear-gradient(rgb(167 139 250 / 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(167 139 250 / 0.12) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 10%, transparent 70%);
+}
+
+/* 娣辩┖ + 榛戣壊鑳屾櫙 */
+html[data-skin='dark'][data-bg='black'] .gs-nav-pill--active {
+  --gs-nav-active-bg: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --gs-nav-active-fg: #0b1220;
+}
+
+/* 鈥斺€?娣辨捣钃?鈥斺€?*/
+html[data-skin='ocean'],
+[data-skin='ocean'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #e0f2fe;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #f0f9ff;
+  --color-ganshale-elevated: #f0f9ff;
+  --color-ganshale-track: #bae6fd;
+  --color-ganshale-border: #bae6fd;
+  --color-ganshale-muted: #0369a1;
+  --color-ganshale-text: #0c4a6e;
+  --color-ganshale-subtle: #7dd3fc;
+  --color-ganshale-accent: #0284c7;
+  --color-ganshale-mint: #06b6d4;
+  --color-ganshale-sky: #0ea5e9;
+  --gs-app-glow-a: rgb(2 132 199 / 0.14);
+  --gs-app-glow-b: rgb(14 165 233 / 0.1);
+  --gs-app-grid-opacity: 0.28;
+  --gs-chrome-border: rgb(186 230 253);
+  --gs-chrome-bg: rgb(255 255 255 / 0.8);
+  --gs-nav-hover-bg: rgb(2 132 199 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 0 18px rgb(2 132 199 / 0.25);
+  --gs-btn-border: rgb(186 230 253);
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(2 132 199 / 0.35);
+  --gs-btn-past-bg: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(186 230 253);
+  --gs-card-bg: rgb(255 255 255 / 0.9);
+  --gs-card-shadow: 0 1px 3px rgb(12 74 110 / 0.06);
+  --gs-card-hover-shadow: 0 8px 22px rgb(2 132 199 / 0.1);
+  --gs-section-icon: #0284c7;
+  --gs-duration-live-color: #0369a1;
+  --gs-duration-live-glow: 0 0 24px rgb(14 165 233 / 0.3);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(6 182 212 / 0.16), transparent 55%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(2 132 199 / 0.1), transparent 55%);
+  --gs-markdown-quote: rgb(2 132 199 / 0.45);
+}
+
+html[data-skin='ocean'] .gs-app-bg::before {
+  opacity: 0.3;
+  background-image: linear-gradient(rgb(14 165 233 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(14 165 233 / 0.1) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* —— 森林绿 —— */
+html[data-skin='forest'],
+[data-skin='forest'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #ecfdf5;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #f0fdf4;
+  --color-ganshale-elevated: #f0fdf4;
+  --color-ganshale-track: #bbf7d0;
+  --color-ganshale-border: #bbf7d0;
+  --color-ganshale-muted: #047857;
+  --color-ganshale-text: #14532d;
+  --color-ganshale-subtle: #6ee7b7;
+  --color-ganshale-accent: #059669;
+  --color-ganshale-mint: #10b981;
+  --color-ganshale-sky: #34d399;
+  --gs-app-glow-a: rgb(5 150 105 / 0.12);
+  --gs-app-glow-b: rgb(16 185 129 / 0.08);
+  --gs-app-grid-opacity: 0.22;
+  --gs-chrome-border: rgb(187 247 208);
+  --gs-chrome-bg: rgb(255 255 255 / 0.82);
+  --gs-nav-hover-bg: rgb(5 150 105 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #14532d 0%, #059669 100%);
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 0 16px rgb(5 150 105 / 0.2);
+  --gs-btn-border: rgb(187 247 208);
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #047857 0%, #059669 100%);
+  --gs-btn-accent-shadow: 0 1px 3px rgb(5 150 105 / 0.3);
+  --gs-btn-past-bg: linear-gradient(135deg, #14532d 0%, #166534 100%);
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(187 247 208);
+  --gs-card-bg: rgb(255 255 255 / 0.92);
+  --gs-card-shadow: 0 1px 2px rgb(20 83 45 / 0.05);
+  --gs-card-hover-shadow: 0 8px 20px rgb(5 150 105 / 0.08);
+  --gs-section-icon: #059669;
+  --gs-duration-live-color: #047857;
+  --gs-duration-live-glow: 0 0 22px rgb(16 185 129 / 0.25);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(16 185 129 / 0.14), transparent 55%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(74 222 128 / 0.12), transparent 55%);
+  --gs-markdown-quote: rgb(5 150 105 / 0.4);
+}
+
+html[data-skin='forest'] .gs-app-bg::before {
+  display: none;
+}
+
+/* —— 霓虹赛博 —— */
+html[data-skin='neon'],
+[data-skin='neon'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #0a0a0f;
+  --color-ganshale-surface: #12121a;
+  --color-ganshale-sidebar: #0e0e14;
+  --color-ganshale-elevated: #1a1a24;
+  --color-ganshale-track: #2a2a38;
+  --color-ganshale-border: #2e2e3a;
+  --color-ganshale-muted: #a1a1aa;
+  --color-ganshale-text: #f4f4f5;
+  --color-ganshale-subtle: #71717a;
+  --color-ganshale-accent: #ec4899;
+  --color-ganshale-mint: #22d3ee;
+  --color-ganshale-sky: #f472b6;
+  --gs-app-glow-a: rgb(236 72 153 / 0.15);
+  --gs-app-glow-b: rgb(34 211 238 / 0.12);
+  --gs-app-grid-opacity: 0.35;
+  --gs-chrome-border: rgb(236 72 153 / 0.2);
+  --gs-chrome-bg: rgb(10 10 15 / 0.9);
+  --gs-nav-hover-bg: rgb(255 255 255 / 0.05);
+  --gs-nav-active-bg: linear-gradient(135deg, #ec4899 0%, #22d3ee 100%);
+  --gs-nav-active-fg: #0a0a0f;
+  --gs-nav-active-shadow: 0 0 24px rgb(236 72 153 / 0.4), 0 0 32px rgb(34 211 238 / 0.25);
+  --gs-btn-border: rgb(46 46 58);
+  --gs-btn-bg: rgb(18 18 26 / 0.95);
+  --gs-btn-accent-bg: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #22d3ee 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #db2777 0%, #9333ea 50%, #06b6d4 100%);
+  --gs-btn-accent-shadow: 0 0 20px rgb(236 72 153 / 0.35);
+  --gs-btn-past-bg: linear-gradient(135deg, #3b0764 0%, #164e63 100%);
+  --gs-card-radius: 0.5rem;
+  --gs-card-border: rgb(236 72 153 / 0.25);
+  --gs-card-bg: rgb(18 18 26 / 0.95);
+  --gs-card-shadow: 0 0 0 1px rgb(34 211 238 / 0.08), 0 4px 20px rgb(0 0 0 / 0.4);
+  --gs-card-hover-shadow: 0 0 24px rgb(236 72 153 / 0.15), 0 0 32px rgb(34 211 238 / 0.1);
+  --gs-section-icon: #22d3ee;
+  --gs-duration-live-color: #67e8f9;
+  --gs-duration-live-glow: 0 0 32px rgb(34 211 238 / 0.5), 0 0 48px rgb(236 72 153 / 0.2);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(236 72 153 / 0.2), transparent 55%),
+    radial-gradient(ellipse 75% 60% at 92% 75%, rgb(34 211 238 / 0.15), transparent 52%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(113 113 122 / 0.15), transparent 55%);
+  --gs-markdown-quote: rgb(236 72 153 / 0.55);
+  --gs-chart-toggle-border: rgb(236 72 153 / 0.28);
+  --gs-chart-toggle-bg: rgb(26 26 38 / 0.95);
+  --gs-chart-toggle-active-bg: linear-gradient(135deg, #ec4899 0%, #22d3ee 100%);
+  --gs-chart-toggle-active-fg: #0a0a0f;
+  --gs-chart-toggle-active-shadow: 0 0 14px rgb(236 72 153 / 0.35);
+  --gs-weekly-plot-border: rgb(236 72 153 / 0.22);
+  --gs-weekly-plot-bg: linear-gradient(to bottom, rgb(30 27 46 / 0.65), rgb(18 18 26 / 0.95));
+  --gs-weekly-plot-grid: rgb(113 113 122 / 0.22);
+  --gs-weekly-plot-inset: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --gs-day-tile-0-border: rgb(236 72 153 / 0.4);
+  --gs-day-tile-0-bg: rgb(76 29 79 / 0.35);
+  --gs-day-tile-1-border: rgb(34 211 238 / 0.38);
+  --gs-day-tile-1-bg: rgb(22 78 99 / 0.38);
+  --gs-day-tile-2-border: rgb(251 191 36 / 0.32);
+  --gs-day-tile-2-bg: rgb(69 49 12 / 0.38);
+  --gs-day-tile-3-border: rgb(52 211 153 / 0.3);
+  --gs-day-tile-3-bg: rgb(6 56 45 / 0.38);
+  --gs-day-tile-4-border: rgb(244 114 182 / 0.35);
+  --gs-day-tile-4-bg: rgb(80 28 56 / 0.38);
+  --gs-day-tile-active-ring-0: rgb(236 72 153 / 0.65);
+  --gs-day-tile-active-ring-1: rgb(34 211 238 / 0.65);
+  --gs-day-tile-active-ring-2: rgb(251 191 36 / 0.55);
+  --gs-day-tile-active-ring-3: rgb(52 211 153 / 0.55);
+  --gs-day-tile-active-ring-4: rgb(244 114 182 / 0.6);
+  --gs-report-detail-bg: rgb(18 18 26 / 0.65);
+  --gs-report-detail-hover: rgb(255 255 255 / 0.06);
+  --gs-report-detail-expanded-bg: rgb(26 26 38 / 0.92);
+  --gs-category-bar-plot-bg: rgb(10 10 15 / 0.5);
+  --gs-category-bar-plot-border: rgb(46 46 58);
+  --gs-modal-bg: rgb(18 18 26 / 0.98);
+  --gs-modal-border: rgb(236 72 153 / 0.22);
+  --gs-modal-shadow: 0 20px 56px rgb(0 0 0 / 0.6), 0 0 24px rgb(236 72 153 / 0.08);
+  --gs-field-bg: rgb(26 26 38 / 0.96);
+  --gs-field-border: rgb(46 46 58);
+  --gs-field-bg-disabled: rgb(10 10 15 / 0.7);
+  color-scheme: dark;
+}
+
+html[data-skin='neon'] .gs-app-bg::before {
+  opacity: 0.4;
+  background-image: linear-gradient(rgb(236 72 153 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(34 211 238 / 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 10%, transparent 75%);
+}
+
+html[data-skin='neon'] .gs-card:hover {
+  border-color: rgb(34 211 238 / 0.45);
+}
+
+html[data-skin='neon'][data-bg='black'] .gs-nav-pill--active {
+  --gs-nav-active-bg: linear-gradient(135deg, #ec4899 0%, #22d3ee 100%);
+  --gs-nav-active-fg: #0a0a0f;
+}
+
+/* 浅色皮肤：弹窗/表单（深空、霓虹在各自块内已定义） */
+html[data-skin='default'],
+html:not([data-skin]),
+html[data-skin='minimal'],
+html[data-skin='paper'],
+html[data-skin='aurora'],
+html[data-skin='ocean'],
+html[data-skin='forest'],
+html[data-skin='ember'],
+html[data-skin='sakura'] {
+  --gs-modal-bg: var(--gs-card-bg);
+  --gs-modal-border: var(--gs-card-border);
+  --gs-modal-shadow: 0 16px 48px color-mix(in srgb, var(--color-ganshale-text) 14%, transparent),
+    var(--gs-card-shadow);
+  --gs-field-bg: var(--color-ganshale-surface);
+  --gs-field-border: var(--color-ganshale-border);
+  --gs-field-bg-disabled: color-mix(in srgb, var(--color-ganshale-page) 75%, transparent);
+}
+
+html[data-skin='dark'],
+html[data-skin='neon'] {
+  --gs-modal-overlay: rgb(0 0 0 / 0.62);
+}

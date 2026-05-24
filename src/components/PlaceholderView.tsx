@@ -10,10 +10,6 @@ const titles: Record<NavKey, { title: string; desc: string }> = {
     title: '每月',
     desc: '按自然月汇总窗口活跃与应用排行。',
   },
-  yearly: {
-    title: '每年',
-    desc: '按自然年汇总窗口活跃与应用排行。',
-  },
   data: {
     title: '数据',
     desc: '桶与事件浏览、JSON 导入导出。',

@@ -1,18 +1,19 @@
 import { Info } from 'lucide-react'
 import {
-  APP_COPYRIGHT_OWNER,
   APP_DISPLAY_NAME,
   APP_FEATURES,
   APP_PRODUCT_NAME,
   APP_TAGLINE,
   APP_VERSION,
-  appCopyrightYear,
   describeAppRuntime,
 } from '../lib/appInfo'
 import { GanshaleLogoMark } from './brand/GanshaleLogoMark'
+import {
+  SETTINGS_FIELD_LABEL_CLASS,
+  SETTINGS_PAGE_TITLE_CLASS,
+} from './dashboardLayout'
 
 export function AboutSettings() {
-  const year = appCopyrightYear()
   const runtimeLabel = describeAppRuntime()
 
   return (
@@ -43,14 +44,14 @@ export function AboutSettings() {
       </section>
 
       <section className="rounded-xl border border-ganshale-border bg-ganshale-surface p-4 shadow-sm">
-        <h3 className="flex items-center gap-2 text-sm font-medium text-ganshale-text">
+        <h3 className={SETTINGS_PAGE_TITLE_CLASS}>
           <Info className="h-4 w-4 text-ganshale-accent" strokeWidth={1.6} />
           主要功能
         </h3>
-        <div className="mt-3 space-y-4">
+        <div className="mt-4 space-y-4">
           {APP_FEATURES.map(({ title, items }) => (
             <div key={title}>
-              <p className="text-xs font-medium text-ganshale-text">{title}</p>
+              <p className={SETTINGS_FIELD_LABEL_CLASS}>{title}</p>
               <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-ganshale-muted">
                 {items.map((item) => (
                   <li key={item}>{item}</li>
@@ -59,19 +60,6 @@ export function AboutSettings() {
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="rounded-xl border border-ganshale-border bg-ganshale-surface px-4 py-3 shadow-sm">
-        <p className="text-[11px] leading-relaxed text-ganshale-muted">
-          {APP_DISPLAY_NAME}{' '}
-          帮助你把电脑上的真实使用情况整理成可读的工作记录与汇报材料，减少反复回忆与手工整理的时间。
-        </p>
-        <p className="mt-2 text-[10px] text-ganshale-subtle">
-          © {year} 版权所有归「{APP_COPYRIGHT_OWNER}」所有。
-        </p>
-        <p className="mt-1 text-[10px] text-ganshale-subtle">
-          本软件按「原样」提供；使用 AI 功能时需自行配置模型网关与 API 密钥，相关调用费用由您与服务商自行承担。
-        </p>
       </section>
     </div>
   )

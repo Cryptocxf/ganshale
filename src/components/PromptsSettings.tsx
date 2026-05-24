@@ -12,40 +12,68 @@ import {
 } from '../lib/llmUserConfig'
 import {
   loadWorkRecordSettings,
-  saveWorkRecordSettings,
   WORK_RECORD_SETTINGS_CHANGED_EVENT,
   type SystemRecordPeriodId,
 } from '../lib/workRecordSettings'
-import { WorkRecordGeneralSettings } from './WorkRecordGeneralSettings'
+import {
+  SETTINGS_FIELD_LABEL_BLOCK_CLASS,
+  SETTINGS_PAGE_TITLE_CLASS,
+} from './dashboardLayout'
 
-const labelCls = 'text-xs font-medium text-ganshale-text'
-/** 原首个输入框 rows=16，统一高度为其 60% */
-const PROMPT_TEXTAREA_ROWS = Math.round(16 * 0.6)
 const textareaCls =
-  'w-full resize-y rounded-lg border border-black/[0.06] bg-ganshale-page/40 p-2 text-[11px] leading-relaxed text-ganshale-text focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10'
+  'gs-field-input gs-field-input--inset min-h-0 w-full flex-1 resize-none overflow-y-auto rounded-lg p-2.5 text-xs font-normal leading-relaxed text-ganshale-text'
 
 type PromptForm = Pick<
   LlmUserConfig,
-  'aiAutoSummaryPrompt' | 'dailyReportPrompt' | 'weeklyReportPrompt'
+  'aiAutoSummaryPrompt' | 'dailyReportPrompt' | 'weeklyReportPrompt' | 'monthlyReportPrompt'
 >
+
+type PromptFieldId = keyof PromptForm
 
 function configToPromptForm(config: LlmUserConfig): PromptForm {
   return {
     aiAutoSummaryPrompt: config.aiAutoSummaryPrompt,
     dailyReportPrompt: config.dailyReportPrompt,
     weeklyReportPrompt: config.weeklyReportPrompt,
+    monthlyReportPrompt: config.monthlyReportPrompt,
   }
 }
 
-const PROMPT_FIELDS: { id: keyof PromptForm; label: string }[] = [
-  { id: 'aiAutoSummaryPrompt', label: 'AI自动总结提示词：' },
-  { id: 'dailyReportPrompt', label: '生成日报提示词：' },
-  { id: 'weeklyReportPrompt', label: '生成周报提示词：' },
+const PROMPT_GRID: { id: PromptFieldId; label: string }[][] = [
+  [
+    { id: 'aiAutoSummaryPrompt', label: 'AI自动总结提示词：' },
+    { id: 'dailyReportPrompt', label: '生成日报提示词：' },
+  ],
+  [
+    { id: 'weeklyReportPrompt', label: '生成周报提示词：' },
+    { id: 'monthlyReportPrompt', label: '生成月报提示词：' },
+  ],
 ]
 
-const DEFAULT_WORK_RECORD_FOR_PROMPTS = {
-  aiAutoSummaryEnabled: true,
-  systemRecordPeriod: '30m' as SystemRecordPeriodId,
+function PromptField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: PromptFieldId
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="flex min-h-0 flex-col gap-2">
+      <label htmlFor={`prompt-${id}`} className={`shrink-0 ${SETTINGS_FIELD_LABEL_BLOCK_CLASS}`}>
+        {label}
+      </label>
+      <textarea
+        id={`prompt-${id}`}
+        value={value}
+        className={textareaCls}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  )
 }
 
 export function PromptsSettings() {
@@ -72,7 +100,8 @@ export function PromptsSettings() {
     return (
       form.aiAutoSummaryPrompt !== s.aiAutoSummaryPrompt ||
       form.dailyReportPrompt !== s.dailyReportPrompt ||
-      form.weeklyReportPrompt !== s.weeklyReportPrompt
+      form.weeklyReportPrompt !== s.weeklyReportPrompt ||
+      form.monthlyReportPrompt !== s.monthlyReportPrompt
     )
   }, [form, saved])
 
@@ -83,6 +112,7 @@ export function PromptsSettings() {
       aiAutoSummaryPrompt: form.aiAutoSummaryPrompt,
       dailyReportPrompt: form.dailyReportPrompt,
       weeklyReportPrompt: form.weeklyReportPrompt,
+      monthlyReportPrompt: form.monthlyReportPrompt,
     })
     const next = loadLlmUserConfig()
     setSaved(next)
@@ -97,9 +127,6 @@ export function PromptsSettings() {
   }, [saved])
 
   const restoreDefaults = useCallback(() => {
-    saveWorkRecordSettings(DEFAULT_WORK_RECORD_FOR_PROMPTS)
-    setSummaryPeriod('30m')
-
     const promptDefaults = defaultLlmUserConfig()
     const cur = loadLlmUserConfig()
     saveLlmUserConfig({
@@ -107,6 +134,7 @@ export function PromptsSettings() {
       aiAutoSummaryPrompt: promptDefaults.aiAutoSummaryPrompt,
       dailyReportPrompt: promptDefaults.dailyReportPrompt,
       weeklyReportPrompt: promptDefaults.weeklyReportPrompt,
+      monthlyReportPrompt: promptDefaults.monthlyReportPrompt,
     })
 
     const next = loadLlmUserConfig()
@@ -125,39 +153,41 @@ export function PromptsSettings() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
+  const displayValue = (id: PromptFieldId) =>
+    id === 'aiAutoSummaryPrompt' ? aiAutoSummaryDisplay : form[id]
+
+  const updateField = (id: PromptFieldId, v: string) => {
+    if (
+      id === 'aiAutoSummaryPrompt' &&
+      usesAiAutoSummaryWindowPlaceholder(form.aiAutoSummaryPrompt)
+    ) {
+      const phrase = resolveAiAutoSummaryPrompt(form.aiAutoSummaryPrompt, summaryPeriod)
+      if (v === phrase) return
+    }
+    setForm((s) => ({ ...s, [id]: v }))
+  }
+
   return (
-    <section className="w-full rounded-xl border border-ganshale-border bg-ganshale-surface py-4 pl-4 pr-[10px] shadow-sm">
-      <h3 className="flex items-center gap-2 text-sm font-medium text-ganshale-text">
+    <section className="flex h-full min-h-0 w-full flex-col rounded-xl border border-ganshale-border bg-ganshale-surface py-4 pl-4 pr-[10px] shadow-sm">
+      <h3 className={`shrink-0 ${SETTINGS_PAGE_TITLE_CLASS}`}>
         <ScrollText className="h-4 w-4 text-ganshale-accent" strokeWidth={1.6} />
         提示词
       </h3>
 
-      <div className="mt-4 w-full space-y-4 text-xs">
-        <WorkRecordGeneralSettings />
-
-        {PROMPT_FIELDS.map(({ id, label }) => (
-          <div key={id} className="space-y-1.5">
-            <label htmlFor={`prompt-${id}`} className={labelCls}>
-              {label}
-            </label>
-            <textarea
-              id={`prompt-${id}`}
-              rows={PROMPT_TEXTAREA_ROWS}
-              value={id === 'aiAutoSummaryPrompt' ? aiAutoSummaryDisplay : form[id]}
-              className={textareaCls}
-              onChange={(e) => {
-                const v = e.target.value
-                if (id === 'aiAutoSummaryPrompt' && usesAiAutoSummaryWindowPlaceholder(form.aiAutoSummaryPrompt)) {
-                  const phrase = resolveAiAutoSummaryPrompt(form.aiAutoSummaryPrompt, summaryPeriod)
-                  if (v === phrase) return
-                }
-                setForm((s) => ({ ...s, [id]: v }))
-              }}
+      <div className="mt-5 flex min-h-0 flex-1 flex-col gap-4 text-xs">
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-x-4 gap-y-4">
+          {PROMPT_GRID.flat().map(({ id, label }) => (
+            <PromptField
+              key={id}
+              id={id}
+              label={label}
+              value={displayValue(id)}
+              onChange={(v) => updateField(id, v)}
             />
-          </div>
-        ))}
+          ))}
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             disabled={!dirty}

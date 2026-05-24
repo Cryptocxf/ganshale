@@ -1,5 +1,6 @@
 import type { AwEvent } from './awTypes'
 import type { LiveForegroundSample } from './liveForeground'
+import { identityFromEventData, identityFromLiveForeground } from './windowAppDisplay'
 import { endOfLocalDay, parseIso, startOfLocalDay } from './timeutil'
 
 /** 进程名比较（忽略 .exe 与大小写） */
@@ -10,12 +11,12 @@ export function normalizeWindowAppKey(app: string): string {
     .replace(/\.exe$/i, '')
 }
 
-/** 实时前台与事件是否同一应用（标题可变，如 Cursor 换文件） */
+/** 实时前台与事件是否同一应用（WPS 文字/表格等按组件区分；同组件内换文件仍视为连续） */
 export function sameForegroundApp(
   evData: Record<string, unknown>,
   live: LiveForegroundSample,
 ): boolean {
-  return normalizeWindowAppKey(String(evData.app ?? '')) === normalizeWindowAppKey(live.app)
+  return identityFromEventData(evData).identityKey === identityFromLiveForeground(live).identityKey
 }
 
 export function findLatestWindowEvent(events: AwEvent[]): AwEvent | undefined {
@@ -26,9 +27,9 @@ export function findLatestWindowEventForApp(
   events: AwEvent[],
   live: LiveForegroundSample,
 ): AwEvent | undefined {
-  const key = normalizeWindowAppKey(live.app)
+  const key = identityFromLiveForeground(live).identityKey
   return [...events]
-    .filter((e) => normalizeWindowAppKey(String(e.data.app ?? '')) === key)
+    .filter((e) => identityFromEventData(e.data).identityKey === key)
     .sort((a, b) => parseIso(b.timestamp) - parseIso(a.timestamp))[0]
 }
 

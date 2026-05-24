@@ -1,8 +1,7 @@
 # 将本项目推送到 GitHub（需先完成 gh 登录）
-# 用法：
-#   1. 安装 GitHub CLI 或确保 gh 在 PATH 中
-#   2. gh auth login
-#   3. .\scripts\publish-github.ps1
+# Windows 用法：
+#   1. .\scripts\gh-login.ps1
+#   2. .\scripts\publish-github.ps1
 # 可选：指定仓库名与可见性
 #   .\scripts\publish-github.ps1 -RepoName ganshale -Visibility private
 
@@ -16,16 +15,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $root
 
-$gh = Get-Command gh -ErrorAction SilentlyContinue
-if (-not $gh) {
-  $fallback = Join-Path $env:TEMP 'gh-cli\bin\gh.exe'
-  if (Test-Path $fallback) { $gh = @{ Source = $fallback } }
-}
-if (-not $gh) {
-  Write-Error '未找到 gh。请安装 GitHub CLI：https://cli.github.com/'
-}
-
-$ghExe = if ($gh.Source) { $gh.Source } else { 'gh' }
+$ghExe = . (Join-Path $PSScriptRoot 'ensure-gh.ps1')
 
 & $ghExe auth status 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {

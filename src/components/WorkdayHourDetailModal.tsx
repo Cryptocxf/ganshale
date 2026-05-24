@@ -5,11 +5,25 @@ import {
   legendEntriesForHour,
   minuteCellsForHour,
 } from '../lib/workdayHourDetail'
+import { DashboardModalRoot } from './DashboardModalRoot'
+import { DashboardSectionSubtitle } from './DashboardSectionSubtitle'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
-  DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
+  DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
 } from './dashboardLayout'
+
+/** 与日看板 WorkdayTimeline 时间条一致 */
+const HOUR_DETAIL_TRACK_CLASS =
+  'relative h-12 w-full shrink-0 overflow-hidden rounded-md bg-ganshale-track/90 ring-1 ring-ganshale-border sm:h-14'
+const HOUR_DETAIL_TICK_CLASS =
+  'absolute top-0 text-[11px] leading-snug tabular-nums text-ganshale-muted'
+/** 分钟小格描边：略深于轨道，不改变格子底色 */
+const HOUR_DETAIL_CELL_RING_CLASS = 'ring-1 ring-inset ring-ganshale-text/20'
+const HOUR_DETAIL_BLOCK_DIVIDER_CLASS = 'border-l border-ganshale-text/28'
+const MINUTES_PER_TICK_BLOCK = 10
+const TICK_BLOCK_COUNT = 60 / MINUTES_PER_TICK_BLOCK
 
 function formatHourRange(hour: number): string {
   const pad = (h: number) => String(h).padStart(2, '0')
@@ -27,21 +41,15 @@ export function WorkdayHourDetailModal({ hour, timeline, onClose }: WorkdayHourD
   const legend = useMemo(() => legendEntriesForHour(hour, timeline), [hour, timeline])
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4 sm:p-6"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <DashboardModalRoot
+      open
+      onClose={onClose}
+      labelledBy="workday-hour-detail-title"
+      dialogClassName={DASHBOARD_DETAIL_MODAL_SIZE_CLASS}
     >
-      <div
-        className={DASHBOARD_DETAIL_MODAL_SHELL_CLASS}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="workday-hour-detail-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-black/[0.06] px-2 py-1.5 sm:px-3">
+        <div
+          className={`flex shrink-0 items-start justify-between gap-3 px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+        >
           <DashboardSectionTitle id="workday-hour-detail-title" icon={Clock3}>
             {formatHourRange(hour)}
           </DashboardSectionTitle>
@@ -75,51 +83,71 @@ export function WorkdayHourDetailModal({ hour, timeline, onClose }: WorkdayHourD
         </div>
 
         <div className={DASHBOARD_DETAIL_MODAL_BODY_CLASS}>
-          <p className="mb-2 text-[10px] text-ganshale-muted">横轴为该小时内每分钟（共 60 格）</p>
-          <div className="rounded-xl bg-ganshale-track/90 p-2 ring-1 ring-black/[0.04]">
-            <div
-              className="flex h-12 w-full gap-px sm:h-14"
-              role="img"
-              aria-label={`${formatHourRange(hour)} 分钟分布`}
-            >
-              {cells.map((cell) => (
-                <div
-                  key={cell.minuteIndex}
-                  title={
-                    cell.label
-                      ? `${String(hour).padStart(2, '0')}:${String(cell.minuteIndex).padStart(2, '0')} · ${cell.label}`
-                      : `${String(hour).padStart(2, '0')}:${String(cell.minuteIndex).padStart(2, '0')}`
-                  }
-                  className={[
-                    'min-w-0 flex-1 rounded-[1px] ring-1 ring-black/[0.03]',
-                    !cell.color ? 'bg-black/[0.04]' : '',
-                  ].join(' ')}
-                  style={cell.color ? { backgroundColor: cell.color } : undefined}
-                />
-              ))}
-            </div>
-            <div className="relative mt-2 h-5 w-full">
-              {[0, 10, 20, 30, 40, 50, 60].map((m) => {
-                const left = m === 60 ? 100 : (m / 60) * 100
+          <DashboardSectionSubtitle className="mb-2 pl-0 sm:pl-0">
+            横轴为该小时内每分钟（共 60 格）
+          </DashboardSectionSubtitle>
+          <div className={HOUR_DETAIL_TRACK_CLASS} role="img" aria-label={`${formatHourRange(hour)} 分钟分布`}>
+            <div className="absolute inset-0 flex">
+              {Array.from({ length: TICK_BLOCK_COUNT }, (_, block) => {
+                const blockCells = cells.slice(
+                  block * MINUTES_PER_TICK_BLOCK,
+                  block * MINUTES_PER_TICK_BLOCK + MINUTES_PER_TICK_BLOCK,
+                )
                 return (
-                  <span
-                    key={m}
+                  <div
+                    key={block}
                     className={[
-                      'absolute top-0 -translate-x-1/2 text-[8px] tabular-nums text-ganshale-subtle',
-                      m === 60 ? '-translate-x-full' : '',
+                      'flex min-h-0 min-w-0 flex-1 gap-px',
+                      block > 0 ? HOUR_DETAIL_BLOCK_DIVIDER_CLASS : '',
                     ].join(' ')}
-                    style={{ left: `${left}%` }}
                   >
-                    {m === 60
-                      ? `${String(hour + 1).padStart(2, '0')}:00`
-                      : `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')}`}
-                  </span>
+                    {blockCells.map((cell) => (
+                      <div
+                        key={cell.minuteIndex}
+                        title={
+                          cell.label
+                            ? `${String(hour).padStart(2, '0')}:${String(cell.minuteIndex).padStart(2, '0')} · ${cell.label}`
+                            : `${String(hour).padStart(2, '0')}:${String(cell.minuteIndex).padStart(2, '0')}`
+                        }
+                        className={[
+                          'min-h-0 min-w-0 flex-1 rounded-[1px]',
+                          HOUR_DETAIL_CELL_RING_CLASS,
+                          !cell.color ? 'bg-ganshale-border/25' : 'border-r border-ganshale-text/25',
+                        ].join(' ')}
+                        style={cell.color ? { backgroundColor: cell.color } : undefined}
+                      />
+                    ))}
+                  </div>
                 )
               })}
             </div>
           </div>
+          <div className="relative mt-1.5 h-9 w-full shrink-0 sm:h-10">
+            {[0, 10, 20, 30, 40, 50, 60].map((m) => {
+              const left = m === 60 ? 100 : (m / 60) * 100
+              const isFirst = m === 0
+              const isLast = m === 60
+              return (
+                <span
+                  key={m}
+                  className={[
+                    HOUR_DETAIL_TICK_CLASS,
+                    isFirst
+                      ? 'left-0 translate-x-0'
+                      : isLast
+                        ? 'left-full -translate-x-full'
+                        : '-translate-x-1/2',
+                  ].join(' ')}
+                  style={isFirst || isLast ? undefined : { left: `${left}%` }}
+                >
+                  {m === 60
+                    ? `${String(hour + 1).padStart(2, '0')}:00`
+                    : `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')}`}
+                </span>
+              )
+            })}
+          </div>
         </div>
-      </div>
-    </div>
+    </DashboardModalRoot>
   )
 }

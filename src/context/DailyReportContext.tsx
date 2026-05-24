@@ -23,19 +23,27 @@ import {
   type ChatLine,
 } from '../lib/dailyReportChat'
 import {
+  assertLlmConfigured,
   gatewayModelToUiModelId,
   getConfiguredGatewayModel,
   getLlmInvokeConfig,
 } from '../lib/llmConfig'
 import { streamChatCompletion } from '../lib/llmOpenAI'
 import {
-  loadAutoDailyReportFiredKey,
-  saveAutoDailyReportFiredKey,
-  shouldFireAutoDailyReportAt18,
+  loadAutoDailyReportFiredSlots,
+  saveAutoDailyReportFiredSlots,
+  shouldFireAutoDailyReport,
 } from '../lib/dailyReportAutoSchedule'
+import {
+  buildDailyReportGenerationUserContent,
+  normalizeDailyReportTitleDate,
+} from '../lib/dailyReportGeneration'
+import { appendDailyReportHistory } from '../lib/dailyReportHistoryStore'
+import { LOCAL_MIDNIGHT_EVENT } from '../lib/localMidnight'
 import { buildWorkRecordBlock, loadWorkRecords } from '../lib/workRecordStore'
 import { loadDailyReportGenerationPrompt } from '../lib/llmUserConfig'
 import { useGanshaleData } from './useGanshaleData'
+import { DailyReportHistoryModal } from '../components/DailyReportHistoryModal'
 import { DailyReportResultModal } from '../components/DailyReportResultModal'
 
 const ATTACH_CONTEXT_STORAGE_KEY = 'ganshale-daily-report-attach-context-v1'
@@ -76,8 +84,10 @@ export type DailyReportContextValue = {
   }) => void
   onAttachDailyContextChange: (checked: boolean) => void
   reportModalOpen: boolean
-  openReportModal: () => void
   closeReportModal: () => void
+  historyModalOpen: boolean
+  openHistoryModal: () => void
+  closeHistoryModal: () => void
   onGenerate: () => void
   onAskOnly: () => void
   onStop: () => void
@@ -101,12 +111,14 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
   const [streaming, setStreaming] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [historyModalOpen, setHistoryModalOpen] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
   const streamingRef = useRef(false)
 
-  const openReportModal = useCallback(() => setReportModalOpen(true), [])
   const closeReportModal = useCallback(() => setReportModalOpen(false), [])
+  const openHistoryModal = useCallback(() => setHistoryModalOpen(true), [])
+  const closeHistoryModal = useCallback(() => setHistoryModalOpen(false), [])
 
   useEffect(() => {
     const p = loadDailyReportPrefs()
@@ -143,6 +155,17 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    const onMidnight = () => {
+      abortRef.current?.abort()
+      streamingRef.current = false
+      setStreaming(false)
+      setReportModalOpen(false)
+    }
+    window.addEventListener(LOCAL_MIDNIGHT_EVENT, onMidnight)
+    return () => window.removeEventListener(LOCAL_MIDNIGHT_EVENT, onMidnight)
+  }, [])
+
   const selectedPromptFull = useMemo(
     () => (promptPresetId === 'concise' ? promptConcise : promptDetailed),
     [promptPresetId, promptConcise, promptDetailed],
@@ -162,12 +185,18 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
     messages[messages.length - 1]?.role === 'assistant' &&
     messages[messages.length - 1]?.content === ''
 
-  const runStream = useCallback(async (snapshotAfterUserAndPlaceholder: ChatLine[]) => {
+  const runStream = useCallback(
+    async (
+      snapshotAfterUserAndPlaceholder: ChatLine[],
+      opts?: { saveToHistory?: boolean },
+    ) => {
+    assertLlmConfigured()
     const { baseUrl, apiKey, model } = getLlmInvokeConfig()
     const apiMessages = toApiMessages(snapshotAfterUserAndPlaceholder)
     const assistantId = snapshotAfterUserAndPlaceholder[snapshotAfterUserAndPlaceholder.length - 1]?.id
 
     let acc = ''
+    let aborted = false
     try {
       await streamChatCompletion({
         baseUrl,
@@ -191,7 +220,7 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
         },
       })
     } catch (e) {
-      const aborted =
+      aborted =
         (e instanceof DOMException && e.name === 'AbortError') ||
         (e instanceof Error && e.name === 'AbortError')
       if (aborted) return
@@ -215,8 +244,25 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
       streamingRef.current = false
       setStreaming(false)
       abortRef.current = null
+      const body = acc.trim()
+      if (body && !aborted) {
+        const normalized = normalizeDailyReportTitleDate(body, day)
+        if (opts?.saveToHistory) {
+          appendDailyReportHistory(day, normalized)
+        }
+        if (normalized !== body && assistantId) {
+          setMessages((prev) => {
+            const out = [...prev]
+            const idx = out.findIndex((m) => m.id === assistantId)
+            if (idx >= 0) out[idx] = { ...out[idx], content: normalized }
+            return out
+          })
+        }
+      }
     }
-  }, [])
+  },
+    [day],
+  )
 
   const onGenerate = useCallback(() => {
     if (streamingRef.current) return
@@ -226,16 +272,12 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
     const workBlock = buildWorkRecordBlock(loadWorkRecords(day))
     const gatewayModel = getConfiguredGatewayModel()
 
-    const userContent = [
-      '【提示词】',
+    const userContent = buildDailyReportGenerationUserContent(
+      day,
       prompt,
-      '',
-      '---',
-      '【今日工作记录】',
       workBlock,
-      '',
-      `【使用模型】网关 model：${gatewayModel}`,
-    ].join('\n')
+      gatewayModel,
+    )
 
     const uiModelId = gatewayModelToUiModelId(gatewayModel)
     const userMsg: ChatLine = {
@@ -260,7 +302,7 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
     streamingRef.current = true
     setStreaming(true)
     setMessages(next)
-    void runStream(next)
+    void runStream(next, { saveToHistory: true })
   }, [day, runStream])
 
   const onAskOnly = useCallback(() => {
@@ -325,15 +367,16 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
     saveAttachDailyContext(checked)
   }, [])
 
-  /** 每天 18:00 自动触发生成日报（与手动点击相同流程） */
+  /** 按设置页「时间」中的配置自动触发生成日报 */
   useEffect(() => {
-    let lastKey = loadAutoDailyReportFiredKey(day)
+    let firedSlots = loadAutoDailyReportFiredSlots(day)
     const id = window.setInterval(() => {
       const now = new Date()
-      const { fire, nextKey } = shouldFireAutoDailyReportAt18(day, now, lastKey)
-      if (nextKey && nextKey !== lastKey) {
-        lastKey = nextKey
-        saveAutoDailyReportFiredKey(day, nextKey)
+      const { fire, nextSlots } = shouldFireAutoDailyReport(day, now, firedSlots)
+
+      if (nextSlots.length !== firedSlots.length) {
+        firedSlots = nextSlots
+        saveAutoDailyReportFiredSlots(day, firedSlots)
       }
       if (fire && !streamingRef.current) {
         onGenerate()
@@ -358,8 +401,10 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
       applyDailyReportSettings,
       onAttachDailyContextChange,
       reportModalOpen,
-      openReportModal,
       closeReportModal,
+      historyModalOpen,
+      openHistoryModal,
+      closeHistoryModal,
       onGenerate,
       onAskOnly,
       onStop,
@@ -379,8 +424,10 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
       applyDailyReportSettings,
       onAttachDailyContextChange,
       reportModalOpen,
-      openReportModal,
       closeReportModal,
+      historyModalOpen,
+      openHistoryModal,
+      closeHistoryModal,
       onGenerate,
       onAskOnly,
       onStop,
@@ -398,6 +445,12 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
         streaming={streaming}
         reportStreamingEmpty={reportStreamingEmpty}
         onClose={closeReportModal}
+        onCopyToast={setToast}
+      />
+      <DailyReportHistoryModal
+        open={historyModalOpen}
+        day={day}
+        onClose={closeHistoryModal}
         onCopyToast={setToast}
       />
     </DailyReportContext.Provider>

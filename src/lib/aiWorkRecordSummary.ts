@@ -1,7 +1,7 @@
 import { loadAiAutoSummaryPrompt } from './llmUserConfig'
 import { resolveAiAutoSummaryPrompt } from './aiAutoSummaryPrompt'
 import { expandLlmNetworkError } from './dailyReportChat'
-import { getLlmInvokeConfig } from './llmConfig'
+import { assertLlmConfigured, getLlmInvokeConfig } from './llmConfig'
 import { chatCompletion } from './llmOpenAI'
 import type { AwEvent } from './awTypes'
 import { formatWindowEventsForAiSummary } from './aiSummarySchedule'
@@ -24,6 +24,7 @@ export async function summarizeWindowEventsWithLlm(
     windowBlock,
   ].join('\n')
 
+  assertLlmConfigured()
   const { baseUrl, apiKey, model } = getLlmInvokeConfig()
 
   try {

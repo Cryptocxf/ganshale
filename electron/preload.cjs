@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
   openPathInFolder: (targetPath) =>
     ipcRenderer.invoke('ganshale:open-path-in-folder', targetPath),
 
+  getStoragePath: () => ipcRenderer.invoke('ganshale:get-storage-path'),
+
+  pickStorageDirectory: () => ipcRenderer.invoke('ganshale:pick-storage-directory'),
+
+  setStorageDirectory: (nextPath) =>
+    ipcRenderer.invoke('ganshale:set-storage-directory', nextPath),
+
   /** @param {string} query */
   /** @returns {Promise<{ ok: boolean; hits?: { name: string; path?: string }[]; error?: string }>} */
   searchLocalApps: (query) => ipcRenderer.invoke('ganshale:search-local-apps', query),

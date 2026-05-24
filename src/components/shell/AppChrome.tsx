@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   Calendar,
-  CalendarClock,
   CalendarDays,
   CalendarRange,
   Database,
@@ -9,16 +8,30 @@ import {
 } from 'lucide-react'
 import { DailyDatePicker } from '../DailyDatePicker'
 import { DailyReportHeaderActions } from '../DailyReportHeaderActions'
+import { MonthlyDatePicker } from '../MonthlyDatePicker'
+import { MonthlyReportHeaderActions } from '../MonthlyReportHeaderActions'
+import { WeeklyDatePicker } from '../WeeklyDatePicker'
+import { WeeklyReportHeaderActions } from '../WeeklyReportHeaderActions'
+import { DataRecordsHeaderActions } from '../data/DataRecordsHeaderActions'
 import { useGanshaleData } from '../../context/useGanshaleData'
-import { PRODUCT_TAGLINE } from '../../constants/brand'
-import { APP_CHROME_INSET_X_COMPACT } from '../dashboardLayout'
+import { useMonthlyReportOptional } from '../../context/MonthlyReportContext'
+import { useWeeklyReportOptional } from '../../context/WeeklyReportContext'
+import {
+  loadWeekKeysWithWeeklyReports,
+  WEEKLY_REPORT_HISTORY_CHANGED_EVENT,
+} from '../../lib/weeklyReportHistoryStore'
+import {
+  APP_CHROME_CONTENT_WIDTH_CLASS,
+  APP_CHROME_INSET_COMPACT,
+  APP_CHROME_INSET_X_COMPACT,
+  DAILY_CHROME_HEADER_TOOLBAR_MIN_H_CLASS,
+} from '../dashboardLayout'
 import type { NavKey } from '../../data/mock'
 
 const nav: { key: NavKey; label: string; icon: typeof Calendar }[] = [
   { key: 'daily', label: '每日', icon: Calendar },
   { key: 'weekly', label: '每周', icon: CalendarRange },
   { key: 'monthly', label: '每月', icon: CalendarDays },
-  { key: 'yearly', label: '每年', icon: CalendarClock },
   { key: 'data', label: '数据', icon: Database },
   { key: 'settings', label: '设置', icon: Settings2 },
 ]
@@ -37,13 +50,26 @@ export function AppChrome({
   children,
 }: AppChromeProps) {
   const { day, setDay, daysWithTimingData } = useGanshaleData()
+  const weeklyReport = useWeeklyReportOptional()
+  const monthlyReport = useMonthlyReportOptional()
+  const [weeksWithReports, setWeeksWithReports] = useState(() =>
+    loadWeekKeysWithWeeklyReports(),
+  )
 
-  const overviewCompact = active === 'daily'
+  useEffect(() => {
+    const sync = () => setWeeksWithReports(loadWeekKeysWithWeeklyReports())
+    window.addEventListener(WEEKLY_REPORT_HISTORY_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(WEEKLY_REPORT_HISTORY_CHANGED_EVENT, sync)
+  }, [])
+
+  const overviewCompact =
+    active === 'daily' || active === 'weekly' || active === 'monthly'
+  const settingsPage = active === 'settings'
+  const dataPage = active === 'data'
   const compactContentPage =
     active === 'settings' ||
     active === 'weekly' ||
     active === 'monthly' ||
-    active === 'yearly' ||
     active === 'data'
   const hidePageHeader = compactContentPage
   const chromeInsetX = APP_CHROME_INSET_X_COMPACT
@@ -52,49 +78,53 @@ export function AppChrome({
     <div
       className={[
         'gs-app-bg flex flex-col',
-        overviewCompact ? 'h-dvh max-h-dvh overflow-hidden' : 'min-h-dvh',
+        overviewCompact || settingsPage || dataPage ? 'h-dvh max-h-dvh overflow-hidden' : 'min-h-dvh',
       ].join(' ')}
     >
-      <header className="sticky top-0 z-40 shrink-0 border-b border-black/[0.06] bg-white/[0.72] shadow-[inset_0_-1px_0_rgb(0_0_0_/_0.04)] backdrop-blur-xl backdrop-saturate-150">
+      <header className="gs-chrome-header sticky top-0 z-40 shrink-0">
         <div
           className={[
-            'mx-auto max-w-[min(100%,1280px)]',
+            APP_CHROME_CONTENT_WIDTH_CLASS,
             chromeInsetX,
             'py-2',
           ].join(' ')}
         >
           <div
             className={[
-              'flex flex-col lg:flex-row lg:items-center lg:justify-between',
-              'min-h-8 gap-2 lg:gap-3',
+              'flex flex-col md:flex-row md:items-center md:justify-between',
+              DAILY_CHROME_HEADER_TOOLBAR_MIN_H_CLASS,
+              'gap-2 md:gap-3',
             ].join(' ')}
           >
-            <nav
-              className="flex min-w-0 gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              aria-label="主导航"
-            >
-              {nav.map(({ key, label, icon: Icon }) => {
-                const on = active === key
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => onNavigate(key)}
-                    className={[
-                      'flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium tracking-tight transition-colors duration-200',
-                      on
-                        ? 'bg-zinc-900 text-white shadow-sm shadow-black/15'
-                        : 'text-ganshale-muted hover:bg-black/[0.04] hover:text-ganshale-text',
-                    ].join(' ')}
-                  >
-                    <Icon className="h-4 w-4 opacity-90" strokeWidth={1.65} />
-                    {label}
-                  </button>
-                )
-              })}
-            </nav>
+            <div className="flex min-w-0 items-center">
+              <nav
+                className="flex min-w-0 gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="主导航"
+              >
+                {nav.map(({ key, label, icon: Icon }) => {
+                  const on = active === key
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => onNavigate(key)}
+                      className={[
+                        'gs-nav-pill text-ganshale-muted',
+                        on ? 'gs-nav-pill--active' : '',
+                      ].join(' ')}
+                    >
+                      <Icon
+                        className={['h-4 w-4', on ? 'opacity-100' : 'opacity-90'].join(' ')}
+                        strokeWidth={1.65}
+                      />
+                      <span className={on ? 'font-bold text-white' : undefined}>{label}</span>
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 lg:shrink-0">
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 md:shrink-0">
               {active === 'daily' ? (
                 <DailyDatePicker
                   day={day}
@@ -102,7 +132,23 @@ export function AppChrome({
                   onChange={setDay}
                 />
               ) : null}
+              {active === 'weekly' && weeklyReport ? (
+                <WeeklyDatePicker
+                  weekStart={weeklyReport.weekStart}
+                  weeksWithReports={weeksWithReports}
+                  onChange={weeklyReport.setWeekStart}
+                />
+              ) : null}
+              {active === 'monthly' && monthlyReport ? (
+                <MonthlyDatePicker
+                  monthAnchor={monthlyReport.monthAnchor}
+                  onChange={monthlyReport.setMonthAnchor}
+                />
+              ) : null}
               {active === 'daily' ? <DailyReportHeaderActions /> : null}
+              {active === 'weekly' ? <WeeklyReportHeaderActions /> : null}
+              {active === 'monthly' ? <MonthlyReportHeaderActions /> : null}
+              {active === 'data' ? <DataRecordsHeaderActions /> : null}
             </div>
           </div>
         </div>
@@ -110,28 +156,44 @@ export function AppChrome({
 
       <div
         className={[
-          'mx-auto flex w-full max-w-[min(100%,1280px)] flex-col',
-          chromeInsetX,
-          overviewCompact
-            ? 'min-h-0 flex-1 pt-2 pb-2.5 sm:pb-3'
-            : compactContentPage
-              ? 'pt-2 pb-2.5 sm:pb-3'
-              : 'py-6 md:py-8',
+          APP_CHROME_CONTENT_WIDTH_CLASS,
+          settingsPage || dataPage
+            ? [APP_CHROME_INSET_COMPACT, 'flex min-h-0 flex-1 flex-col'].join(' ')
+            : [
+                chromeInsetX,
+                overviewCompact
+                  ? 'min-h-0 flex-1 pt-2 pb-2.5 sm:pb-3'
+                  : compactContentPage
+                    ? 'pt-2 pb-2.5 sm:pb-3'
+                    : 'py-6 md:py-8',
+              ].join(' '),
         ].join(' ')}
       >
         {!overviewCompact && !hidePageHeader ? (
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-black/[0.05] pb-5 md:mb-8 md:pb-6">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ganshale-text md:text-[1.65rem]">
-              {pageTitle}
-            </h1>
-            <p className="max-w-[min(100%,22rem)] text-right text-[11px] leading-relaxed text-ganshale-muted md:text-xs">
-              {PRODUCT_TAGLINE}
-            </p>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200/90 pb-5 md:mb-8 md:pb-6">
+            <div>
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-ganshale-sky">
+                Ganshale
+              </p>
+              <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-ganshale-text md:text-[1.65rem]">
+                {pageTitle}
+              </h1>
+            </div>
           </div>
         ) : null}
 
         <div
-          className={overviewCompact ? 'flex min-h-0 flex-1 flex-col gap-2' : undefined}
+          className={[
+            overviewCompact
+              ? 'flex min-h-0 flex-1 flex-col gap-2'
+              : dataPage
+                ? 'flex min-h-0 flex-1 flex-col'
+              : settingsPage
+                ? 'gs-page-enter flex min-h-0 flex-1 flex-col'
+                : 'gs-page-enter',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           {children}
         </div>

@@ -74,21 +74,22 @@ npm run pack
 
 ### 模型网关
 
-打开应用内 **设置 → 模型配置**，填写：
+打开应用内 **设置 → 模型配置**：
 
-- **网关地址**：须为 OpenAI 兼容根路径，包含 `/v1`
-- **API Key**：界面以密文显示；留空可使用内置默认（建议在私有部署时改为环境变量或自行填写）
-- **模型 ID**：发给网关的 `model` 字段
+1. 从 **供应商** 下拉选择 OpenAI、DeepSeek、Moonshot、智谱、百炼、SiliconFlow、OpenRouter、Groq、Ollama 等（或「自定义」）
+2. 填写 **API Key** 与 **模型 ID**（选择供应商后会自动填入常用网关地址与示例模型）
+3. 点击 **测试** 确认连通后再 **保存**
 
-开发时可在项目根目录创建 `.env`（勿提交到 Git）：
+应用**不再内置**任何网关地址或 API Key；首次使用前必须自行配置。
+
+打包时若需预填（仅限私有构建），可在项目根目录 `.env` 中设置（勿提交到 Git）：
 
 ```env
 VITE_LLM_BASE_URL=https://your-gateway.example/v1
 VITE_LLM_API_KEY=your-api-key
-VITE_LLM_PROXY_TARGET=http://127.0.0.1:15678
 ```
 
-未配置 `VITE_LLM_BASE_URL` 时，开发服务器会通过 `/__llm` 代理转发，避免浏览器 CORS 问题。
+开发模式下未配置 `VITE_LLM_BASE_URL` 时，可将网关设为 `http://127.0.0.1:5173/__llm/v1`，由 Vite 代理转发到本地服务（`VITE_LLM_PROXY_TARGET`，默认 `http://127.0.0.1:15678`），以避免浏览器 CORS。
 
 ### 提示词
 
@@ -137,25 +138,29 @@ A：**设置 → 基本设置 → 清空本地**（请谨慎操作）。
 
 ## 发布到 GitHub
 
-本地已初始化 Git 仓库。首次推送到你的 GitHub 账号：
+本地已初始化 Git 仓库。在 **PowerShell** 中进入项目根目录 `D:\Ganshale`：
 
 ```powershell
-# 1. 安装并登录 GitHub CLI：https://cli.github.com/
-gh auth login
+# 1. 登录 GitHub（无需单独安装 gh，脚本会自动下载到 tools/gh）
+.\scripts\gh-login.ps1
 
-# 2. 在项目根目录执行（默认创建私有仓库 ganshale）
+# 2. 创建远程仓库并推送（默认私有仓库名 ganshale）
 .\scripts\publish-github.ps1
 
-# 或指定仓库名与公开/私有
-.\scripts\publish-github.ps1 -RepoName ganshale -Visibility public
+# 公开仓库：
+# .\scripts\publish-github.ps1 -RepoName ganshale -Visibility public
 ```
 
-也可在 GitHub 网页手动新建空仓库后：
+若提示「无法识别 gh」，说明未安装 GitHub CLI，**不要**直接输入 `gh auth login`，请用上面的 `.\scripts\gh-login.ps1`。
 
-```bash
+**不用 gh 的替代方式**：在 [GitHub 新建空仓库](https://github.com/new) 后：
+
+```powershell
 git remote add origin https://github.com/<你的用户名>/ganshale.git
 git push -u origin main
 ```
+
+（首次 push 会弹出浏览器或要求输入 GitHub 用户名 + [Personal Access Token](https://github.com/settings/tokens)）
 
 ## 参与与反馈
 

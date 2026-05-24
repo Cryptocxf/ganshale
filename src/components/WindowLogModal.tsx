@@ -4,8 +4,13 @@ import type { AwEvent } from '../lib/awTypes'
 import { formatClock, parseIso, toYmdLocal } from '../lib/timeutil'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
-  DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
+  DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
+  DASHBOARD_HEADER_ACTION_BTN_CLASS,
+  GS_FIELD_INPUT_SM_CLASS,
+  GS_MODAL_FOOTER_DIVIDER_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
 } from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import {
   WINDOW_TABLE_MODAL_COLGROUP,
@@ -111,21 +116,15 @@ export function WindowLogModal({
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4 sm:p-6"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <DashboardModalRoot
+      open
+      onClose={onClose}
+      labelledBy="window-log-modal-title"
+      dialogClassName={DASHBOARD_DETAIL_MODAL_SIZE_CLASS}
     >
-      <div
-        className={DASHBOARD_DETAIL_MODAL_SHELL_CLASS}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="window-log-modal-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-2 border-b border-black/[0.06] px-2 py-1.5 sm:px-3">
+        <div
+          className={`flex items-center justify-between gap-2 px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+        >
           <DashboardSectionTitle id="window-log-modal-title" icon={AppWindow}>
             实时窗口记录
             <span className="text-[10px] font-normal text-ganshale-muted">
@@ -137,7 +136,7 @@ export function WindowLogModal({
               type="button"
               onClick={onSaveAll}
               disabled={total === 0}
-              className="inline-flex items-center gap-1 rounded-md border border-black/[0.08] bg-white px-2 py-1 text-[10px] font-medium text-ganshale-text shadow-sm transition hover:bg-ganshale-page disabled:opacity-40"
+              className={`${DASHBOARD_HEADER_ACTION_BTN_CLASS} inline-flex items-center gap-1 disabled:opacity-40`}
             >
               <Download className="h-3 w-3" strokeWidth={2} aria-hidden />
               保存全部
@@ -166,7 +165,9 @@ export function WindowLogModal({
         </div>
 
         {total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-black/[0.06] px-2 py-2 sm:px-3">
+          <div
+            className={`flex flex-wrap items-center justify-between gap-2 px-2 py-2 sm:px-3 ${GS_MODAL_FOOTER_DIVIDER_CLASS}`}
+          >
             <p className="text-[10px] text-ganshale-muted">
               第 {page} / {pageCount} 页 · 本页 {pageRows.length} 条
             </p>
@@ -175,7 +176,7 @@ export function WindowLogModal({
                 type="button"
                 disabled={page <= 1}
                 onClick={() => goToPage(page - 1)}
-                className="rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text transition hover:bg-ganshale-page disabled:opacity-40"
+                className={`${DASHBOARD_HEADER_ACTION_BTN_CLASS} disabled:opacity-40`}
               >
                 上一页
               </button>
@@ -183,7 +184,7 @@ export function WindowLogModal({
                 type="button"
                 disabled={page >= pageCount}
                 onClick={() => goToPage(page + 1)}
-                className="rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text transition hover:bg-ganshale-page disabled:opacity-40"
+                className={`${DASHBOARD_HEADER_ACTION_BTN_CLASS} disabled:opacity-40`}
               >
                 下一页
               </button>
@@ -201,7 +202,7 @@ export function WindowLogModal({
                       if (Number.isFinite(n)) goToPage(n)
                     }
                   }}
-                  className="w-12 rounded border border-black/[0.08] bg-white px-1 py-0.5 text-center text-[10px] text-ganshale-text tabular-nums focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10"
+                  className={`w-12 ${GS_FIELD_INPUT_SM_CLASS} text-ganshale-text`}
                 />
                 页
               </label>
@@ -211,14 +212,13 @@ export function WindowLogModal({
                   const n = Number(jumpInput)
                   if (Number.isFinite(n)) goToPage(n)
                 }}
-                className="rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text transition hover:bg-ganshale-page"
+                className={DASHBOARD_HEADER_ACTION_BTN_CLASS}
               >
                 跳转
               </button>
             </div>
           </div>
         ) : null}
-      </div>
-    </div>
+    </DashboardModalRoot>
   )
 }

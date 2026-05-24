@@ -2,8 +2,11 @@ import { Check, Copy, Download, FileText, Loader2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
-  DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
+  DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
+  DASHBOARD_HEADER_ACTION_BTN_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
 } from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import { MarkdownContent } from './MarkdownContent'
 import { toYmdLocal } from '../lib/timeutil'
@@ -86,24 +89,18 @@ export function DailyReportResultModal({
   const showSpinner = streaming && reportStreamingEmpty
 
   return (
-    <div
-      className="fixed inset-0 z-[95] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[min(10vh,4rem)] sm:p-6 sm:pt-[min(12vh,5rem)]"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <DashboardModalRoot
+      open
+      onClose={onClose}
+      zIndex={95}
+      enterAnimation
+      labelledBy="daily-report-result-title"
+      overlayClassName="items-start overflow-y-auto pt-[min(10vh,4rem)] sm:pt-[min(12vh,5rem)]"
+      dialogClassName={`${DASHBOARD_DETAIL_MODAL_SIZE_CLASS} max-w-2xl shrink-0`}
     >
-      <div
-        className={[
-          DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
-          'max-w-2xl shrink-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="daily-report-result-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-black/[0.06] px-2 py-1.5 sm:px-3">
+        <div
+          className={`flex shrink-0 items-center justify-between gap-2 px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+        >
           <DashboardSectionTitle id="daily-report-result-title" icon={FileText}>
             日报
           </DashboardSectionTitle>
@@ -116,7 +113,7 @@ export function DailyReportResultModal({
                 'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40',
                 copied
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-black/[0.08] bg-white text-ganshale-text hover:bg-ganshale-page',
+                  : DASHBOARD_HEADER_ACTION_BTN_CLASS,
               ].join(' ')}
             >
               {copied ? (
@@ -130,7 +127,7 @@ export function DailyReportResultModal({
               type="button"
               disabled={!hasText}
               onClick={handleExport}
-              className="inline-flex items-center gap-1 rounded-md border border-black/[0.08] bg-white px-2 py-1 text-[10px] font-medium text-ganshale-text transition hover:bg-ganshale-page disabled:cursor-not-allowed disabled:opacity-40"
+              className={`${DASHBOARD_HEADER_ACTION_BTN_CLASS} inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40`}
             >
               <Download className="h-3 w-3" strokeWidth={1.8} />
               导出 TXT
@@ -165,7 +162,6 @@ export function DailyReportResultModal({
             </p>
           )}
         </div>
-      </div>
-    </div>
+    </DashboardModalRoot>
   )
 }

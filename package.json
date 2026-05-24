@@ -1,7 +1,7 @@
 {
   "name": "ganshale",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -19,7 +19,8 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -43,17 +44,22 @@
   },
   "build": {
     "appId": "net.ganshale.desktop",
-    "productName": "Ganshale",
+    "productName": "干啥了",
+    "icon": "public/ganshale-logo-app.png",
     "directories": {
       "output": "release"
     },
     "asarUnpack": [
       "**/node_modules/active-win/**/*"
     ],
+    "electronRebuildConfig": {
+      "onlyModules": []
+    },
     "win": {
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "public/ganshale-logo-app.png"
     }
   }
 }

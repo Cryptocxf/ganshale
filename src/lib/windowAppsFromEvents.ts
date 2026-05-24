@@ -1,5 +1,6 @@
 import type { AwEvent } from './awTypes'
 import { patternHintFromWindowApp } from './monitoredAppsStore'
+import { identityFromEventData } from './windowAppDisplay'
 
 export type WindowAppSummary = {
   app: string
@@ -15,7 +16,8 @@ export function uniqueAppsFromWindowEvents(events: AwEvent[]): WindowAppSummary[
     const appRaw = String(ev.data.app ?? '').trim()
     if (!appRaw) continue
     const appPath = String(ev.data.appPath ?? '').trim()
-    const key = (appPath || appRaw).toLowerCase()
+    const id = identityFromEventData(ev.data)
+    const key = id.identityKey
     if (map.has(key)) continue
     const patternHint = patternHintFromWindowApp(appRaw)
     if (!patternHint) continue
@@ -23,7 +25,7 @@ export function uniqueAppsFromWindowEvents(events: AwEvent[]): WindowAppSummary[
       app: appRaw,
       appPath: appPath || undefined,
       patternHint,
-      label: appRaw.replace(/\.exe$/i, '') || appRaw,
+      label: id.displayName,
     })
   }
   return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'))

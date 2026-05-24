@@ -9,20 +9,19 @@ import {
 } from '../lib/workRecordSettings'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
-  DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
+  DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
+  DASHBOARD_HEADER_ACTION_BTN_CLASS,
+  GS_FIELD_INPUT_MD_CLASS,
+  GS_MODAL_FOOTER_DIVIDER_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
 } from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import { StatusPulseDot } from './StatusPulseDot'
 
-const selectCls =
-  'w-full min-w-0 rounded-md border border-black/[0.08] bg-white py-1 pl-1.5 pr-6 text-[11px] text-ganshale-text shadow-sm focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10 disabled:cursor-not-allowed disabled:opacity-50'
+const selectCls = `${GS_FIELD_INPUT_MD_CLASS} w-full min-w-0 py-1 pl-1.5 pr-6 shadow-sm disabled:cursor-not-allowed disabled:opacity-50`
 
 const labelCls = 'mb-1 block text-[10px] font-medium text-ganshale-muted'
-
-const btnSecondary =
-  'rounded-md border border-black/[0.08] bg-white px-3 py-1 text-[11px] font-medium text-ganshale-text transition hover:bg-ganshale-page'
-const btnPrimary =
-  'rounded-md bg-zinc-900 px-3 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-800'
 
 export type WorkRecordSettingsDraft = WorkRecordSettings
 
@@ -46,21 +45,15 @@ export function WorkRecordSettingsModal({
   const aiActive = isAiAutoSummaryActive(draft)
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4 sm:p-6"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onCancel()
-      }}
+    <DashboardModalRoot
+      open
+      onClose={onCancel}
+      labelledBy="work-record-settings-modal-title"
+      dialogClassName={DASHBOARD_DETAIL_MODAL_SIZE_CLASS}
     >
-      <div
-        className={DASHBOARD_DETAIL_MODAL_SHELL_CLASS}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="work-record-settings-modal-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-black/[0.06] px-2 py-1.5 sm:px-3">
+        <div
+          className={`flex items-center justify-between px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+        >
           <DashboardSectionTitle id="work-record-settings-modal-title" icon={Settings2}>
             工作记录设置
           </DashboardSectionTitle>
@@ -124,13 +117,13 @@ export function WorkRecordSettingsModal({
             </select>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-black/[0.06] pt-2">
-            <button type="button" className={btnSecondary} onClick={onCancel}>
+          <div className={`flex justify-end gap-2 pt-2 ${GS_MODAL_FOOTER_DIVIDER_CLASS}`}>
+            <button type="button" className={DASHBOARD_HEADER_ACTION_BTN_CLASS} onClick={onCancel}>
               取消
             </button>
             <button
               type="button"
-              className={btnPrimary}
+              className="gs-toolbar-btn gs-toolbar-btn--accent px-3 py-1 text-[11px]"
               disabled={disabled}
               onClick={() => onSave(draft)}
             >
@@ -138,8 +131,7 @@ export function WorkRecordSettingsModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </DashboardModalRoot>
   )
 }
 

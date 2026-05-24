@@ -3,11 +3,16 @@ import { ClipboardList, Save, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   aiSummaryWindowBounds,
-  clearLastAiSummaryAt,
+  clearAiSummaryScheduleForDay,
+  ensureAiSummaryAnchoredForSession,
   filterWindowEventsInRange,
   getNextAiSummaryAtMs,
+  isAiSummaryScheduleDay,
   saveLastAiSummaryAt,
+  saveNextAiSummaryAt,
 } from '../lib/aiSummarySchedule'
+import { LOCAL_MIDNIGHT_EVENT, type LocalMidnightDetail } from '../lib/localMidnight'
+import { compareLocalCalendarDay, toYmdLocal } from '../lib/timeutil'
 import { summarizeWindowEventsWithLlm } from '../lib/aiWorkRecordSummary'
 import {
   appendAiSummaryWorkRecord,
@@ -18,6 +23,7 @@ import {
   formatWorkRecordTime,
   saveWorkRecords,
   sortWorkRecordsByTimeDesc,
+  WORK_RECORDS_UPDATED_EVENT,
   type WorkRecordRow,
 } from '../lib/workRecordStore'
 import {
@@ -28,18 +34,24 @@ import {
   WORK_RECORD_SETTINGS_CHANGED_EVENT,
   type WorkRecordSettings,
 } from '../lib/workRecordSettings'
-import { AiAutoSummaryActiveBadge } from './AiAutoSummaryActiveBadge'
+import { AiAutoSummaryStatusSuffix } from './AiAutoSummaryActiveBadge'
+import { DashboardHeaderActionSlot } from './DashboardHeaderActionSlot'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
-  DASHBOARD_DETAIL_MODAL_SHELL_CLASS,
+  DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
+  DASHBOARD_HEADER_ACTIONS_ROW_CLASS,
+  DASHBOARD_HEADER_ACTION_BTN_CLASS,
+  DASHBOARD_TOP_CARD_BODY_CLASS,
+  GS_FIELD_INPUT_ROW_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
+  GS_MODAL_INSET_PANEL_CLASS,
 } from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
+import { DASHBOARD_SECTION_DESCRIPTIONS } from '../lib/dashboardSectionDescriptions'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import { WorkRecordSourceBadge } from './WorkRecordSourceBadge'
 
 const WORK_RECORD_ROW_H_PX = 32
-
-const HEADER_ACTION_BTN =
-  'shrink-0 rounded-md border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-medium text-ganshale-text shadow-sm transition hover:bg-ganshale-page'
 
 const ROW_SAVE_BTN =
   'rounded p-1 text-ganshale-muted transition hover:bg-emerald-50 hover:text-emerald-800'
@@ -47,18 +59,14 @@ const ROW_DELETE_BTN =
   'rounded p-1 text-ganshale-muted transition hover:bg-red-50 hover:text-red-700 disabled:opacity-30'
 
 const th = 'px-2 text-center text-[11px] font-medium align-middle whitespace-nowrap'
-const thIndex = 'px-1 text-center text-[11px] font-medium align-middle whitespace-nowrap'
 const thTime = 'px-1 text-center text-[11px] font-medium align-middle whitespace-nowrap'
 const td = 'px-2 text-[11px] align-middle'
-const tdIndex = 'px-1 text-center text-[10px] align-middle tabular-nums text-ganshale-muted'
 const tdTime =
-  'px-1 text-center text-[10px] align-middle tabular-nums text-ganshale-muted whitespace-nowrap'
-const inputCls =
-  'h-7 min-w-0 flex-1 truncate rounded border border-black/[0.06] bg-white px-1.5 text-[11px] leading-7 text-ganshale-text placeholder:text-ganshale-subtle focus:border-ganshale-text/25 focus:outline-none focus:ring-1 focus:ring-ganshale-text/10 disabled:cursor-default disabled:bg-ganshale-page/80 disabled:text-ganshale-text'
+  'px-1 text-center text-[11px] align-middle tabular-nums text-ganshale-muted whitespace-nowrap'
+const inputCls = GS_FIELD_INPUT_ROW_CLASS
 
 function WorkRecordTableRow({
   row,
-  displayIndex,
   isSystem,
   showBadge,
   onUpdate,
@@ -69,7 +77,6 @@ function WorkRecordTableRow({
   rowPy,
 }: {
   row: WorkRecordRow
-  displayIndex: number
   isSystem: boolean
   showBadge: boolean
   onUpdate: (id: string, patch: Partial<Pick<WorkRecordRow, 'content'>>) => void
@@ -85,7 +92,6 @@ function WorkRecordTableRow({
       className="hover:bg-ganshale-page/60"
       style={{ height: WORK_RECORD_ROW_H_PX, minHeight: WORK_RECORD_ROW_H_PX }}
     >
-      <td className={`${tdIndex} ${py}`}>{displayIndex}</td>
       <td className={`${td} ${py}`}>
         <div className="flex min-w-0 items-center gap-1.5">
           {showBadge ? <WorkRecordSourceBadge source={row.source} saved={row.saved} /> : null}
@@ -156,17 +162,43 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   const savedFlashTimerRef = useRef<number | null>(null)
   const aiSummaryBusyRef = useRef(false)
   const aiSummaryAbortRef = useRef<AbortController | null>(null)
+  const isToday = useMemo(() => compareLocalCalendarDay(day) === 'today', [day])
 
   eventsRef.current = events
   dayRef.current = day
 
-  useEffect(() => {
-    dismissedSystemIdsRef.current = loadDismissedSystemRecordIds(day)
+  const reloadRowsFromStorage = useCallback(() => {
+    const d = dayRef.current
+    dismissedSystemIdsRef.current = loadDismissedSystemRecordIds(d)
     const settings = loadWorkRecordSettings()
-    const stored = loadWorkRecords(day)
+    const stored = loadWorkRecords(d)
     setRows(isAiAutoSummaryActive(settings) ? stored : stored.filter((r) => r.source !== 'system'))
+  }, [])
+
+  useEffect(() => {
+    reloadRowsFromStorage()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 换日仅从本地加载
   }, [day])
+
+  useEffect(() => {
+    window.addEventListener(WORK_RECORDS_UPDATED_EVENT, reloadRowsFromStorage)
+    return () => window.removeEventListener(WORK_RECORDS_UPDATED_EVENT, reloadRowsFromStorage)
+  }, [reloadRowsFromStorage])
+
+  useEffect(() => {
+    const onMidnight = (e: Event) => {
+      const detail = (e as CustomEvent<LocalMidnightDetail>).detail
+      if (!detail || toYmdLocal(dayRef.current) !== detail.prevYmd) return
+      const today = new Date()
+      dismissedSystemIdsRef.current = loadDismissedSystemRecordIds(today)
+      const settings = loadWorkRecordSettings()
+      const stored = loadWorkRecords(today)
+      setRows(isAiAutoSummaryActive(settings) ? stored : stored.filter((r) => r.source !== 'system'))
+      setRecordSettingsRev((v) => v + 1)
+    }
+    window.addEventListener(LOCAL_MIDNIGHT_EVENT, onMidnight)
+    return () => window.removeEventListener(LOCAL_MIDNIGHT_EVENT, onMidnight)
+  }, [])
 
   const runAiSummary = useCallback(async () => {
     if (aiSummaryBusyRef.current) return
@@ -192,8 +224,10 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     aiSummaryAbortRef.current = new AbortController()
 
     try {
+      const intervalMs = systemRecordIntervalMs(settings)
       if (windowEvents.length === 0) {
         saveLastAiSummaryAt(currentDay, nowMs)
+        if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + intervalMs)
         return
       }
       const content = await summarizeWindowEventsWithLlm(
@@ -202,6 +236,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         aiSummaryAbortRef.current.signal,
       )
       saveLastAiSummaryAt(currentDay, nowMs)
+      if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + intervalMs)
       setRows((prev) => appendAiSummaryWorkRecord(prev, content))
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
@@ -221,6 +256,9 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   useEffect(() => {
     const settings = loadWorkRecordSettings()
     if (!isAiAutoSummaryActive(settings)) return
+    if (!isAiSummaryScheduleDay(day)) return
+
+    ensureAiSummaryAnchoredForSession(day, settings)
 
     const tick = () => void runAiSummary()
 
@@ -231,6 +269,8 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       const schedule = () => {
         const current = loadWorkRecordSettings()
         if (!isAiAutoSummaryActive(current)) return
+        if (!isAiSummaryScheduleDay(dayRef.current)) return
+        ensureAiSummaryAnchoredForSession(dayRef.current, current)
         const nextAt = getNextAiSummaryAtMs(dayRef.current, current)
         const delay =
           nextAt == null ? intervalMs : Math.max(250, nextAt - Date.now())
@@ -253,7 +293,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       if (fire) void tick()
     }, 30_000)
     return () => window.clearInterval(id)
-  }, [recordSettingsRev, runAiSummary])
+  }, [day, recordSettingsRev, runAiSummary])
 
   useEffect(() => {
     const onSettingsChange = () => {
@@ -271,8 +311,11 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         wasActive !== nowActive
       ) {
         setRecordSettingsRev((v) => v + 1)
-        if (nowActive && !wasActive) {
-          clearLastAiSummaryAt(dayRef.current)
+        if (!nowActive) {
+          clearAiSummaryScheduleForDay(dayRef.current)
+        } else if (!wasActive || recordSettings.systemRecordPeriod !== next.systemRecordPeriod) {
+          clearAiSummaryScheduleForDay(dayRef.current)
+          ensureAiSummaryAnchoredForSession(dayRef.current, next)
         }
       }
     }
@@ -359,9 +402,8 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   const deleteManualDisabled = manualRowCount <= 1
 
   const workRecordTableHead = (
-    <thead className="sticky top-0 z-[1] border-b border-ganshale-border bg-ganshale-page text-ganshale-subtle">
+    <thead className="gs-dashboard-modal__table-head sticky top-0 z-[1] text-ganshale-subtle">
       <tr style={{ height: WORK_RECORD_ROW_H_PX }}>
-        <th className={thIndex}>序号</th>
         <th className={th}>具体内容</th>
         <th className={thTime}>时间</th>
         <th className={th}>操作</th>
@@ -370,15 +412,14 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   )
 
   const workRecordTableBody = (rowPy?: string) => (
-    <tbody className="divide-y divide-ganshale-border">
-      {sortedRows.map((row, index) => {
+    <tbody className="gs-dashboard-modal__table-body divide-y divide-ganshale-border">
+      {sortedRows.map((row) => {
         const isSystem = row.source === 'system'
         const showBadge = (row.source === 'manual' && row.saved) || isSystem
         return (
           <WorkRecordTableRow
             key={row.id}
             row={row}
-            displayIndex={sortedRows.length - index}
             isSystem={isSystem}
             showBadge={showBadge}
             onUpdate={updateRow}
@@ -396,40 +437,47 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   return (
     <section
       aria-label="今日工作记录"
-      className="gs-card relative flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-2.5"
+      className="gs-card relative flex h-full min-h-0 flex-col overflow-hidden p-2 sm:p-2.5"
     >
-      <div className="flex shrink-0 items-start justify-between gap-2">
-        <DashboardSectionTitle
-          icon={ClipboardList}
-          suffix={
-            isAiAutoSummaryActive(recordSettings) ? <AiAutoSummaryActiveBadge day={day} /> : null
-          }
-        >
-          今日工作记录
-        </DashboardSectionTitle>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
-          <button type="button" onClick={addRow} className={HEADER_ACTION_BTN}>
-            新增行
-          </button>
-          {detailRows.length > 0 ? (
-            <button
-              type="button"
+      <div className="shrink-0">
+        <div className="flex min-h-[22px] min-w-0 items-start justify-between gap-2">
+          <DashboardSectionTitle
+            icon={ClipboardList}
+            description={DASHBOARD_SECTION_DESCRIPTIONS.dailyWorkRecord}
+            suffix={<AiAutoSummaryStatusSuffix day={day} settings={recordSettings} />}
+          >
+            今日工作记录
+          </DashboardSectionTitle>
+          <div className={DASHBOARD_HEADER_ACTIONS_ROW_CLASS}>
+            {isToday ? (
+              <DashboardHeaderActionSlot
+                label="新增行"
+                visible
+                onClick={addRow}
+                className={DASHBOARD_HEADER_ACTION_BTN_CLASS}
+              />
+            ) : null}
+            <DashboardHeaderActionSlot
+              label="查看详情"
+              visible={isToday || detailRows.length > 0}
               onClick={() => setDetailModalOpen(true)}
-              className={HEADER_ACTION_BTN}
-            >
-              查看详情
-            </button>
-          ) : null}
+              className={DASHBOARD_HEADER_ACTION_BTN_CLASS}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="mt-1.5 min-h-0 flex-1 overflow-auto rounded-lg border border-black/[0.06]">
+      <div
+        className={[
+          DASHBOARD_TOP_CARD_BODY_CLASS,
+          `mt-1.5 overflow-auto ${GS_MODAL_INSET_PANEL_CLASS}`,
+        ].join(' ')}
+      >
         <table className="w-full table-fixed border-collapse text-left">
           <colgroup>
-            <col className="w-[7%]" />
-            <col className="w-[54%]" />
-            <col className="w-[12%]" />
-            <col className="w-[12%]" />
+            <col className="w-[58%]" />
+            <col className="w-[18%]" />
+            <col className="w-[24%]" />
           </colgroup>
           {workRecordTableHead}
           {workRecordTableBody()}
@@ -437,28 +485,25 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       </div>
 
       {detailModalOpen ? (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4 sm:p-6"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setDetailModalOpen(false)
-          }}
+        <DashboardModalRoot
+          open
+          onClose={() => setDetailModalOpen(false)}
+          labelledBy="work-record-detail-modal-title"
+          dialogClassName={DASHBOARD_DETAIL_MODAL_SIZE_CLASS}
         >
-          <div
-            className={DASHBOARD_DETAIL_MODAL_SHELL_CLASS}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="work-record-detail-modal-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-black/[0.06] px-2 py-1.5 sm:px-3">
+            <div
+              className={`flex items-center justify-between px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+            >
               <DashboardSectionTitle id="work-record-detail-modal-title" icon={ClipboardList}>
                 今日工作记录
               </DashboardSectionTitle>
-              <div className="flex items-center gap-1.5">
-                <button type="button" onClick={addRow} className={HEADER_ACTION_BTN}>
-                  新增行
-                </button>
+              <div className={DASHBOARD_HEADER_ACTIONS_ROW_CLASS}>
+                <DashboardHeaderActionSlot
+                  label="新增行"
+                  visible={isToday}
+                  onClick={addRow}
+                  className={DASHBOARD_HEADER_ACTION_BTN_CLASS}
+                />
                 <button
                   type="button"
                   onClick={() => setDetailModalOpen(false)}
@@ -472,17 +517,15 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
             <div className={DASHBOARD_DETAIL_MODAL_BODY_CLASS}>
               <table className="w-full table-fixed border-collapse text-left">
                 <colgroup>
-                  <col className="w-[7%]" />
-                  <col className="w-[54%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[12%]" />
+                  <col className="w-[58%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[24%]" />
                 </colgroup>
                 {workRecordTableHead}
                 {workRecordTableBody()}
               </table>
             </div>
-          </div>
-        </div>
+        </DashboardModalRoot>
       ) : null}
 
     </section>

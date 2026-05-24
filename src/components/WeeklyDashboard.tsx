@@ -1,94 +1,201 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { AwEvent } from '../lib/awTypes'
+import { useGanshaleData } from '../context/useGanshaleData'
+import { useWeeklyReport } from '../context/WeeklyReportContext'
+import { currentForegroundSegmentLive } from '../lib/aggregations'
 import {
-  appTotalsFromWindowEvents,
-  formatDuration,
-  formatDurationHmsZh,
-  totalSecondsWindowEvents,
-} from '../lib/aggregations'
-import * as store from '../lib/idbStore'
-import { BUCKET_WINDOW } from '../lib/seed'
-import { excludeGanshaleSelfWindowEvents } from '../lib/selfWindowFilter'
+  MONITORED_APPS_CHANGED_EVENT,
+  loadMonitoredAppPatterns,
+} from '../lib/monitoredAppsStore'
+import { compareLocalCalendarWeek, startOfWeekMondayLocal } from '../lib/timeutil'
 import {
-  endOfWeekSundayLocal,
-  parseYmdLocal,
-  startOfWeekMondayLocal,
-  toYmdLocal,
-} from '../lib/timeutil'
-import { SECONDARY_PAGE_CONTENT_CLASS } from './dashboardLayout'
+  addWeeksMondayLocal,
+  countWorkDaysInWeek,
+  formatWeekOverWeekCompare,
+  isoWeekNumberLocal,
+  loadWindowEventsForWeekRange,
+  sumOfficeSecondsForWeek,
+  sumOfficeSecondsForPrevWeekCompare,
+} from '../lib/weeklyWorktime'
+import { WeeklyDailyReportDetailsPanel } from './WeeklyDailyReportDetailsPanel'
+import { WeeklyDailyDurationDistribution } from './WeeklyDailyDurationDistribution'
+import { WeeklyWorkDurationCard } from './WeeklyWorkDurationCard'
+import {
+  WEEKLY_MIDDLE_SECTION_CLASS,
+  WEEKLY_PAGE_CLASS,
+  WEEKLY_REPORT_DETAILS_SECTION_CLASS,
+} from './dashboardLayout'
+
+function useMonitoredAppPatterns(): string[] {
+  const [patterns, setPatterns] = useState(() => loadMonitoredAppPatterns())
+  useEffect(() => {
+    const sync = () => setPatterns(loadMonitoredAppPatterns())
+    window.addEventListener(MONITORED_APPS_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(MONITORED_APPS_CHANGED_EVENT, sync)
+  }, [])
+  return patterns
+}
 
 export function WeeklyDashboard() {
-  const [weekStart, setWeekStart] = useState(() => startOfWeekMondayLocal(new Date()))
-  const [events, setEvents] = useState<AwEvent[]>([])
-  const [loading, setLoading] = useState(true)
+  const { weekStart, setWeekStart } = useWeeklyReport()
+
+  useEffect(() => {
+    setWeekStart(startOfWeekMondayLocal(new Date()))
+  }, [setWeekStart])
+  const {
+    ready: dataReady,
+    liveForeground,
+    windowTrackingActive,
+    collectionPausedByUser,
+  } = useGanshaleData()
+  const patterns = useMonitoredAppPatterns()
+  const [currentWeekEvents, setCurrentWeekEvents] = useState<Awaited<
+    ReturnType<typeof loadWindowEventsForWeekRange>
+  > | null>(null)
+  const [prevWeekEvents, setPrevWeekEvents] = useState<Awaited<
+    ReturnType<typeof loadWindowEventsForWeekRange>
+  > | null>(null)
+  const [worktimeReady, setWorktimeReady] = useState(false)
+  const [liveTick, setLiveTick] = useState(0)
+  const weekKind = useMemo(() => compareLocalCalendarWeek(weekStart), [weekStart])
+  const weekNo = useMemo(() => isoWeekNumberLocal(weekStart), [weekStart])
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      const s = weekStart
-      const e = endOfWeekSundayLocal(s)
-      const list = await store.getEventsInRange(BUCKET_WINDOW, s.toISOString(), e.toISOString())
-      if (!cancelled) {
-        setEvents(excludeGanshaleSelfWindowEvents(list))
-        setLoading(false)
-      }
-    })()
+    setWorktimeReady(false)
+    const prevStart = addWeeksMondayLocal(weekStart, -1)
+    Promise.all([
+      loadWindowEventsForWeekRange(weekStart, 1),
+      loadWindowEventsForWeekRange(prevStart, 1),
+    ])
+      .then(([cur, prev]) => {
+        if (!cancelled) {
+          setCurrentWeekEvents(cur)
+          setPrevWeekEvents(prev)
+          setWorktimeReady(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurrentWeekEvents([])
+          setPrevWeekEvents([])
+          setWorktimeReady(true)
+        }
+      })
     return () => {
       cancelled = true
     }
   }, [weekStart])
 
-  const sec = useMemo(() => totalSecondsWindowEvents(events), [events])
-  const topApps = useMemo(() => appTotalsFromWindowEvents(events).slice(0, 8), [events])
+  useEffect(() => {
+    if (weekKind !== 'current') return
+    const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [weekKind])
+
+  useEffect(() => {
+    if (weekKind !== 'current' || !dataReady) return
+    const id = window.setInterval(() => {
+      loadWindowEventsForWeekRange(weekStart, 1)
+        .then(setCurrentWeekEvents)
+        .catch(() => {})
+    }, 2500)
+    return () => clearInterval(id)
+  }, [weekKind, weekStart, dataReady])
+
+  const extrapolateToday =
+    weekKind === 'current' && windowTrackingActive && !collectionPausedByUser
+
+  const weekEventsForUi = useMemo(() => {
+    void liveTick
+    if (!currentWeekEvents) return []
+    if (!extrapolateToday) return currentWeekEvents
+    const { event, seconds } = currentForegroundSegmentLive(
+      currentWeekEvents,
+      liveForeground,
+      Date.now(),
+      true,
+    )
+    if (!event) return currentWeekEvents
+    return currentWeekEvents.map((ev) =>
+      ev.id === event.id ? { ...ev, duration: seconds } : ev,
+    )
+  }, [currentWeekEvents, liveForeground, extrapolateToday, liveTick])
+
+  const currentSec = useMemo(() => {
+    void liveTick
+    if (!currentWeekEvents) return 0
+    return sumOfficeSecondsForWeek({
+      weekStartMonday: weekStart,
+      events: currentWeekEvents,
+      patterns,
+      live: liveForeground,
+      now: new Date(),
+      extrapolateToday,
+    })
+  }, [currentWeekEvents, weekStart, patterns, liveForeground, extrapolateToday, liveTick])
+
+  const prevSec = useMemo(() => {
+    if (!prevWeekEvents) return 0
+    return sumOfficeSecondsForPrevWeekCompare({
+      weekStartMonday: weekStart,
+      events: prevWeekEvents,
+      patterns,
+    })
+  }, [prevWeekEvents, weekStart, patterns])
+
+  const compare = useMemo(
+    () => formatWeekOverWeekCompare(currentSec, prevSec),
+    [currentSec, prevSec],
+  )
+
+  const workDays = useMemo(() => {
+    void liveTick
+    if (!currentWeekEvents) return 0
+    return countWorkDaysInWeek({
+      weekStartMonday: weekStart,
+      events: currentWeekEvents,
+      patterns,
+      live: liveForeground,
+      now: new Date(),
+      extrapolateToday,
+    })
+  }, [weekStart, currentWeekEvents, patterns, liveForeground, extrapolateToday, liveTick])
+
+  const avgSec = useMemo(() => {
+    return workDays > 0 ? Math.round(currentSec / workDays) : 0
+  }, [currentSec, workDays])
+
+  const statsReady = dataReady && worktimeReady
 
   return (
-    <div className={SECONDARY_PAGE_CONTENT_CLASS}>
-      <div className="gs-card p-4">
-        <label className="text-[10px] font-medium uppercase tracking-wide text-ganshale-subtle">
-          周内任一天（自动对齐到当周周一）
-        </label>
-        <input
-          type="date"
-          value={toYmdLocal(weekStart)}
-          onChange={(e) => {
-            const v = e.target.value
-            if (!v) return
-            setWeekStart(startOfWeekMondayLocal(parseYmdLocal(v)))
-          }}
-          className="mt-2 block max-w-[11rem] rounded-lg border border-black/[0.08] bg-white px-2 py-1.5 font-mono text-xs shadow-sm"
+    <div className={WEEKLY_PAGE_CLASS}>
+      <section className={WEEKLY_REPORT_DETAILS_SECTION_CLASS}>
+        <WeeklyDailyReportDetailsPanel weekStart={weekStart} />
+      </section>
+
+      <section className={WEEKLY_MIDDLE_SECTION_CLASS}>
+        <div className="gs-card flex h-full min-h-0 flex-col overflow-hidden p-2.5 sm:p-3">
+          <WeeklyDailyDurationDistribution
+            weekStart={weekStart}
+            events={weekEventsForUi}
+            patterns={patterns}
+            live={liveForeground}
+            extrapolateToday={extrapolateToday}
+            ready={statsReady}
+          />
+        </div>
+        <WeeklyWorkDurationCard
+          weekStart={weekStart}
+          weekNo={weekNo}
+          ready={statsReady}
+          currentSec={currentSec}
+          compareLine={compare.line}
+          compareTone={compare.tone}
+          avgSec={avgSec}
+          workDays={workDays}
+          liveTotal={extrapolateToday}
         />
-        <p className="mt-1 text-[10px] text-ganshale-muted">
-          {toYmdLocal(weekStart)} — {toYmdLocal(endOfWeekSundayLocal(weekStart))}
-        </p>
-      </div>
-      <div className="gs-card p-4">
-        <h2 className="text-sm font-semibold text-ganshale-text">本周概括</h2>
-        {loading ? (
-          <p className="mt-3 text-sm text-ganshale-muted">加载中…</p>
-        ) : (
-          <>
-            <p className="mt-2 font-display text-xl font-semibold tabular-nums text-ganshale-text">
-              累积活跃 {formatDurationHmsZh(sec)}
-            </p>
-            <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-ganshale-subtle">
-              应用 Top
-            </p>
-            <ul className="mt-2 space-y-1.5 text-sm">
-              {topApps.length === 0 ? (
-                <li className="text-ganshale-muted">本周暂无窗口数据</li>
-              ) : (
-                topApps.map((r) => (
-                  <li key={r.app} className="flex justify-between gap-3 font-mono text-xs">
-                    <span className="truncate text-ganshale-text">{r.app}</span>
-                    <span className="shrink-0 text-ganshale-muted">{formatDuration(r.seconds)}</span>
-                  </li>
-                ))
-              )}
-            </ul>
-          </>
-        )}
-      </div>
+      </section>
     </div>
   )
 }

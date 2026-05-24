@@ -163,6 +163,21 @@ export async function countEvents(): Promise<number> {
   })
 }
 
+export async function deleteEventsInRange(
+  bucketId: string,
+  startIso: string,
+  endIso: string,
+): Promise<number> {
+  const events = await getEventsInRange(bucketId, startIso, endIso)
+  if (events.length === 0) return 0
+  const db = await openDb()
+  const tx = db.transaction('events', 'readwrite')
+  const eStore = tx.objectStore('events')
+  for (const ev of events) eStore.delete(ev.id)
+  await txDone(tx)
+  return events.length
+}
+
 export async function clearAllData(): Promise<void> {
   const db = await openDb()
   const tx = db.transaction(['buckets', 'events'], 'readwrite')

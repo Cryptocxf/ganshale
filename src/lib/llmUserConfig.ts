@@ -16,53 +16,87 @@ const WORK_RECORD_SETTINGS_KEY = 'ganshale-work-record-settings-v2'
 
 const MODEL_IDS = new Set<string>(DAILY_REPORT_MODELS.map((m) => m.id))
 
-export const DEFAULT_LLM_BASE_URL =
-  'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1'
+/** @deprecated 发布版不再内置网关；保留常量名供旧代码引用，值为空 */
+export const DEFAULT_LLM_BASE_URL = ''
 
-export const DEFAULT_LLM_API_KEY = '3886B9B1-FABA-4694-85CB-11FC271D1F29'
+/** @deprecated 发布版不再内置 Key */
+export const DEFAULT_LLM_API_KEY = ''
 
-export const DEFAULT_GATEWAY_MODEL_ID = 'qwen3-max'
+/** @deprecated 发布版不再内置模型 ID */
+export const DEFAULT_GATEWAY_MODEL_ID = ''
 
-const LEGACY_DEFAULT_GATEWAY_MODEL_ID = 'qwen3.5-hy'
-const LEGACY_DEFAULT_API_KEY = 'lingxiclaw-session-312374384'
-const LEGACY_DEFAULT_BASE_URLS = new Set(['http://127.0.0.1:15678/v1'])
+const LEGACY_SHIPPED_BASE_URLS = new Set([
+  'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
+  'http://127.0.0.1:15678/v1',
+])
+
+const LEGACY_SHIPPED_API_KEYS = new Set([
+  '3886B9B1-FABA-4694-85CB-11FC271D1F29',
+  'lingxiclaw-session-312374384',
+])
+
+const LEGACY_SHIPPED_MODEL_IDS = new Set(['qwen3-max', 'qwen3.5-hy'])
+
+function isLegacyShippedBaseUrl(url: string): boolean {
+  const t = url.trim().replace(/\/+$/, '')
+  return LEGACY_SHIPPED_BASE_URLS.has(t)
+}
+
+function isLegacyShippedApiKey(key: string): boolean {
+  const t = key.trim()
+  return !t || LEGACY_SHIPPED_API_KEYS.has(t)
+}
+
+function isLegacyShippedModelId(modelId: string): boolean {
+  const t = modelId.trim()
+  return !t || LEGACY_SHIPPED_MODEL_IDS.has(t)
+}
+
+function buildTimeLlmBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_LLM_BASE_URL && String(import.meta.env.VITE_LLM_BASE_URL).trim()
+  return fromEnv ? fromEnv.replace(/\/+$/, '') : ''
+}
+
+function buildTimeLlmApiKey(): string {
+  const fromEnv = import.meta.env.VITE_LLM_API_KEY && String(import.meta.env.VITE_LLM_API_KEY).trim()
+  return fromEnv || ''
+}
 
 function resolveStoredBaseUrl(stored: string | undefined, fallback: string): string {
   const t = stored?.trim() ?? ''
-  if (!t || LEGACY_DEFAULT_BASE_URLS.has(t)) return fallback
+  if (!t || isLegacyShippedBaseUrl(t)) return fallback
   return t
 }
 
 function resolveStoredApiKey(stored: string | undefined, fallback: string): string {
   const t = stored?.trim() ?? ''
-  if (!t || t === LEGACY_DEFAULT_API_KEY || t === DEFAULT_LLM_API_KEY) return fallback
+  if (isLegacyShippedApiKey(t)) return fallback
   return t
 }
 
-/** 是否使用内置默认 Key（未自定义） */
+/** API Key 是否未填写 */
 export function isBuiltinLlmApiKey(key: string): boolean {
-  const t = key.trim()
-  return !t || t === DEFAULT_LLM_API_KEY
+  return !key.trim()
 }
 
-/** 持久化用：内置默认 URL / Key 存为空字符串 */
+/** 持久化用：与构建时默认值相同的 URL / Key 存为空字符串 */
 export function normalizeLlmConfigForStorage(
   config: Pick<LlmUserConfig, 'baseUrl' | 'apiKey' | 'gatewayModelId'>,
   defaultBaseUrl: string = describeDefaultLlmBaseUrl(),
 ): Pick<LlmUserConfig, 'baseUrl' | 'apiKey' | 'gatewayModelId'> {
   const baseUrl = config.baseUrl.trim()
   const apiKey = config.apiKey.trim()
+  const gatewayModelId = config.gatewayModelId.trim()
   return {
-    baseUrl:
-      !baseUrl || baseUrl === defaultBaseUrl || baseUrl === DEFAULT_LLM_BASE_URL ? '' : baseUrl,
-    apiKey: isBuiltinLlmApiKey(apiKey) ? '' : apiKey,
-    gatewayModelId: resolveStoredGatewayModelId(config.gatewayModelId),
+    baseUrl: !baseUrl || baseUrl === defaultBaseUrl || isLegacyShippedBaseUrl(baseUrl) ? '' : baseUrl,
+    apiKey: !apiKey || apiKey === buildTimeLlmApiKey() || isLegacyShippedApiKey(apiKey) ? '' : apiKey,
+    gatewayModelId: isLegacyShippedModelId(gatewayModelId) ? '' : gatewayModelId,
   }
 }
 
 function resolveStoredGatewayModelId(stored: string | undefined): string {
   const t = stored?.trim() ?? ''
-  if (!t || t === LEGACY_DEFAULT_GATEWAY_MODEL_ID) return DEFAULT_GATEWAY_MODEL_ID
+  if (isLegacyShippedModelId(t)) return ''
   return t
 }
 
@@ -79,7 +113,7 @@ export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
   '## 输出格式要求',
   '严格按以下Markdown结构输出：',
   '',
-  '# 日报 YYYY-MM-DD',
+  '# 日报 （使用下文【报告日期】中的 YYYY-MM-DD，不得使用其他日期）',
   '',
   '## 一、工作概览',
   '- 总记录条数：X条',
@@ -111,6 +145,7 @@ export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
   '2. 推测分类：根据关键词自动归类（如“Cursor/代码/调试”→开发，“会议/讨论/评审”→会议，“微信/钉钉”→沟通）。',
   '3. 忽略明显非工作记录（如时长<1分钟的零星切换、个人娱乐内容）。',
   '4. 如果某条记录过于模糊（如只有“Cursor”），保留原样但不强行归类到“开发”。',
+  '5. 报告标题日期必须严格等于【报告日期】中的 YYYY-MM-DD，禁止使用示例或臆造日期。',
   '',
   '## 今日工作记录列表',
   '[这里粘贴“今日工作记录”表格的全部内容，格式如：序号、具体内容、时间、分类（如有）]',
@@ -169,6 +204,37 @@ export const DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT = [
   '',
   '## 本周每日工作记录汇总',
   '[在这里粘贴你从周一到周日的所有“今日工作记录”内容]',
+].join('\n')
+
+export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
+  '## 角色',
+  '你是一位专业的职场助理，擅长将零散的工作记录整理成结构清晰、语言精炼的月报。',
+  '',
+  '## 任务',
+  '根据我提供的【本月每日/每周工作记录汇总】，生成一份符合我风格的月报。',
+  '',
+  '## 输出格式要求',
+  '严格按照以下格式输出，不要添加额外解释：',
+  '',
+  '【分类标题1】',
+  '1. 具体工作内容描述（不超过20字）',
+  '2. 具体工作内容描述',
+  '',
+  '【分类标题2】',
+  '1. 具体工作内容描述',
+  '2. ...',
+  '',
+  '（以此类推）',
+  '',
+  '## 内容处理规则',
+  '1. **分类方式**：根据工作内容的性质自动归类，分类标题用【】包裹。',
+  '2. **精炼原则**：每条工作描述不超过20个字，动词开头或直接陈述结果。',
+  '3. **合并同类项**：相同类型、相近主题的工作合并为一条。',
+  '4. **优先级排序**：每条分类下，按重要性或时间顺序排列。',
+  '5. **过滤噪音**：忽略时长过短、明显非工作、个人娱乐性质的记录。',
+  '',
+  '## 本月工作记录汇总',
+  '[在这里粘贴本月的日报、周报或工作记录汇总]',
 ].join('\n')
 
 const LEGACY_WEEKLY_REPORT_GENERATION_PROMPT = [
@@ -232,6 +298,12 @@ export function normalizeStoredWeeklyReportPrompt(stored: string): string {
   return t
 }
 
+export function normalizeStoredMonthlyReportPrompt(stored: string): string {
+  const t = stored.trim()
+  if (!t) return DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
+  return t
+}
+
 export type LlmUserConfig = {
   baseUrl: string
   apiKey: string
@@ -240,17 +312,19 @@ export type LlmUserConfig = {
   aiAutoSummaryPrompt: string
   dailyReportPrompt: string
   weeklyReportPrompt: string
+  monthlyReportPrompt: string
 }
 
 export function defaultLlmUserConfig(): LlmUserConfig {
   return {
-    baseUrl: DEFAULT_LLM_BASE_URL,
-    apiKey: DEFAULT_LLM_API_KEY,
-    gatewayModelId: DEFAULT_GATEWAY_MODEL_ID,
-    modelMap: { 'qwen3.5': DEFAULT_GATEWAY_MODEL_ID },
+    baseUrl: buildTimeLlmBaseUrl(),
+    apiKey: buildTimeLlmApiKey(),
+    gatewayModelId: '',
+    modelMap: {},
     aiAutoSummaryPrompt: buildDefaultAiAutoSummaryPromptTemplate(),
     dailyReportPrompt: DEFAULT_DAILY_REPORT_GENERATION_PROMPT,
     weeklyReportPrompt: DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT,
+    monthlyReportPrompt: DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT,
   }
 }
 
@@ -306,8 +380,10 @@ function normalizePartial(
   const modelMap = parseModelMap(j.modelMap)
   const gatewayModelId =
     typeof j.gatewayModelId === 'string' && j.gatewayModelId.trim()
-      ? j.gatewayModelId.trim()
-      : modelMap['qwen3.5']?.trim() || DEFAULT_GATEWAY_MODEL_ID
+      ? resolveStoredGatewayModelId(j.gatewayModelId)
+      : modelMap['qwen3.5']?.trim()
+        ? resolveStoredGatewayModelId(modelMap['qwen3.5'])
+        : ''
   const aiAutoSummaryPrompt =
     typeof j.aiAutoSummaryPrompt === 'string' && j.aiAutoSummaryPrompt.trim()
       ? j.aiAutoSummaryPrompt.trim()
@@ -325,6 +401,10 @@ function normalizePartial(
     typeof j.weeklyReportPrompt === 'string' && j.weeklyReportPrompt.trim()
       ? j.weeklyReportPrompt.trim()
       : undefined
+  const monthlyReportPrompt =
+    typeof j.monthlyReportPrompt === 'string' && j.monthlyReportPrompt.trim()
+      ? j.monthlyReportPrompt.trim()
+      : undefined
   return {
     baseUrl: typeof j.baseUrl === 'string' ? j.baseUrl.trim() : '',
     apiKey: typeof j.apiKey === 'string' ? j.apiKey : '',
@@ -333,6 +413,7 @@ function normalizePartial(
     ...(aiAutoSummaryPrompt ? { aiAutoSummaryPrompt } : {}),
     ...(dailyReportPrompt ? { dailyReportPrompt } : {}),
     ...(weeklyReportPrompt ? { weeklyReportPrompt } : {}),
+    ...(monthlyReportPrompt ? { monthlyReportPrompt } : {}),
   }
 }
 
@@ -356,6 +437,9 @@ export function loadLlmUserConfig(): LlmUserConfig {
     weeklyReportPrompt: normalizeStoredWeeklyReportPrompt(
       j.weeklyReportPrompt ?? fallback.weeklyReportPrompt,
     ),
+    monthlyReportPrompt: normalizeStoredMonthlyReportPrompt(
+      j.monthlyReportPrompt ?? fallback.monthlyReportPrompt,
+    ),
   }
 
   if (typeof window !== 'undefined') {
@@ -371,15 +455,21 @@ export function loadLlmUserConfig(): LlmUserConfig {
               : ''
         const rawWeekly =
           typeof stored.weeklyReportPrompt === 'string' ? stored.weeklyReportPrompt.trim() : ''
+        const rawMonthly =
+          typeof stored.monthlyReportPrompt === 'string' ? stored.monthlyReportPrompt.trim() : ''
         const storedKey = typeof stored.apiKey === 'string' ? stored.apiKey.trim() : ''
         const storedBase = typeof stored.baseUrl === 'string' ? stored.baseUrl.trim() : ''
-        const shouldPersistSecrets =
-          storedKey === DEFAULT_LLM_API_KEY ||
-          storedBase === DEFAULT_LLM_BASE_URL
+        const storedModel =
+          typeof stored.gatewayModelId === 'string' ? stored.gatewayModelId.trim() : ''
+        const shouldPersistLegacy =
+          isLegacyShippedApiKey(storedKey) ||
+          isLegacyShippedBaseUrl(storedBase) ||
+          isLegacyShippedModelId(storedModel)
         if (
           rawDaily !== config.dailyReportPrompt ||
           rawWeekly !== config.weeklyReportPrompt ||
-          shouldPersistSecrets
+          rawMonthly !== config.monthlyReportPrompt ||
+          shouldPersistLegacy
         ) {
           saveLlmUserConfig(config)
         }
@@ -408,11 +498,18 @@ export function loadWeeklyReportGenerationPrompt(): string {
   return p || DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT
 }
 
+export function loadMonthlyReportGenerationPrompt(): string {
+  const p = loadLlmUserConfig().monthlyReportPrompt.trim()
+  return p || DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
+}
+
 export function saveLlmUserConfig(config: LlmUserConfig): void {
   if (typeof window === 'undefined') return
-  const gatewayModelId = config.gatewayModelId.trim() || DEFAULT_GATEWAY_MODEL_ID
+  const gatewayModelId = resolveStoredGatewayModelId(config.gatewayModelId)
   const modelMap: Partial<Record<DailyReportModelId, string>> = { ...config.modelMap }
-  modelMap['qwen3.5'] = gatewayModelId
+  if (gatewayModelId) {
+    modelMap['qwen3.5'] = gatewayModelId
+  }
 
   const storedFields = normalizeLlmConfigForStorage(config)
   const trimmed: LlmUserConfig = {
@@ -425,6 +522,7 @@ export function saveLlmUserConfig(config: LlmUserConfig): void {
       buildDefaultAiAutoSummaryPromptTemplate(),
     dailyReportPrompt: normalizeStoredDailyReportPrompt(config.dailyReportPrompt),
     weeklyReportPrompt: normalizeStoredWeeklyReportPrompt(config.weeklyReportPrompt),
+    monthlyReportPrompt: normalizeStoredMonthlyReportPrompt(config.monthlyReportPrompt),
   }
   for (const m of DAILY_REPORT_MODELS) {
     const v = modelMap[m.id]?.trim()
@@ -436,9 +534,8 @@ export function saveLlmUserConfig(config: LlmUserConfig): void {
 }
 
 export function describeDefaultLlmBaseUrl(): string {
-  const fromEnv = import.meta.env.VITE_LLM_BASE_URL && String(import.meta.env.VITE_LLM_BASE_URL).trim()
-  if (fromEnv) return fromEnv.replace(/\/+$/, '')
-  return DEFAULT_LLM_BASE_URL
+  return buildTimeLlmBaseUrl()
 }
 
-export const API_KEY_MASK_DISPLAY = '••••••••••••••••••••••••••••'
+export const LLM_NOT_CONFIGURED_HINT =
+  '请先在「设置 → 模型配置」填写网关地址、API Key 与模型 ID，并点击测试确认可用。'

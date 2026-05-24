@@ -10,6 +10,13 @@ export function endOfLocalDay(d: Date): Date {
   return x
 }
 
+/** 距下一本地 0:00:00.000 的毫秒数 */
+export function msUntilNextLocalMidnight(nowMs = Date.now()): number {
+  const next = startOfLocalDay(new Date(nowMs))
+  next.setDate(next.getDate() + 1)
+  return Math.max(0, next.getTime() - nowMs)
+}
+
 export function parseIso(s: string): number {
   return new Date(s).getTime()
 }
@@ -37,8 +44,8 @@ export function formatDayLabel(d: Date): string {
   })
 }
 
-/** `YYYY-MM-DD` 本地日历日（用于 `<input type="date">`） */
-const WEEKDAY_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
+/** 本地 `YYYY-MM-DD` 本地日历日（用于 `<input type="date">`） */
+export const WEEKDAY_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 
 /** 本地 `YYYY年MM月DD日 HH:mm:ss` */
 export function formatDatetimeZh(d: Date): string {
@@ -61,6 +68,23 @@ export function formatDatetimeZhWithWeekday(d: Date): string {
   const mi = String(d.getMinutes()).padStart(2, '0')
   const s = String(d.getSeconds()).padStart(2, '0')
   return `${y}年${mo}月${day}日（${w}）${h}:${mi}:${s}`
+}
+
+/** 日报上下文用：`2026年05月16日（周六）` */
+export function formatReportDayLabelZh(d: Date): string {
+  const ymd = toYmdLocal(d)
+  const [y, m, day] = ymd.split('-')
+  const w = WEEKDAY_ZH[d.getDay()]
+  return `${y}年${m}月${day}日（${w}）`
+}
+
+/** 日看板办公时长卡片角标：`2026年05月16日  周六` */
+export function formatOfficeDurationDayFooterZh(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const w = WEEKDAY_ZH[d.getDay()]
+  return `${y}年${m}月${day}日  ${w}`
 }
 
 export function toYmdLocal(d: Date): string {
@@ -107,6 +131,34 @@ export function endOfWeekSundayLocal(weekStartMonday: Date): Date {
   x.setDate(x.getDate() + 6)
   x.setHours(23, 59, 59, 999)
   return x
+}
+
+/** 周内周一至周日（每天 12:00 本地，避免 DST 偏移） */
+export function daysInLocalWeek(weekStartMonday: Date): Date[] {
+  const start = startOfWeekMondayLocal(weekStartMonday)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start)
+    d.setDate(d.getDate() + i)
+    d.setHours(12, 0, 0, 0)
+    return d
+  })
+}
+
+export function formatWeekRangeLabel(weekStartMonday: Date): string {
+  const end = endOfWeekSundayLocal(weekStartMonday)
+  return `${toYmdLocal(weekStartMonday)} — ${toYmdLocal(end)}`
+}
+
+/** 相对参考日所在周：过去 / 本周 / 未来 */
+export function compareLocalCalendarWeek(
+  weekStartMonday: Date,
+  reference: Date = new Date(),
+): 'past' | 'current' | 'future' {
+  const a = toYmdLocal(startOfWeekMondayLocal(weekStartMonday))
+  const b = toYmdLocal(startOfWeekMondayLocal(reference))
+  if (a < b) return 'past'
+  if (a > b) return 'future'
+  return 'current'
 }
 
 export function startOfMonthLocal(d: Date): Date {

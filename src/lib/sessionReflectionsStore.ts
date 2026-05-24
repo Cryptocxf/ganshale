@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'ganshale-session-reflections-v1'
+export const SESSION_REFLECTIONS_STORAGE_KEY = STORAGE_KEY
 const MAX_ENTRIES = 400
 
 export type SessionReflectionEntry = {

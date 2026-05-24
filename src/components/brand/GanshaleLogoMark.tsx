@@ -1,11 +1,10 @@
 import {
   BRAND_LOGO_APP_SRC,
-  BRAND_LOGO_BG,
   BRAND_LOGO_SPLASH_SRC,
 } from '../../constants/brand'
 
 /**
- * 品牌图：`splash` 为入场完整版，`app` 为应用内 logo1 图标。
+ * 品牌图：`splash` 为入场完整版，`app` 为圆形 Logo 图标。
  */
 export function GanshaleLogoMark({
   className = '',
@@ -28,7 +27,7 @@ export function GanshaleLogoMark({
       style={{
         width: size,
         height: size,
-        ...(isSplash ? { backgroundColor: BRAND_LOGO_BG } : {}),
+        ...(isSplash ? { borderRadius: 8 } : {}),
       }}
     >
       <img

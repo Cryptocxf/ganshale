@@ -15,9 +15,17 @@ import {
 import {
   WINDOW_DWELL_IDLE_CLOSE_MS,
   WINDOW_DWELL_PROMPT_MILESTONES_SEC,
-  WINDOW_REMARKS_UPDATED_EVENT,
 } from '../lib/windowDwellPromptConfig'
-import { loadWindowRemarks, upsertWindowRemark } from '../lib/windowRemarksStore'
+import {
+  WORK_RECORDS_UPDATED_EVENT,
+  appendManualWorkRecord,
+} from '../lib/workRecordStore'
+import { identityFromEventData } from '../lib/windowAppDisplay'
+import {
+  GS_FIELD_INPUT_MD_CLASS,
+  GS_MODAL_HEADER_DIVIDER_CLASS,
+} from './dashboardLayout'
+import { DashboardModalRoot } from './DashboardModalRoot'
 
 type PromptState = {
   event: AwEvent
@@ -26,12 +34,13 @@ type PromptState = {
 }
 
 function appLabel(ev: AwEvent): string {
-  return String(ev.data.app ?? '').replace(/\.exe$/i, '') || '应用'
+  return identityFromEventData(ev.data).displayName || '应用'
 }
 
 export function WindowDwellPrompt() {
   const {
     ready,
+    day,
     windowEvents,
     liveForeground,
     windowTrackingActive,
@@ -41,10 +50,11 @@ export function WindowDwellPrompt() {
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [prompt, setPrompt] = useState<PromptState | null>(null)
   const [idleTick, setIdleTick] = useState(0)
+  const [hovering, setHovering] = useState(false)
 
   const firedRef = useRef<Set<string>>(new Set())
   const prevSegmentEventIdRef = useRef<string | null>(null)
-  const lastInputAtRef = useRef(0)
+  const lastIdleAtRef = useRef(0)
   const draftRef = useRef('')
 
   const extrapolate = Boolean(
@@ -83,15 +93,18 @@ export function WindowDwellPrompt() {
     setPrompt((p) => {
       if (!p) return null
       const t = draftRef.current.trim()
-      if (t) upsertWindowRemark(p.event.id, t)
-      try {
-        window.dispatchEvent(new CustomEvent(WINDOW_REMARKS_UPDATED_EVENT))
-      } catch {
-        /* ignore */
+      if (t) {
+        appendManualWorkRecord(day, t)
+        try {
+          window.dispatchEvent(new CustomEvent(WORK_RECORDS_UPDATED_EVENT))
+        } catch {
+          /* ignore */
+        }
       }
+      setHovering(false)
       return null
     })
-  }, [])
+  }, [day])
 
   useEffect(() => {
     if (!ready || !liveSeg.event || prompt) return
@@ -101,10 +114,10 @@ export function WindowDwellPrompt() {
       const key = `${event.id}:${m}`
       if (firedRef.current.has(key)) continue
       firedRef.current.add(key)
-      const initial = loadWindowRemarks()[event.id] ?? ''
-      draftRef.current = initial
-      lastInputAtRef.current = Date.now()
-      setPrompt({ event, milestoneSec: m, draft: initial })
+      draftRef.current = ''
+      lastIdleAtRef.current = Date.now()
+      setHovering(false)
+      setPrompt({ event, milestoneSec: m, draft: '' })
       break
     }
   }, [ready, liveSeg.event?.id, liveSeg.seconds, prompt])
@@ -123,45 +136,55 @@ export function WindowDwellPrompt() {
   }, [prompt])
 
   useEffect(() => {
-    if (!prompt) return
+    if (!prompt || hovering) return
     void idleTick
-    if (Date.now() - lastInputAtRef.current >= WINDOW_DWELL_IDLE_CLOSE_MS) {
+    if (Date.now() - lastIdleAtRef.current >= WINDOW_DWELL_IDLE_CLOSE_MS) {
       closeAndSave()
     }
-  }, [prompt, idleTick, closeAndSave])
+  }, [prompt, hovering, idleTick, closeAndSave])
 
   const onInputActivity = useCallback(() => {
-    lastInputAtRef.current = Date.now()
+    lastIdleAtRef.current = Date.now()
+  }, [])
+
+  const onDialogMouseEnter = useCallback(() => {
+    setHovering(true)
+  }, [])
+
+  const onDialogMouseLeave = useCallback(() => {
+    setHovering(false)
+    lastIdleAtRef.current = Date.now()
   }, [])
 
   const idleLeftSec = useMemo(() => {
-    if (!prompt) return 0
+    if (!prompt || hovering) return null
     void idleTick
     return Math.max(
       0,
       Math.ceil(
-        (WINDOW_DWELL_IDLE_CLOSE_MS - (Date.now() - lastInputAtRef.current)) / 1000,
+        (WINDOW_DWELL_IDLE_CLOSE_MS - (Date.now() - lastIdleAtRef.current)) / 1000,
       ),
     )
-  }, [prompt, idleTick])
+  }, [prompt, hovering, idleTick])
 
   if (!prompt) return null
 
   const titleShort = String(prompt.event.data.title ?? '').trim() || '（无标题）'
 
   return (
-    <div
-      className="fixed inset-0 z-[110] flex items-end justify-end bg-black/40 p-2 sm:p-3"
-      role="presentation"
+    <DashboardModalRoot
+      open
+      onClose={closeAndSave}
+      zIndex={110}
+      dismissOnBackdrop={false}
+      labelledBy="dwell-prompt-title"
+      overlayClassName="items-end justify-end p-2 sm:p-3"
+      dialogClassName="w-full max-w-[20rem]"
     >
-      <div
-        className="flex w-full max-w-[20rem] flex-col rounded-xl border border-black/[0.08] bg-white shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dwell-prompt-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-1.5 border-b border-black/[0.06] px-2.5 py-2">
+      <div onMouseEnter={onDialogMouseEnter} onMouseLeave={onDialogMouseLeave}>
+        <div
+          className={`flex items-start justify-between gap-1.5 px-2.5 py-2 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+        >
           <div className="min-w-0">
             <h2
               id="dwell-prompt-title"
@@ -170,7 +193,13 @@ export function WindowDwellPrompt() {
               已连续使用「{appLabel(prompt.event)}」{formatDuration(prompt.milestoneSec)}
             </h2>
             <p className="mt-0.5 text-[10px] leading-snug text-ganshale-muted">
-              无操作 {idleLeftSec}s 后关闭 · 备注会保存到本条窗口记录
+              {hovering
+                ? '鼠标移开后 10 秒自动关闭'
+                : idleLeftSec != null
+                  ? `无操作 ${idleLeftSec}s 后关闭`
+                  : '无操作 10s 后关闭'}
+              {' · '}
+              有内容将写入今日工作记录
             </p>
           </div>
           <button
@@ -188,7 +217,7 @@ export function WindowDwellPrompt() {
             <span className="break-words">{titleShort}</span>
           </p>
           <label htmlFor="dwell-prompt-note" className="sr-only">
-            备注
+            工作记录
           </label>
           <textarea
             id="dwell-prompt-note"
@@ -203,11 +232,11 @@ export function WindowDwellPrompt() {
             onKeyDown={onInputActivity}
             onPointerDown={onInputActivity}
             onFocus={onInputActivity}
-            placeholder="记点什么…（可选，将写入该条记录的备注）"
-            className="w-full resize-y rounded-lg border border-black/[0.08] bg-ganshale-page/40 px-2 py-1.5 text-[11px] leading-relaxed text-ganshale-text placeholder:text-ganshale-subtle focus:border-ganshale-text/25 focus:outline-none focus:ring-2 focus:ring-ganshale-text/10"
+            placeholder="记点什么…（可选，将写入今日工作记录）"
+            className={`w-full resize-y rounded-lg px-2 py-1.5 text-[11px] leading-relaxed ${GS_FIELD_INPUT_MD_CLASS}`}
           />
         </div>
       </div>
-    </div>
+    </DashboardModalRoot>
   )
 }
