@@ -12,9 +12,7 @@
   自动记录你在电脑上「干了啥」，整理成工作记录，并借助大模型一键生成日报、周报、月报。
 </p>
 
-<p align="center">
-  <img src="public/ganshale-splash.png" alt="干啥了启动页" width="480" />
-</p>
+
 
 ---
 
