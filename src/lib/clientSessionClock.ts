@@ -72,7 +72,7 @@ export function hasTodayClockOutPersisted(): boolean {
   return readWorkdayClockOut() !== null
 }
 
-const FROZEN_TIMER_STORAGE_KEY = 'ganshale-workday-timer-frozen-v2'
+export const FROZEN_TIMER_STORAGE_KEY = 'ganshale-workday-timer-frozen-v2'
 const FROZEN_TIMER_MAX_DAYS = 120
 
 function readFrozenTimerMap(): Record<string, number> {
@@ -101,7 +101,7 @@ function pruneFrozenTimerMap(map: Record<string, number>): Record<string, number
   return next
 }
 
-/** 读取今日已冻结的办公累计秒数（聚焦本应用等导致 live 停涨时用于展示下限）。 */
+/** 读取今日已写入 localStorage 的办公累计秒数快照。 */
 export function readTodayFrozenTimerSec(): number | undefined {
   return getFrozenTimerSecForYmd(toYmdLocal(new Date()))
 }
@@ -111,7 +111,7 @@ export function persistLiveTodayFrozenSec(elapsedSec: number) {
   const ymd = toYmdLocal(new Date())
   const map = readFrozenTimerMap()
   const next = Math.max(0, Math.floor(elapsedSec))
-  map[ymd] = Math.max(map[ymd] ?? 0, next)
+  map[ymd] = next
   const pruned = pruneFrozenTimerMap(map)
   try {
     localStorage.setItem(FROZEN_TIMER_STORAGE_KEY, JSON.stringify(pruned))
@@ -126,9 +126,9 @@ function getFrozenTimerSecForYmd(ymd: string): number | undefined {
 
 /**
  * 本地「今天」的实时累计秒数（与日期选择无关）：用于写入 frozen 快照。
- * 上界为当日 23:59:59.999；已下班则冻结在点击「下班了」的时刻。
+ * 上界为当日 23:59:59.999。不再因「下班了」或设置的下班时刻而提前截止。
  */
-export function getTodayLiveWorkdayElapsedSec(collectionPausedByUser: boolean): number {
+export function getTodayLiveWorkdayElapsedSec(_collectionPausedByUser = false): number {
   const today = new Date()
   const now = Date.now()
   const dayStartMs = startOfLocalDay(today).getTime()
@@ -136,15 +136,7 @@ export function getTodayLiveWorkdayElapsedSec(collectionPausedByUser: boolean): 
 
   const sessionStart = getClientSessionStartMs()
   const countFrom = Math.max(sessionStart, dayStartMs)
-
-  let effectiveEnd = Math.min(now, dayEndMs)
-
-  if (collectionPausedByUser) {
-    const co = readWorkdayClockOut()
-    if (co) {
-      effectiveEnd = Math.min(effectiveEnd, co.clockOutAtMs)
-    }
-  }
+  const effectiveEnd = Math.min(now, dayEndMs)
 
   return Math.max(0, Math.floor((effectiveEnd - countFrom) / 1000))
 }

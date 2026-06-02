@@ -116,8 +116,8 @@ export function WeeklyDailyReportDetailsPanel({ weekStart }: { weekStart: Date }
         {rows.map((row, i) => {
           const active = row.ymd === selectedYmd
           const isToday = compareLocalCalendarDay(row.day) === 'today'
-          const tileBorderClass =
-            i === 5 ? 'gs-day-tile--sat' : i === 6 ? 'gs-day-tile--sun' : 'gs-day-tile--weekday'
+          const isWeekend = i === 5 || i === 6
+          const tileBorderClass = i === 5 ? 'gs-day-tile--sat' : i === 6 ? 'gs-day-tile--sun' : 'gs-day-tile--weekday'
           return (
             <button
               key={row.ymd}
@@ -127,7 +127,8 @@ export function WeeklyDailyReportDetailsPanel({ weekStart }: { weekStart: Date }
                 setExpandedId(null)
               }}
               className={[
-                'relative flex h-full min-h-[5.5rem] flex-col items-center rounded-lg border px-1.5 py-2 transition sm:min-h-0 sm:px-2 sm:py-2.5',
+                'relative flex h-full min-h-[5.5rem] flex-col items-center rounded-lg px-1.5 py-2 transition sm:min-h-0 sm:px-2 sm:py-2.5',
+                isWeekend ? '' : 'border',
                 selectedRow ? 'sm:min-h-[5.5rem]' : '',
                 tileBorderClass,
                 isToday ? 'gs-day-tile--today' : '',

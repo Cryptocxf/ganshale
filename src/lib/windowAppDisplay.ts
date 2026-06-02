@@ -1,3 +1,4 @@
+import { APP_DISPLAY_NAME } from '../constants/brand'
 import { getAppDisplayNameOverride } from './appDisplayNameStore'
 import { normalizeWindowAppKey } from './windowForegroundMatch'
 
@@ -19,6 +20,43 @@ const DOC_DISPLAY: Record<DocTypeIdentityKey, string> = {
   excel: 'Excel',
   ppt: 'PPT',
   pdf: 'PDF',
+}
+
+/** 常见 Windows 系统应用：进程名 → 中文展示名 */
+const SYSTEM_APP_DISPLAY: Record<string, string> = {
+  notepad: '记事本',
+  weixin: '微信',
+  youdaodict: '有道翻译',
+  wemeetapp: '腾讯会议',
+  baidunetdisk: '百度网盘',
+  mspaint: '画图',
+  calc: '计算器',
+  snippingtool: '截图工具',
+  cmd: '命令提示符',
+  pwsh: 'PowerShell',
+  windowsterminal: '终端',
+  wt: '终端',
+  explorer: '资源管理器',
+}
+
+/**
+ * 进程名别名：统一展示名与 identityKey（合并统计、避免 Unite 等新壳进程名露出）。
+ */
+const APP_IDENTITY_ALIASES: Record<string, { displayName: string; identityKey: string }> = {
+  baidunetdiskunite: { displayName: '百度网盘', identityKey: 'baidunetdisk' },
+  'chuanyun-view': { displayName: '移动云电脑', identityKey: 'chuanyun' },
+  openclaw: { displayName: 'OpenClaw', identityKey: 'openclaw' },
+  moa: { displayName: 'MOA', identityKey: 'moa' },
+  emobile: { displayName: '移动办公', identityKey: 'emobile' },
+  mobileoffice: { displayName: '移动办公', identityKey: 'emobile' },
+  claude: { displayName: 'Claude', identityKey: 'claude' },
+}
+
+function isGanshaleAppIdentity(exe: string, title: string, appPath: string): boolean {
+  if (exe === 'ganshale') return true
+  if (exe !== 'electron') return false
+  const h = haystack(title, appPath)
+  return h.includes('ganshale') || h.includes('干啥了')
 }
 
 /** 窗口标题 / 路径中的扩展名（优先于进程名） */
@@ -84,6 +122,24 @@ export function resolveWindowAppIdentity(
 
   if (exe === 'code' || exe === 'code-insiders' || exe === 'code - insiders') {
     return { displayName: 'VS Code', identityKey: 'vscode', processApp }
+  }
+
+  if (isGanshaleAppIdentity(exe, String(title ?? ''), String(appPath ?? ''))) {
+    return { displayName: APP_DISPLAY_NAME, identityKey: 'ganshale', processApp }
+  }
+
+  const alias = APP_IDENTITY_ALIASES[exe]
+  if (alias) {
+    return {
+      displayName: alias.displayName,
+      identityKey: alias.identityKey,
+      processApp,
+    }
+  }
+
+  const systemLabel = SYSTEM_APP_DISPLAY[exe]
+  if (systemLabel) {
+    return { displayName: systemLabel, identityKey: exe, processApp }
   }
 
   const key = exe || 'unknown'

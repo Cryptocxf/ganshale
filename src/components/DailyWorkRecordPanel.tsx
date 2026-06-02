@@ -42,6 +42,8 @@ import {
   DASHBOARD_HEADER_ACTIONS_ROW_CLASS,
   DASHBOARD_HEADER_ACTION_BTN_CLASS,
   DASHBOARD_TOP_CARD_BODY_CLASS,
+  DASHBOARD_WORK_RECORD_PREVIEW_MAX_PX,
+  DASHBOARD_WORK_RECORD_PREVIEW_ROWS,
   GS_FIELD_INPUT_ROW_CLASS,
   GS_MODAL_HEADER_DIVIDER_CLASS,
   GS_MODAL_INSET_PANEL_CLASS,
@@ -49,6 +51,7 @@ import {
 import { DashboardModalRoot } from './DashboardModalRoot'
 import { DASHBOARD_SECTION_DESCRIPTIONS } from '../lib/dashboardSectionDescriptions'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
+import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
 import { WorkRecordSourceBadge } from './WorkRecordSourceBadge'
 
 const WORK_RECORD_ROW_H_PX = 32
@@ -400,6 +403,11 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
 
   const manualRowCount = rows.filter((r) => r.source !== 'system').length
   const deleteManualDisabled = manualRowCount <= 1
+  const previewRows = useMemo(
+    () => sortedRows.slice(0, DASHBOARD_WORK_RECORD_PREVIEW_ROWS),
+    [sortedRows],
+  )
+  const showWorkRecordFooter = sortedRows.length > DASHBOARD_WORK_RECORD_PREVIEW_ROWS
 
   const workRecordTableHead = (
     <thead className="gs-dashboard-modal__table-head sticky top-0 z-[1] text-ganshale-subtle">
@@ -411,9 +419,9 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     </thead>
   )
 
-  const workRecordTableBody = (rowPy?: string) => (
+  const workRecordTableBody = (sourceRows: WorkRecordRow[], rowPy?: string) => (
     <tbody className="gs-dashboard-modal__table-body divide-y divide-ganshale-border">
-      {sortedRows.map((row) => {
+      {sourceRows.map((row) => {
         const isSystem = row.source === 'system'
         const showBadge = (row.source === 'manual' && row.saved) || isSystem
         return (
@@ -467,21 +475,33 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         </div>
       </div>
 
-      <div
-        className={[
-          DASHBOARD_TOP_CARD_BODY_CLASS,
-          `mt-1.5 overflow-auto ${GS_MODAL_INSET_PANEL_CLASS}`,
-        ].join(' ')}
-      >
-        <table className="w-full table-fixed border-collapse text-left">
-          <colgroup>
-            <col className="w-[58%]" />
-            <col className="w-[18%]" />
-            <col className="w-[24%]" />
-          </colgroup>
-          {workRecordTableHead}
-          {workRecordTableBody()}
-        </table>
+      <div className={[DASHBOARD_TOP_CARD_BODY_CLASS, 'mt-1.5'].join(' ')}>
+        <div
+          className={[
+            'flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-ganshale-border',
+            GS_MODAL_INSET_PANEL_CLASS,
+          ].join(' ')}
+        >
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
+            style={{ maxHeight: DASHBOARD_WORK_RECORD_PREVIEW_MAX_PX }}
+          >
+            <table className="w-full table-fixed border-collapse text-left">
+              <colgroup>
+                <col className="w-[58%]" />
+                <col className="w-[18%]" />
+                <col className="w-[24%]" />
+              </colgroup>
+              {workRecordTableHead}
+              {workRecordTableBody(previewRows)}
+            </table>
+          </div>
+          {showWorkRecordFooter ? (
+            <DashboardPairPreviewFooter>
+              仅展示近 {DASHBOARD_WORK_RECORD_PREVIEW_ROWS} 条记录，点击右上角「查看详情」可查看全部记录。
+            </DashboardPairPreviewFooter>
+          ) : null}
+        </div>
       </div>
 
       {detailModalOpen ? (
@@ -522,7 +542,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
                   <col className="w-[24%]" />
                 </colgroup>
                 {workRecordTableHead}
-                {workRecordTableBody()}
+                {workRecordTableBody(sortedRows)}
               </table>
             </div>
         </DashboardModalRoot>

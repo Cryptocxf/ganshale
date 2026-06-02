@@ -26,10 +26,28 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
   }, [finish])
 
   useEffect(() => {
-    // 触发入场动画
-    const tVisible = window.setTimeout(() => setVisible(true), 30)
-    // 开始退出
-    const tExit = window.setTimeout(beginExit, SPLASH_MS)
+    let tVisible = 0
+    let tExit = 0
+    let started = false
+
+    const startSplashTimeline = () => {
+      if (started) return
+      started = true
+      tVisible = window.setTimeout(() => setVisible(true), 30)
+      tExit = window.setTimeout(beginExit, SPLASH_MS)
+    }
+
+    const desktop = window.ganshaleDesktop
+    if (desktop?.onMainWindowShown) {
+      const unsub = desktop.onMainWindowShown(startSplashTimeline)
+      return () => {
+        unsub()
+        window.clearTimeout(tVisible)
+        window.clearTimeout(tExit)
+      }
+    }
+
+    startSplashTimeline()
     return () => {
       window.clearTimeout(tVisible)
       window.clearTimeout(tExit)

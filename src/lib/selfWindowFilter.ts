@@ -8,25 +8,34 @@ export function isElectronShellApp(app: string): boolean {
 }
 
 /**
- * 是否为本应用（Ganshale）窗口：此类记录不写库、不参与统计与列表。
+ * 是否为本应用（Ganshale）窗口（用于回顾弹窗等，不排除采集与统计）。
  * - 打包后主程序名为 ganshale.exe
- * - 开发态统一排除 electron.exe（本应用 Electron 壳）
- * - 路径含 ganshale 的 electron 亦排除（双保险）
+ * - 开发态为 electron.exe 且路径/标题含 ganshale 或「干啥了」
  */
 export function isGanshaleSelfWindowRecord(
   app: string,
   title: string,
   appPath?: string,
 ): boolean {
-  if (isElectronShellApp(app)) return true
-
-  const a = app.toLowerCase()
+  const a = app.toLowerCase().trim()
   const p = (appPath ?? '').toLowerCase().replace(/\\/g, '/')
   const t = title.toLowerCase()
 
-  if (a === 'ganshale.exe') return true
-  if (p.includes('ganshale') && a.includes('electron')) return true
-  if ((t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
+  if (a === 'ganshale.exe' || a === 'ganshale') return true
+  if (isElectronShellApp(app)) {
+    return (
+      p.includes('ganshale') ||
+      t.includes('ganshale') ||
+      t.includes('干啥了') ||
+      t.includes('天哪，你每天都干啥了')
+    )
+  }
+  if (
+    (t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) &&
+    (a === 'ganshale.exe' || a === 'ganshale' || isElectronShellApp(app))
+  ) {
+    return true
+  }
   return false
 }
 
@@ -53,21 +62,18 @@ export function isWindowsExplorerWindowEvent(ev: AwEvent): boolean {
 }
 
 /**
- * 不参与窗口时长、时间轴、分类聚合与列表展示的事件（本应用自身 + 资源管理器）。
+ * 不参与窗口时长、时间轴、分类聚合与列表展示的事件（仅资源管理器）。
  */
 export function shouldSkipWindowEventForStats(ev: AwEvent): boolean {
-  return isGanshaleSelfWindowEvent(ev) || isWindowsExplorerWindowEvent(ev)
+  return isWindowsExplorerWindowEvent(ev)
 }
 
-/** 过滤本应用自身窗口 + Windows 资源管理器（explorer），用于列表与下游统计 */
+/** 过滤 Windows 资源管理器（explorer），用于列表与下游统计 */
 export function excludeGanshaleSelfWindowEvents(events: AwEvent[]): AwEvent[] {
   return events.filter((ev) => !shouldSkipWindowEventForStats(ev))
 }
 
-/** 实时前台采样是否不参与延伸统计（本应用 / 资源管理器） */
+/** 实时前台采样是否不参与延伸统计（资源管理器） */
 export function isLiveForegroundSkippedForStats(live: LiveForegroundSample): boolean {
-  return (
-    isGanshaleSelfWindowRecord(live.app, live.title, live.appPath) ||
-    isWindowsExplorerApp(live.app ?? '')
-  )
+  return isWindowsExplorerApp(live.app ?? '')
 }

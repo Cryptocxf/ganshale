@@ -4,6 +4,8 @@ import {
   isMutedChartColor,
 } from './appPalette'
 
+import { BRAND_LOGO_APP_SRC, OPENCLAW_ICON_SRC } from '../constants/brand'
+
 /** Normalize to basename lowercase for lookup (Windows .exe etc.). */
 export function normalizeAppKey(app: string): string {
   const t = app.trim()
@@ -23,6 +25,8 @@ const DIRECT_ICON_URL: Record<string, string> = {
   'wpp.exe': 'https://www.wps.com/favicon.ico',
   'wemeetapp.exe': 'https://meeting.tencent.com/favicon.ico',
   'txmeeting.exe': 'https://meeting.tencent.com/favicon.ico',
+  'baidunetdisk.exe': 'https://pan.baidu.com/favicon.ico',
+  baidunetdisk: 'https://pan.baidu.com/favicon.ico',
 }
 
 /** Office 文档类型图标（Iconify / VS Code Icons 文件类型） */
@@ -60,6 +64,9 @@ const CHART_HEX_OVERRIDE: Record<string, string> = {
   'wpp.exe': '#D71345',
   'wemeetapp.exe': '#1296DB',
   'txmeeting.exe': '#1296DB',
+  baidunetdisk: '#2932E1',
+  openclaw: '#E85D04',
+  chuanyun: '#0066FF',
 }
 
 /** Known apps → Simple Icons slug + brand hex（图表着色；图标经 {@link brandIconUrl}）。 */
@@ -121,6 +128,49 @@ export function getBrandForApp(app: string): Brand | null {
   return DOC_TYPE_BRANDS[key] ?? BRANDS[key] ?? null
 }
 
+const BUNDLED_ICON_BY_KEY: Record<string, string> = {
+  ganshale: BRAND_LOGO_APP_SRC,
+  'ganshale.exe': BRAND_LOGO_APP_SRC,
+  openclaw: OPENCLAW_ICON_SRC,
+  'openclaw.exe': OPENCLAW_ICON_SRC,
+}
+
+function isGanshaleBundledIconKey(
+  key: string,
+  opts?: { appPath?: string },
+): boolean {
+  if (key === 'ganshale' || key === 'ganshale.exe') return true
+  if (key !== 'electron' && key !== 'electron.exe') return false
+  const h = (opts?.appPath ?? '').toLowerCase().replace(/\\/g, '/')
+  return h.includes('ganshale')
+}
+
+/** 打包内置图标（离线可用，不依赖 Iconify CDN） */
+export function bundledAppIconUrl(
+  app: string,
+  opts?: { appPath?: string },
+): string | null {
+  const key = normalizeAppKey(app)
+  const direct = BUNDLED_ICON_BY_KEY[key]
+  if (direct) return direct
+  if (isGanshaleBundledIconKey(key, opts)) return BRAND_LOGO_APP_SRC
+  return null
+}
+
+/** 有内置品牌图时不要用 exe 系统图标（安装包 exe 常为 Electron 默认图） */
+export function prefersBundledIconOverNative(
+  app: string,
+  brandKey?: string,
+  appPath?: string,
+): boolean {
+  const pathOpts = { appPath }
+  const keys = [brandKey?.trim(), app.trim()].filter(Boolean) as string[]
+  for (const k of keys) {
+    if (bundledAppIconUrl(k, pathOpts)) return true
+  }
+  return false
+}
+
 function iconifyUrlWithBrandColor(app: string, baseUrl: string): string {
   const color = brandOrNeutralHex(app)
   const sep = baseUrl.includes('?') ? '&' : '?'
@@ -133,6 +183,8 @@ function iconifyUrlWithBrandColor(app: string, baseUrl: string): string {
  */
 export function brandIconUrl(app: string): string | null {
   const key = normalizeAppKey(app)
+  const bundled = bundledAppIconUrl(key) ?? bundledAppIconUrl(app)
+  if (bundled) return bundled
   const directUrl = DIRECT_ICON_URL[key]
   if (directUrl) return directUrl
   const iconifyId = DIRECT_ICONIFY[key]
@@ -189,6 +241,11 @@ export function brandFallbackLetter(app: string): string {
   if (key === 'ppt') return 'P'
   if (key === 'pdf') return 'D'
   if (key === 'vscode') return 'V'
+  if (key === 'ganshale' || key === 'ganshale.exe') return '干'
+  if (key === 'openclaw' || key === 'openclaw.exe') return 'O'
+  if (key === 'chuanyun' || key === 'chuanyun-view') return '移'
+  if (key === 'baidunetdisk' || key === 'baidunetdiskunite') return '百'
+  if (key === 'notepad') return '记'
   const name = key.replace(/\.exe$/i, '').replace(/64$/i, '')
   return (name[0] ?? '?').toUpperCase()
 }

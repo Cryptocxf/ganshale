@@ -98,16 +98,19 @@ export function findLlmProviderPreset(id: string): LlmProviderPreset | undefined
   return LLM_PROVIDER_PRESETS.find((p) => p.id === id)
 }
 
-/** 根据已填写的网关地址猜测当前供应商（用于下拉回显） */
+/** 根据已填写的网关地址与模型 ID 猜测当前供应商（用于下拉回显） */
 export function guessLlmProviderPresetId(baseUrl: string, modelId: string): string {
   const norm = baseUrl.trim().replace(/\/+$/, '').toLowerCase()
+  const model = modelId.trim()
   if (!norm) return 'custom'
   const hit = LLM_PROVIDER_PRESETS.find(
     (p) => p.id !== 'custom' && p.baseUrl.replace(/\/+$/, '').toLowerCase() === norm,
   )
-  if (hit) return hit.id
+  if (hit) {
+    if (!model || hit.modelId === model) return hit.id
+    return 'custom'
+  }
   if (/11434/.test(norm)) return 'ollama'
   if (/1234/.test(norm)) return 'lmstudio'
-  void modelId
   return 'custom'
 }

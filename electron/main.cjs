@@ -1,29 +1,101 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, shell, dialog } = require('electron')
+const {
+  app,
+  BrowserWindow,
+  Menu,
+  ipcMain,
+  screen,
+  shell,
+  dialog,
+  Tray,
+  nativeImage,
+} = require('electron')
 const path = require('path')
 const fs = require('fs')
+const startupLog = require('./startupLog.cjs')
 
-function storageBootstrapFile() {
-  return path.join(app.getPath('appData'), 'Ganshale', 'storage-path.json')
-}
+startupLog.init()
 
-function applyCustomUserDataPath() {
+/** @param {string} title @param {string} detail */
+function showFatalStartupError(title, detail) {
+  startupLog.write('FATAL', title, detail)
   try {
-    const bootstrap = storageBootstrapFile()
-    if (!fs.existsSync(bootstrap)) return
-    const parsed = JSON.parse(fs.readFileSync(bootstrap, 'utf8'))
-    const custom = String(parsed.userDataPath ?? '').trim()
-    if (!custom) return
-    fs.mkdirSync(custom, { recursive: true })
-    app.setPath('userData', custom)
-  } catch (err) {
-    console.warn('[ganshale] storage bootstrap failed', err)
+    dialog.showErrorBox(
+      title,
+      `${detail}\n\n若仍无法启动，请将以下日志发给开发者：\n${startupLog.logFilePath()}`,
+    )
+  } catch {
+    /* ignore */
   }
 }
 
-applyCustomUserDataPath()
+process.on('uncaughtException', (err) => {
+  showFatalStartupError('干啥了 启动失败', err instanceof Error ? err.message : String(err))
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  startupLog.write('unhandledRejection', reason)
+})
+
+/** 数据目录：安装目录下的 `data`（打包）；开发时在项目根 `data`。 */
+function defaultUserDataPath() {
+  if (app.isPackaged) {
+    return path.join(path.dirname(process.execPath), 'data')
+  }
+  return path.join(app.getAppPath(), '..', 'data')
+}
+
+function fallbackUserDataPath() {
+  return path.join(app.getPath('appData'), 'Ganshale')
+}
+
+/** @param {string} dir */
+function canWriteDirectory(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    const probe = path.join(dir, `.write-probe-${process.pid}`)
+    fs.writeFileSync(probe, 'ok', 'utf8')
+    fs.unlinkSync(probe)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function applyUserDataPath() {
+  const preferred = defaultUserDataPath()
+  if (canWriteDirectory(preferred)) {
+    app.setPath('userData', preferred)
+    startupLog.write('userData', preferred)
+    return
+  }
+
+  const fallback = fallbackUserDataPath()
+  if (canWriteDirectory(fallback)) {
+    app.setPath('userData', fallback)
+    startupLog.write('userData fallback', fallback, `preferred=${preferred}`)
+    return
+  }
+
+  startupLog.write('userData unavailable', preferred, fallback)
+}
+
+applyUserDataPath()
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  startupLog.write('second instance blocked')
+  app.quit()
+}
 
 /** @type {BrowserWindow | null} */
 let mainBrowserWindow = null
+/** @type {Tray | null} */
+let appTray = null
+/** 用户确认退出或 before-quit 时为 true，允许窗口真正关闭 */
+let isQuitting = false
+/** 主窗口是否已 `show()`（启动页在可见后再计时） */
+let mainWindowHasShown = false
 /** @type {BrowserWindow | null} */
 let reflectPromptWindow = null
 let lastReflectPromptClosedAt = 0
@@ -35,6 +107,8 @@ let reflectPrevForeground = null
 let reflectSegmentStartTs = 0
 /** 上一 tick 主窗口是否最小化（用于从最小化恢复时仍能触发一次回顾） */
 let reflectLastTickMinimized = false
+/** 设置页「开启小回顾弹窗」；默认开启 */
+let reflectPromptEnabled = true
 
 function isElectronShellApp(app) {
   const a = String(app ?? '')
@@ -45,15 +119,28 @@ function isElectronShellApp(app) {
 }
 
 function isGanshaleSelfWindow(app, title, appPath) {
-  if (isElectronShellApp(app)) return true
   const t = String(title).toLowerCase()
-  const a = String(app).toLowerCase()
-  if (a === 'ganshale.exe') return true
+  const a = String(app)
+    .toLowerCase()
+    .trim()
   const p = String(appPath ?? '')
     .toLowerCase()
     .replace(/\\/g, '/')
-  if (p.includes('ganshale') && a.includes('electron')) return true
-  if ((t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) && (a === 'ganshale.exe' || isElectronShellApp(app))) return true
+  if (a === 'ganshale.exe' || a === 'ganshale') return true
+  if (isElectronShellApp(app)) {
+    return (
+      p.includes('ganshale') ||
+      t.includes('ganshale') ||
+      t.includes('干啥了') ||
+      t.includes('天哪，你每天都干啥了')
+    )
+  }
+  if (
+    (t.includes('干啥了') || t.includes('天哪，你每天都干啥了')) &&
+    (a === 'ganshale.exe' || a === 'ganshale' || isElectronShellApp(app))
+  ) {
+    return true
+  }
   return false
 }
 
@@ -233,7 +320,7 @@ function handleReflectFocusTransition(mainWin, mapped, now) {
     !isWindowsExplorerApp(ended.app) &&
     (minimized || reflectLastTickMinimized)
 
-  if (shouldAsk) {
+  if (shouldAsk && reflectPromptEnabled) {
     openReflectPrompt(mainWin, ended, durationSec)
   }
 
@@ -241,6 +328,12 @@ function handleReflectFocusTransition(mainWin, mapped, now) {
   reflectSegmentStartTs = now
   reflectLastTickMinimized = minimized
 }
+
+ipcMain.handle('ganshale:set-reflect-prompt-enabled', (_event, enabled) => {
+  reflectPromptEnabled = enabled !== false
+  if (!reflectPromptEnabled) closeReflectPromptWindow()
+  return { ok: true }
+})
 
 ipcMain.handle('reflect-prompt:submit', (event, payload) => {
   const win = BrowserWindow.fromWebContents(event.sender)
@@ -265,6 +358,89 @@ ipcMain.handle('reflect-prompt:skip', (event) => {
   return { ok: true }
 })
 
+/** @type {BrowserWindow | null} */
+let todoReminderWindow = null
+
+function closeTodoReminderWindow() {
+  if (todoReminderWindow && !todoReminderWindow.isDestroyed()) {
+    todoReminderWindow.close()
+  }
+  todoReminderWindow = null
+}
+
+/**
+ * @param {{ title?: string; body?: string; priority?: number; todoId?: string }} payload
+ */
+function openTodoReminder(payload) {
+  const title = String(payload?.title ?? '').trim() || '待办提醒'
+  const body = String(payload?.body ?? '').trim()
+  const priority = Math.min(5, Math.max(1, Number(payload?.priority) || 1))
+
+  const htmlPath = path.join(__dirname, 'todo-reminder.html')
+  if (!fs.existsSync(htmlPath)) {
+    console.warn('[ganshale] todo-reminder.html missing:', htmlPath)
+    return { ok: false }
+  }
+
+  if (todoReminderWindow && !todoReminderWindow.isDestroyed()) {
+    todoReminderWindow.close()
+    todoReminderWindow = null
+  }
+
+  const w = new BrowserWindow({
+    width: 380,
+    height: 210,
+    minWidth: 320,
+    minHeight: 180,
+    show: false,
+    title: '干啥了 · 待办提醒',
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    autoHideMenuBar: true,
+    resizable: false,
+    icon: resolveAppIconPath(),
+    backgroundColor: '#fff9f5',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'todo-reminder-preload.cjs'),
+    },
+  })
+
+  todoReminderWindow = w
+  w.once('closed', () => {
+    todoReminderWindow = null
+  })
+
+  void w.loadFile(htmlPath).then(() => {
+    w.webContents.send('todo-reminder:init', { title, body, priority })
+    placeReflectPromptBottomRight(w)
+    w.show()
+    w.focus()
+  })
+
+  return { ok: true }
+}
+
+ipcMain.handle('ganshale:show-todo-reminder', (_event, payload) => {
+  try {
+    return openTodoReminder(payload && typeof payload === 'object' ? payload : {})
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+})
+
+ipcMain.handle('todo-reminder:dismiss', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win || win !== todoReminderWindow) return { ok: false }
+  closeTodoReminderWindow()
+  return { ok: true }
+})
+
 /** @type {Map<string, string>} pathLower → data URL */
 const fileIconCache = new Map()
 const FILE_ICON_CACHE_MAX = 400
@@ -276,6 +452,69 @@ function resolveAppIconPath() {
     ? path.join(__dirname, '..', 'public', 'ganshale-logo-app.png')
     : path.join(__dirname, '..', 'dist', 'ganshale-logo-app.png')
   return fs.existsSync(rel) ? rel : undefined
+}
+
+function showMainWindow() {
+  const win = mainBrowserWindow
+  if (!win || win.isDestroyed()) {
+    createWindow()
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  if (process.platform === 'win32') win.setSkipTaskbar(false)
+  win.show()
+  win.focus()
+}
+
+function destroyAppTray() {
+  if (appTray && !appTray.isDestroyed()) {
+    appTray.destroy()
+  }
+  appTray = null
+}
+
+function ensureAppTray() {
+  if (appTray && !appTray.isDestroyed()) return appTray
+  const iconPath = resolveAppIconPath()
+  if (!iconPath) return null
+  const image = nativeImage.createFromPath(iconPath)
+  if (image.isEmpty()) return null
+  const trayImage =
+    process.platform === 'win32' ? image.resize({ width: 16, height: 16 }) : image
+  appTray = new Tray(trayImage)
+  appTray.setToolTip('干啥了')
+  const menu = Menu.buildFromTemplate([
+    { label: '显示主窗口', click: () => showMainWindow() },
+    { type: 'separator' },
+    {
+      label: '退出应用',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ])
+  appTray.setContextMenu(menu)
+  appTray.on('double-click', () => showMainWindow())
+  return appTray
+}
+
+/** @returns {'tray' | 'quit' | 'cancel'} */
+function promptCloseMainWindow(win) {
+  const choice = dialog.showMessageBoxSync(win, {
+    type: 'question',
+    buttons: ['最小化到托盘', '退出应用', '取消'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+    title: '干啥了',
+    message: '要关闭窗口吗？',
+    detail:
+      '选择「最小化到托盘」可继续在后台记录窗口使用情况；选择「退出应用」将完全退出。',
+  })
+  if (choice === 0) return 'tray'
+  if (choice === 1) return 'quit'
+  return 'cancel'
 }
 
 /** @type {((opts?: object) => Promise<object | undefined>) | null | undefined} undefined = not loaded yet */
@@ -357,23 +596,55 @@ function mapForeground(result) {
   return out
 }
 
+ipcMain.handle('ganshale:was-main-window-shown', () => mainWindowHasShown)
+
 ipcMain.handle('ganshale:window-tracking-supported', async () => {
   const fn = await getActiveWin()
   return { supported: Boolean(fn), platform: process.platform }
 })
 
 /**
+ * 将进程名或路径解析为可读取图标的绝对路径（Windows System32 等）。
+ * @param {string} filePathOrExe
+ * @returns {string | null}
+ */
+function resolveIconFilePath(filePathOrExe) {
+  const raw = String(filePathOrExe ?? '').trim()
+  if (!raw) return null
+
+  if (fs.existsSync(raw)) return raw
+
+  if (process.platform !== 'win32') return null
+
+  const base = path.basename(raw.replace(/[/\\]+/g, path.sep))
+  if (!/\.exe$/i.test(base)) return null
+
+  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows'
+  const candidates = [
+    path.join(systemRoot, 'System32', base),
+    path.join(systemRoot, 'SysWOW64', base),
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+/**
  * 系统文件图标（Windows 等对 .exe 有效），返回 PNG data URL；失败返回 null。
+ * 支持仅传 `notepad.exe` 等进程名（自动解析 System32 路径）。
  * @param {unknown} filePath
  * @returns {Promise<string | null>}
  */
 ipcMain.handle('ganshale:get-file-icon', async (_event, filePath) => {
   if (typeof filePath !== 'string' || !filePath.trim()) return null
-  const key = filePath.trim().toLowerCase()
+  const resolved = resolveIconFilePath(filePath.trim())
+  if (!resolved) return null
+  const key = resolved.toLowerCase()
   const hit = fileIconCache.get(key)
   if (hit) return hit
   try {
-    const img = await app.getFileIcon(filePath.trim(), { size: 'normal' })
+    const img = await app.getFileIcon(resolved, { size: 'normal' })
     if (!img || img.isEmpty()) return null
     const png = img.toPNG()
     if (!png || png.length === 0) return null
@@ -708,45 +979,10 @@ ipcMain.handle('ganshale:get-download-path', async () => {
 
 ipcMain.handle('ganshale:get-storage-path', async () => {
   try {
-    return { ok: true, path: app.getPath('userData') }
-  } catch (err) {
     return {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      ok: true,
+      path: app.getPath('userData'),
     }
-  }
-})
-
-ipcMain.handle('ganshale:pick-storage-directory', async () => {
-  try {
-    const win = BrowserWindow.getFocusedWindow()
-    const result = await dialog.showOpenDialog(win ?? undefined, {
-      properties: ['openDirectory', 'createDirectory'],
-      title: '选择数据存储目录',
-    })
-    if (result.canceled || !result.filePaths?.[0]) {
-      return { ok: false, cancelled: true }
-    }
-    return { ok: true, path: result.filePaths[0] }
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    }
-  }
-})
-
-ipcMain.handle('ganshale:set-storage-directory', async (_event, nextPath) => {
-  try {
-    const p = String(nextPath ?? '').trim()
-    if (!p) return { ok: false, error: '路径为空' }
-    fs.mkdirSync(path.dirname(storageBootstrapFile()), { recursive: true })
-    fs.writeFileSync(
-      storageBootstrapFile(),
-      JSON.stringify({ userDataPath: p }, null, 2),
-      'utf8',
-    )
-    return { ok: true, needsRestart: true }
   } catch (err) {
     return {
       ok: false,
@@ -771,6 +1007,7 @@ ipcMain.handle('ganshale:open-path-in-folder', async (_event, targetPath) => {
 })
 
 function createWindow() {
+  mainWindowHasShown = false
   const win = new BrowserWindow({
     width: 1120,
     height: 760,
@@ -785,49 +1022,123 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      /** 托盘隐藏时仍按时处理前台窗口 IPC 与心跳 */
+      backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.cjs'),
     },
   })
 
   mainBrowserWindow = win
+  const contents = win.webContents
 
-  win.on('close', () => {
+  win.on('close', (e) => {
     closeReflectPromptWindow()
+    if (isQuitting) {
+      if (trackingWebContents === contents) stopWindowTracking()
+      return
+    }
+    e.preventDefault()
+
+    const action = promptCloseMainWindow(win)
+    if (action === 'tray') {
+      ensureAppTray()
+      if (process.platform === 'win32') win.setSkipTaskbar(true)
+      win.hide()
+      return
+    }
+    if (action === 'quit') {
+      isQuitting = true
+      if (trackingWebContents === contents) stopWindowTracking()
+      app.quit()
+    }
   })
 
-  win.once('ready-to-show', () => win.show())
+  win.once('ready-to-show', () => {
+    if (win.isDestroyed()) return
+    mainWindowHasShown = true
+    win.show()
+    if (!contents.isDestroyed()) {
+      contents.send('ganshale:main-window-shown')
+    }
+  })
+
+  contents.on('did-fail-load', (_e, code, desc, url) => {
+    startupLog.write('did-fail-load', code, desc, url)
+    if (win.isDestroyed()) return
+    if (!win.isVisible()) win.show()
+    if (!isDev) {
+      showFatalStartupError(
+        '干啥了 界面加载失败',
+        `错误 ${code}：${desc}\n${url ?? ''}\n请尝试重新安装，或检查杀毒软件是否拦截了安装目录。`,
+      )
+    } else {
+      console.error('[ganshale] failed to load dev URL', code, desc)
+    }
+  })
 
   if (isDev) {
     win.loadURL('http://127.0.0.1:5173/')
-    win.webContents.on('did-fail-load', (_e, code, desc) => {
-      console.error('[ganshale] failed to load dev URL', code, desc)
-    })
   } else {
     const indexHtml = path.join(__dirname, '..', 'dist', 'index.html')
-    void win.loadFile(indexHtml)
+    if (!fs.existsSync(indexHtml)) {
+      startupLog.write('missing index.html', indexHtml)
+      showFatalStartupError(
+        '干啥了 缺少程序文件',
+        `找不到界面文件：\n${indexHtml}\n\n安装可能不完整，请卸载后重新安装。`,
+      )
+      return
+    }
+    void win.loadFile(indexHtml).catch((err) => {
+      startupLog.write('loadFile rejected', err)
+      showFatalStartupError(
+        '干啥了 界面加载失败',
+        err instanceof Error ? err.message : String(err),
+      )
+    })
   }
 
   win.on('closed', () => {
-    if (trackingWebContents === win.webContents) stopWindowTracking()
     if (mainBrowserWindow === win) mainBrowserWindow = null
   })
 }
 
-app.whenReady().then(() => {
-  if (process.platform !== 'darwin') {
-    Menu.setApplicationMenu(null)
-  }
-  createWindow()
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+if (gotSingleInstanceLock) {
+  app.on('second-instance', () => {
+    showMainWindow()
   })
-})
+
+  app.whenReady().then(() => {
+    startupLog.write('app ready')
+    if (process.platform !== 'darwin') {
+      Menu.setApplicationMenu(null)
+    }
+    createWindow()
+    ensureAppTray()
+    app.on('activate', () => {
+      if (mainBrowserWindow && !mainBrowserWindow.isDestroyed()) {
+        showMainWindow()
+        return
+      }
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  }).catch((err) => {
+    showFatalStartupError(
+      '干啥了 启动失败',
+      err instanceof Error ? err.message : String(err),
+    )
+    app.quit()
+  })
+}
 
 app.on('window-all-closed', () => {
+  if (!isQuitting) return
   stopWindowTracking()
+  destroyAppTray()
   if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
   stopWindowTracking()
+  destroyAppTray()
 })

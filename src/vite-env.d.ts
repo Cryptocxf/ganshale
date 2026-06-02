@@ -48,22 +48,22 @@ interface GanshaleDesktopBridge {
   getDownloadPath: () => Promise<{ ok: boolean; path?: string; error?: string }>
   /** 在资源管理器中打开目录 */
   openPathInFolder: (targetPath: string) => Promise<{ ok: boolean; error?: string }>
-  /** 当前 userData 目录（Electron 数据根路径） */
+  /** 当前 userData 目录（安装目录下 data） */
   getStoragePath: () => Promise<{ ok: boolean; path?: string; error?: string }>
-  pickStorageDirectory: () => Promise<{
-    ok: boolean
-    path?: string
-    cancelled?: boolean
-    error?: string
-  }>
-  setStorageDirectory: (
-    nextPath: string,
-  ) => Promise<{ ok: boolean; needsRestart?: boolean; error?: string }>
   /** 主进程 `app.getFileIcon`，返回 PNG data URL */
   getFileIcon: (filePath: string) => Promise<string | null>
+  /** 主窗口已显示（`ready-to-show` 之后），用于启动页计时 */
+  onMainWindowShown?: (cb: () => void) => () => void
   onForegroundWindow: (cb: (payload: LiveForegroundSample | null) => void) => () => void
   /** 最小化回顾弹窗保存后，主进程把记录发到渲染进程 */
   onSessionReflection?: (cb: (payload: Record<string, unknown>) => void) => () => void
+  showTodoReminder?: (payload: {
+    todoId?: string
+    title: string
+    body?: string
+    priority?: number
+  }) => Promise<{ ok: boolean; error?: string }>
+  setReflectPromptEnabled?: (enabled: boolean) => Promise<{ ok: boolean }>
 }
 
 declare global {

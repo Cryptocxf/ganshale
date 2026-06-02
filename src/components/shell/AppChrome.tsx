@@ -4,9 +4,11 @@ import {
   CalendarDays,
   CalendarRange,
   Database,
+  ListTodo,
   Settings2,
 } from 'lucide-react'
 import { DailyDatePicker } from '../DailyDatePicker'
+import { WorkdayTimerToggle } from '../WorkdayTimerToggle'
 import { DailyReportHeaderActions } from '../DailyReportHeaderActions'
 import { MonthlyDatePicker } from '../MonthlyDatePicker'
 import { MonthlyReportHeaderActions } from '../MonthlyReportHeaderActions'
@@ -32,6 +34,7 @@ const nav: { key: NavKey; label: string; icon: typeof Calendar }[] = [
   { key: 'daily', label: '每日', icon: Calendar },
   { key: 'weekly', label: '每周', icon: CalendarRange },
   { key: 'monthly', label: '每月', icon: CalendarDays },
+  { key: 'todos', label: '待办', icon: ListTodo },
   { key: 'data', label: '数据', icon: Database },
   { key: 'settings', label: '设置', icon: Settings2 },
 ]
@@ -66,11 +69,13 @@ export function AppChrome({
     active === 'daily' || active === 'weekly' || active === 'monthly'
   const settingsPage = active === 'settings'
   const dataPage = active === 'data'
+  const todosPage = active === 'todos'
   const compactContentPage =
     active === 'settings' ||
     active === 'weekly' ||
     active === 'monthly' ||
-    active === 'data'
+    active === 'data' ||
+    active === 'todos'
   const hidePageHeader = compactContentPage
   const chromeInsetX = APP_CHROME_INSET_X_COMPACT
 
@@ -78,7 +83,9 @@ export function AppChrome({
     <div
       className={[
         'gs-app-bg flex flex-col',
-        overviewCompact || settingsPage || dataPage ? 'h-dvh max-h-dvh overflow-hidden' : 'min-h-dvh',
+        overviewCompact || settingsPage || dataPage || todosPage
+          ? 'h-dvh max-h-dvh overflow-hidden'
+          : 'min-h-dvh',
       ].join(' ')}
     >
       <header className="gs-chrome-header sticky top-0 z-40 shrink-0">
@@ -126,11 +133,14 @@ export function AppChrome({
 
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 md:shrink-0">
               {active === 'daily' ? (
-                <DailyDatePicker
-                  day={day}
-                  daysWithTimingData={daysWithTimingData}
-                  onChange={setDay}
-                />
+                <>
+                  <WorkdayTimerToggle day={day} />
+                  <DailyDatePicker
+                    day={day}
+                    daysWithTimingData={daysWithTimingData}
+                    onChange={setDay}
+                  />
+                </>
               ) : null}
               {active === 'weekly' && weeklyReport ? (
                 <WeeklyDatePicker
@@ -157,7 +167,7 @@ export function AppChrome({
       <div
         className={[
           APP_CHROME_CONTENT_WIDTH_CLASS,
-          settingsPage || dataPage
+          settingsPage || dataPage || todosPage
             ? [APP_CHROME_INSET_COMPACT, 'flex min-h-0 flex-1 flex-col'].join(' ')
             : [
                 chromeInsetX,
@@ -186,7 +196,7 @@ export function AppChrome({
           className={[
             overviewCompact
               ? 'flex min-h-0 flex-1 flex-col gap-2'
-              : dataPage
+              : dataPage || todosPage
                 ? 'flex min-h-0 flex-1 flex-col'
               : settingsPage
                 ? 'gs-page-enter flex min-h-0 flex-1 flex-col'

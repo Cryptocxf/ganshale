@@ -244,13 +244,20 @@ export function totalActiveSecondsWindowLive(
   extrapolate: boolean,
 ): number {
   const base = totalActiveSecondsWindow(day, events)
-  if (!extrapolate || !live) return base
+  if (!extrapolate) return base
+
+  const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
+
+  if (!live) {
+    const latest = findLatestWindowEvent(statsEvents)
+    if (latest) return extrapolateWindowEventToNow(day, base, latest, nowMs, null)
+    return base
+  }
 
   if (isLiveForegroundSkippedForStats(live)) {
     return base
   }
 
-  const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
   const latest = findLatestWindowEvent(statsEvents)
   if (latest && sameForegroundApp(latest.data, live)) {
     return extrapolateWindowEventToNow(day, base, latest, nowMs, live)

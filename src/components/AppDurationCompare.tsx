@@ -5,8 +5,11 @@ import {
   appTotalsForWeek,
   formatDurationCompactSec,
   formatDurationPreciseSec,
+  type AppTotalRow,
 } from '../lib/aggregations'
 import type { AwEvent } from '../lib/awTypes'
+import { getAppDisplayNameOverride } from '../lib/appDisplayNameStore'
+import { identityFromEventData } from '../lib/windowAppDisplay'
 import { chartColorFromMap, chartColorMapForApps } from '../lib/appBrandIcons'
 import { AppBrandIcon } from './AppBrandIcon'
 import { useAppDisplayNamesRevision } from '../hooks/useAppDisplayNamesRevision'
@@ -28,8 +31,39 @@ import {
   DASHBOARD_PAIR_ICON_SIZE,
   DASHBOARD_PAIR_ROW_HEIGHT_PX,
 } from './dashboardLayout'
+import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
 
 const DEFAULT_PREVIEW_COUNT = DASHBOARD_DURATION_PREVIEW_ROWS
+
+function rowsForCompareQueue(
+  queue: string[],
+  totals: AppTotalRow[],
+  events: AwEvent[],
+): AppTotalRow[] {
+  const byKey = new Map(totals.map((r) => [r.identityKey, r]))
+  for (const key of queue) {
+    if (byKey.has(key)) continue
+    const ev = events.find((e) => identityFromEventData(e.data).identityKey === key)
+    const id = ev
+      ? identityFromEventData(ev.data)
+      : {
+          identityKey: key,
+          processApp: key,
+          displayName: getAppDisplayNameOverride(key) ?? (key.replace(/\.exe$/i, '') || key),
+        }
+    byKey.set(key, {
+      app: id.processApp,
+      displayName: id.displayName,
+      identityKey: key,
+      seconds: 0,
+      appPath: ev ? String(ev.data.appPath ?? '').trim() || undefined : undefined,
+    })
+  }
+  return queue
+    .map((k) => byKey.get(k))
+    .filter((r): r is AppTotalRow => r != null)
+    .sort((a, b) => b.seconds - a.seconds)
+}
 
 function durationRankClass(rank: number): string {
   if (rank === 1) return 'w-3.5 shrink-0 text-center text-[13px] font-bold tabular-nums text-ganshale-text'
@@ -43,6 +77,7 @@ function DurationBarRow({
   row,
   maxSeconds,
   color,
+  onRemove,
 }: {
   rank: number
   row: {
@@ -54,6 +89,7 @@ function DurationBarRow({
   }
   maxSeconds: number
   color: string
+  onRemove?: () => void
 }) {
   const label = row.displayName || row.app.replace(/\.exe$/i, '') || row.app
   const durationCompact = formatDurationCompactSec(row.seconds)
@@ -88,11 +124,20 @@ function DurationBarRow({
         />
       </div>
       <span
-        className="w-[3.5rem] shrink-0 truncate text-right font-mono text-[11px] tabular-nums text-ganshale-muted"
+        className="w-[3.25rem] shrink-0 truncate text-right font-mono text-[11px] tabular-nums text-ganshale-muted"
         title={durationPrecise}
       >
         {durationCompact}
       </span>
+      {onRemove ? (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-[2.25rem] shrink-0 text-center text-[10px] font-medium text-red-600 transition hover:text-red-800"
+        >
+          删除
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -103,25 +148,37 @@ export function AppDurationCompare({
   ready,
   previewCount = DEFAULT_PREVIEW_COUNT,
   weekStartMonday,
+  compareQueue,
+  onRemoveFromCompare,
 }: {
   day: Date
   events: AwEvent[]
   ready: boolean
   previewCount?: number
   weekStartMonday?: Date
+  /** 日看板：仅展示用户加入对比队列的应用 */
+  compareQueue?: string[]
+  onRemoveFromCompare?: (identityKey: string) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const nameRev = useAppDisplayNamesRevision()
-  const rows = useMemo(
+  const totals = useMemo(
     () =>
       weekStartMonday != null
         ? appTotalsForWeek(weekStartMonday, events)
         : appTotalsForDay(day, events),
     [weekStartMonday, day, events, nameRev],
   )
+  const rows = useMemo(() => {
+    if (compareQueue != null) {
+      return rowsForCompareQueue(compareQueue, totals, events)
+    }
+    return totals
+  }, [compareQueue, totals, events, nameRev])
   const maxSeconds = useMemo(() => rows.reduce((m, r) => Math.max(m, r.seconds), 0), [rows])
   const colorMap = useMemo(() => chartColorMapForApps(rows.map((r) => r.identityKey)), [rows])
   const previewRows = rows.slice(0, previewCount)
+  const showCompareFooter = compareQueue != null && rows.length > previewCount
 
   return (
     <>
@@ -144,6 +201,7 @@ export function AppDurationCompare({
           </div>
         </div>
         <div className={DASHBOARD_PAIR_CARD_BODY_CLASS}>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className={DASHBOARD_PAIR_SCROLL_BODY_CLASS}>
           {!ready ? (
             <p className="flex h-full items-center justify-center text-center text-xs text-ganshale-muted">
@@ -151,7 +209,9 @@ export function AppDurationCompare({
             </p>
           ) : rows.length === 0 ? (
             <p className="flex h-full items-center justify-center text-center text-xs text-ganshale-muted">
-              暂无窗口数据。
+              {compareQueue != null
+                ? '窗口记录中的应用会自动加入对比；也可在左侧点击「添加」。'
+                : '暂无窗口数据。'}
             </p>
           ) : (
             <div className={DASHBOARD_DURATION_LIST_FRAME_CLASS}>
@@ -162,10 +222,21 @@ export function AppDurationCompare({
                   row={row}
                   maxSeconds={maxSeconds}
                   color={chartColorFromMap(colorMap, row.identityKey)}
+                  onRemove={
+                    onRemoveFromCompare
+                      ? () => onRemoveFromCompare(row.identityKey)
+                      : undefined
+                  }
                 />
               ))}
+              {showCompareFooter ? (
+                <DashboardPairPreviewFooter>
+                  仅展示排名前 {previewCount} 的应用，点击右上角「查看全部」可查看全部对比记录。
+                </DashboardPairPreviewFooter>
+              ) : null}
             </div>
           )}
+          </div>
           </div>
         </div>
       </div>
@@ -200,6 +271,11 @@ export function AppDurationCompare({
                   row={row}
                   maxSeconds={maxSeconds}
                   color={chartColorFromMap(colorMap, row.identityKey)}
+                  onRemove={
+                    onRemoveFromCompare
+                      ? () => onRemoveFromCompare(row.identityKey)
+                      : undefined
+                  }
                 />
               ))}
             </div>

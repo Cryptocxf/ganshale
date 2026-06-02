@@ -3,12 +3,11 @@ import {
   Bot,
   Clock,
   Info,
+  LayoutGrid,
   ScrollText,
-  Settings2,
 } from 'lucide-react'
 import { AppearanceSettings } from './AppearanceSettings'
 import { AboutSettings } from './AboutSettings'
-import { DataManagementSettings } from './DataManagementSettings'
 import { ModelConfigSettings } from './ModelConfigSettings'
 import { PromptsSettings } from './PromptsSettings'
 import { TimeSettings } from './TimeSettings'
@@ -18,13 +17,13 @@ import {
   SETTINGS_SHELL_CLASS,
 } from './dashboardLayout'
 
-type SettingsSection = 'general' | 'time' | 'prompts' | 'models' | 'about'
+type SettingsSection = 'theme' | 'time' | 'prompts' | 'models' | 'about'
 
-const NAV: { id: SettingsSection; label: string; icon: typeof Settings2 }[] = [
-  { id: 'general', label: '基础设置', icon: Settings2 },
+const NAV: { id: SettingsSection; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'models', label: '模型配置', icon: Bot },
   { id: 'prompts', label: '提示词', icon: ScrollText },
   { id: 'time', label: '时间', icon: Clock },
+  { id: 'theme', label: '主题', icon: LayoutGrid },
   { id: 'about', label: '关于', icon: Info },
 ]
 
@@ -35,7 +34,7 @@ const navActive =
 const navIdle = 'text-ganshale-muted hover:bg-slate-100 hover:text-ganshale-text'
 
 export function SettingsView() {
-  const [section, setSection] = useState<SettingsSection>('general')
+  const [section, setSection] = useState<SettingsSection>('models')
 
   return (
     <div className={SETTINGS_SHELL_CLASS}>
@@ -79,12 +78,9 @@ export function SettingsView() {
           <ModelConfigSettings />
         ) : section === 'time' ? (
           <TimeSettings />
-        ) : (
-          <>
-            <AppearanceSettings />
-            <DataManagementSettings />
-          </>
-        )}
+        ) : section === 'theme' ? (
+          <AppearanceSettings />
+        ) : null}
       </div>
     </div>
   )

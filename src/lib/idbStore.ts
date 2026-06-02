@@ -6,6 +6,11 @@ const DB_VERSION = 1
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
+/** 清空或切换存储分区后丢弃缓存连接，下次读取会重新 open。 */
+export function resetDbConnection(): void {
+  dbPromise = null
+}
+
 function openDb(): Promise<IDBDatabase> {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
@@ -65,18 +70,14 @@ export async function getEventsInRange(
   const t1 = new Date(endIso).getTime()
   return new Promise((resolve, reject) => {
     const tx = db.transaction('events', 'readonly')
-    const idx = tx.objectStore('events').index('by_bucket')
+    const idx = tx.objectStore('events').index('by_bucket_time')
     const out: AwEvent[] = []
-    const range = IDBKeyRange.only(bucketId)
+    const range = IDBKeyRange.bound([bucketId, startIso], [bucketId, endIso])
     const req = idx.openCursor(range)
     req.onerror = () => reject(req.error)
     req.onsuccess = () => {
       const cur = req.result
       if (!cur) {
-        out.sort(
-          (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-        )
         resolve(out)
         return
       }
@@ -129,14 +130,20 @@ export async function getDistinctWindowEventLocalDays(
   return days
 }
 
+/** 取 bucket 内时间最新的一条（走复合索引，避免全表扫描） */
 export async function getLastEvent(bucketId: string): Promise<AwEvent | null> {
-  const events = await getAllEventsForBucket(bucketId)
-  if (events.length === 0) return null
-  return events.reduce((best, ev) =>
-    new Date(ev.timestamp).getTime() > new Date(best.timestamp).getTime()
-      ? ev
-      : best,
-  )
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('events', 'readonly')
+    const idx = tx.objectStore('events').index('by_bucket_time')
+    const range = IDBKeyRange.bound([bucketId, ''], [bucketId, '\uffff'])
+    const req = idx.openCursor(range, 'prev')
+    req.onerror = () => reject(req.error)
+    req.onsuccess = () => {
+      const cur = req.result
+      resolve(cur ? (cur.value as AwEvent) : null)
+    }
+  })
 }
 
 export async function putEvent(ev: AwEvent): Promise<void> {

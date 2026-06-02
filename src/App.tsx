@@ -5,9 +5,11 @@ import { DataRecordsView } from './components/data/DataRecordsView'
 import { SettingsView } from './components/SettingsView'
 import { SplashScreen } from './components/brand/SplashScreen'
 import { AppChrome } from './components/shell/AppChrome'
+import { TodoDashboard } from './components/TodoDashboard'
 import { WeeklyDashboard } from './components/WeeklyDashboard'
 import { WindowDwellPrompt } from './components/WindowDwellPrompt'
 import { useGanshaleData } from './context/useGanshaleData'
+import { useTodoReminderScheduler } from './hooks/useTodoReminders'
 import { markClientWorkSessionStart } from './lib/clientSessionClock'
 import { APP_WINDOW_TITLE } from './constants/brand'
 import type { NavKey } from './data/mock'
@@ -20,6 +22,7 @@ const pageTitle: Record<NavKey, string> = {
   daily: '每日',
   weekly: '每周',
   monthly: '每月',
+  todos: '待办',
   data: '数据',
   settings: '设置',
 }
@@ -56,6 +59,7 @@ function ActivePage({
           <MonthlyDashboard onNavigate={onNavigate} />
         </div>
       ) : null}
+      {active === 'todos' ? <TodoDashboard /> : null}
       {active === 'data' ? <DataRecordsView /> : null}
       {active === 'settings' ? <SettingsView /> : null}
     </>
@@ -63,7 +67,7 @@ function ActivePage({
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(isDesktopClient)
+  const [showSplash, setShowSplash] = useState(() => isDesktopClient())
   const dismissSplash = useCallback(() => {
     markClientWorkSessionStart()
     setShowSplash(false)
@@ -73,6 +77,7 @@ function App() {
     () => new Set(['daily']),
   )
   const { error } = useGanshaleData()
+  useTodoReminderScheduler(isDesktopClient())
 
   const setActive = useCallback((key: NavKey) => {
     if (OVERVIEW_NAV.includes(key)) {
@@ -105,6 +110,7 @@ function App() {
               active === 'settings' ||
               active === 'weekly' ||
               active === 'monthly' ||
+              active === 'todos' ||
               active === 'data'
                 ? 'mb-2 shrink-0'
                 : 'mb-6',

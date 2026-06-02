@@ -50,6 +50,16 @@ export const SKIN_PRESETS = [
     label: '霓虹赛博',
     description: '暗底、品红电青',
   },
+  {
+    key: 'sunset',
+    label: '落日金',
+    description: '暖金夕照、柔和',
+  },
+  {
+    key: 'lavender',
+    label: '薄雾紫',
+    description: '淡紫灰、静谧',
+  },
 ] as const
 
 export type SkinKey = (typeof SKIN_PRESETS)[number]['key']
@@ -62,7 +72,7 @@ const LEGACY_SKIN: Record<string, SkinKey> = {
   classic: 'sakura',
   midnight: 'ocean',
   rose: 'aurora',
-  sunset: 'paper',
+  sunset: 'sunset',
   latte: 'paper',
   mono: 'minimal',
 }

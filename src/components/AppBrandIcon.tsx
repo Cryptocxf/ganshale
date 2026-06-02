@@ -3,13 +3,23 @@ import {
   brandFallbackLetter,
   brandIconUrl,
   brandOrNeutralHex,
+  bundledAppIconUrl,
   normalizeAppKey,
+  prefersBundledIconOverNative,
 } from '../lib/appBrandIcons'
 import { isDocTypeIdentityKey } from '../lib/windowAppDisplay'
 
 type Phase = 'native' | 'brand' | 'letter'
 
-/** 优先系统文件图标（Electron），其次 Simple Icons，再字母回退 */
+function nativeIconQuery(app: string, appPath?: string): string {
+  const trimmedPath = appPath?.trim() ?? ''
+  if (trimmedPath) return trimmedPath
+  const key = normalizeAppKey(app)
+  if (!key || key === 'unknown') return ''
+  return /\.exe$/i.test(key) ? key : `${key}.exe`
+}
+
+/** 优先系统文件图标（Electron），其次内置 / Simple Icons，再字母回退 */
 export function AppBrandIcon({
   app,
   appPath,
@@ -27,15 +37,19 @@ export function AppBrandIcon({
 }) {
   const iconKey = (brandKey?.trim() || app).trim()
   const useDocTypeIcon = isDocTypeIdentityKey(normalizeAppKey(iconKey))
-  const brandUrl = brandIconUrl(iconKey)
+  const bundledUrl =
+    bundledAppIconUrl(iconKey, { appPath }) ?? bundledAppIconUrl(app, { appPath })
+  const staticBrandUrl = bundledUrl ?? brandIconUrl(iconKey)
   const letter = brandFallbackLetter(iconKey)
   const bg = iconKey ? brandOrNeutralHex(iconKey) : '#a1a1aa'
 
-  const trimmedPath = appPath?.trim() ?? ''
-  const skipNative = useDocTypeIcon && Boolean(brandUrl)
+  const nativeQuery = nativeIconQuery(app, appPath)
+  const skipNative =
+    prefersBundledIconOverNative(app, brandKey, appPath) ||
+    (useDocTypeIcon && Boolean(staticBrandUrl))
 
   const [phase, setPhase] = useState<Phase>(() =>
-    skipNative ? 'brand' : trimmedPath ? 'native' : brandUrl ? 'brand' : 'letter',
+    skipNative ? 'brand' : staticBrandUrl ? 'brand' : nativeQuery ? 'native' : 'letter',
   )
   const [nativeSrc, setNativeSrc] = useState<string | null>(null)
 
@@ -45,36 +59,36 @@ export function AppBrandIcon({
       if (cancelled) return
       const hasBridge =
         typeof window !== 'undefined' && Boolean(window.ganshaleDesktop?.getFileIcon)
-      if (skipNative || !trimmedPath || !hasBridge) {
+      if (skipNative || !nativeQuery || !hasBridge) {
         setNativeSrc(null)
-        setPhase(brandUrl ? 'brand' : 'letter')
+        setPhase(staticBrandUrl ? 'brand' : 'letter')
         return
       }
 
-      setPhase('native')
+      setPhase(staticBrandUrl ? 'brand' : 'native')
       setNativeSrc(null)
 
-      void window.ganshaleDesktop!.getFileIcon!(trimmedPath).then((url) => {
+      void window.ganshaleDesktop!.getFileIcon!(nativeQuery).then((url) => {
         if (cancelled) return
         if (url) {
           setNativeSrc(url)
           setPhase('native')
         } else {
           setNativeSrc(null)
-          setPhase(brandUrl ? 'brand' : 'letter')
+          setPhase(staticBrandUrl ? 'brand' : 'letter')
         }
       })
     })
     return () => {
       cancelled = true
     }
-  }, [trimmedPath, brandUrl, skipNative])
+  }, [nativeQuery, staticBrandUrl, skipNative])
 
   const showNative = phase === 'native' && Boolean(nativeSrc)
   const showBrand =
-    (phase === 'brand' && brandUrl) ||
-    (phase === 'native' && !nativeSrc && brandUrl)
-  const displaySrc = showNative ? nativeSrc! : showBrand ? brandUrl! : null
+    (phase === 'brand' && staticBrandUrl) ||
+    (phase === 'native' && !nativeSrc && staticBrandUrl)
+  const displaySrc = showNative ? nativeSrc! : showBrand ? staticBrandUrl! : null
   const showImg = Boolean(displaySrc)
 
   return (
@@ -84,7 +98,7 @@ export function AppBrandIcon({
         className,
       ].join(' ')}
       style={{ width: size, height: size }}
-      title={trimmedPath || app || normalizeAppKey(app)}
+      title={nativeQuery || app || normalizeAppKey(app)}
     >
       {showImg ? (
         <img
@@ -100,7 +114,7 @@ export function AppBrandIcon({
             const failed = e.currentTarget.getAttribute('src') ?? ''
             if (failed.startsWith('data:')) {
               setNativeSrc(null)
-              setPhase(brandUrl ? 'brand' : 'letter')
+              setPhase(staticBrandUrl ? 'brand' : 'letter')
             } else {
               setPhase('letter')
             }

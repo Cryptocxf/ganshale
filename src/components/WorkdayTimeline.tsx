@@ -316,7 +316,7 @@ export function WorkdayTimeline({
                 : '暂无 0:00—24:00 内的窗口数据。'}
           </p>
         ) : (
-          <div className="flex h-full min-h-0 flex-col pt-2 sm:pt-3">
+          <div className="flex h-full min-h-0 flex-col pt-1 sm:pt-1.5">
             <div
               ref={panSurfaceRef}
               className={[
@@ -402,7 +402,7 @@ export function WorkdayTimeline({
               })}
               </div>
             </div>
-            <div className="relative mt-1.5 h-[1.925rem] w-full shrink-0 sm:h-[2.1rem]">
+            <div className="relative mt-1 h-[1.75rem] w-full shrink-0 sm:h-[1.875rem]">
               {viewHourMarks.map((h) => {
                 const isFirst = h === markStartHour
                 const isLast = h === markEndHour
@@ -438,10 +438,10 @@ export function WorkdayTimeline({
                     >
                       <span>{`${h}:00`}</span>
                       {isWorkStart ? (
-                        <span className="mt-0.5 text-[10px] text-emerald-800/90">上班时间</span>
+                        <span className="mt-px text-[10px] leading-tight text-emerald-800/90">上班时间</span>
                       ) : null}
                       {isWorkEnd ? (
-                        <span className="mt-0.5 text-[10px] text-emerald-800/90">下班时间</span>
+                        <span className="mt-px text-[10px] leading-tight text-emerald-800/90">下班时间</span>
                       ) : null}
                     </button>
                   )
@@ -451,10 +451,10 @@ export function WorkdayTimeline({
                   <span key={`label-${h}`} className={labelClass} style={labelStyle}>
                     <span>{`${h}:00`}</span>
                     {isWorkStart ? (
-                      <span className="mt-0.5 text-[10px] text-emerald-800/90">上班时间</span>
+                      <span className="mt-px text-[10px] leading-tight text-emerald-800/90">上班时间</span>
                     ) : null}
                     {isWorkEnd ? (
-                      <span className="mt-0.5 text-[10px] text-emerald-800/90">下班时间</span>
+                      <span className="mt-px text-[10px] leading-tight text-emerald-800/90">下班时间</span>
                     ) : null}
                   </span>
                 )
@@ -471,19 +471,22 @@ export function WorkdayTimeline({
                     style={{ left: `${left}%` }}
                   >
                     <span>{formatWorkdayClock(hour, minute)}</span>
-                    <span className="mt-0.5 text-[10px] text-emerald-800/90">{caption}</span>
+                    <span className="mt-px text-[10px] leading-tight text-emerald-800/90">{caption}</span>
                   </span>
                 )
               })}
             </div>
             </div>
             {legend.length > 0 ? (
-              <div className="mt-1.5 w-full shrink-0" aria-label="应用图例">
-                <div className="flex w-full flex-wrap content-start items-center gap-x-3 gap-y-1">
+              <div
+                className="mt-0.5 max-h-[2rem] w-full shrink-0 overflow-hidden"
+                aria-label="应用图例"
+              >
+                <div className="flex w-full flex-wrap content-start items-center gap-x-2.5 gap-y-0.5 leading-tight">
                   {legend.map(([label, color]) => (
                     <span
                       key={label}
-                      className="inline-flex max-w-full items-center gap-1 text-[10px] text-ganshale-muted"
+                      className="inline-flex max-w-full items-center gap-1 text-[10px] leading-tight text-ganshale-muted"
                     >
                       <span
                         className="h-1.5 w-1.5 shrink-0 rounded-full"

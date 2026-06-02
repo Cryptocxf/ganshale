@@ -85,8 +85,7 @@ html:not([data-skin]),
   --gs-day-tile-active-ring-4: rgb(251 113 133 / 0.55);
   --gs-day-tile-weekday-border: color-mix(in srgb, var(--color-ganshale-border) 88%, transparent);
   --gs-day-tile-weekday-bg: color-mix(in srgb, var(--color-ganshale-surface) 92%, var(--color-ganshale-elevated));
-  --gs-day-tile-sat-border: color-mix(in srgb, var(--color-ganshale-sky) 72%, var(--color-ganshale-border));
-  --gs-day-tile-sun-border: color-mix(in srgb, var(--color-ganshale-coral) 72%, var(--color-ganshale-border));
+  --gs-day-tile-weekend-border: rgb(248 113 113);
   --gs-day-tile-today-line: var(--color-ganshale-accent);
   --gs-day-tile-active-ring: color-mix(in srgb, var(--color-ganshale-accent) 52%, transparent);
   --gs-report-detail-bg: color-mix(in srgb, var(--color-ganshale-page) 55%, transparent);
@@ -771,6 +770,112 @@ html[data-skin='neon'][data-bg='black'] .gs-nav-pill--active {
   --gs-nav-active-fg: #0a0a0f;
 }
 
+/* —— 落日金 —— */
+html[data-skin='sunset'],
+[data-skin='sunset'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #fff7ed;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #ffedd5;
+  --color-ganshale-elevated: #ffedd5;
+  --color-ganshale-track: #fed7aa;
+  --color-ganshale-border: #fed7aa;
+  --color-ganshale-muted: #c2410c;
+  --color-ganshale-text: #7c2d12;
+  --color-ganshale-subtle: #fdba74;
+  --color-ganshale-accent: #ea580c;
+  --color-ganshale-mint: #f97316;
+  --color-ganshale-sky: #fb923c;
+  --gs-app-glow-a: rgb(234 88 12 / 0.14);
+  --gs-app-glow-b: rgb(251 146 60 / 0.1);
+  --gs-app-grid-opacity: 0.24;
+  --gs-chrome-border: rgb(254 215 170);
+  --gs-chrome-bg: rgb(255 255 255 / 0.82);
+  --gs-nav-hover-bg: rgb(234 88 12 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 0 18px rgb(234 88 12 / 0.25);
+  --gs-btn-border: rgb(254 215 170);
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(234 88 12 / 0.35);
+  --gs-btn-past-bg: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(254 215 170);
+  --gs-card-bg: rgb(255 255 255 / 0.9);
+  --gs-card-shadow: 0 1px 3px rgb(124 45 18 / 0.06);
+  --gs-card-hover-shadow: 0 8px 22px rgb(234 88 12 / 0.1);
+  --gs-section-icon: #ea580c;
+  --gs-duration-live-color: #c2410c;
+  --gs-duration-live-glow: 0 0 24px rgb(251 146 60 / 0.3);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(251 146 60 / 0.16), transparent 55%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(234 88 12 / 0.1), transparent 55%);
+  --gs-markdown-quote: rgb(234 88 12 / 0.45);
+}
+
+html[data-skin='sunset'] .gs-app-bg::before {
+  opacity: 0.28;
+  background-image: linear-gradient(rgb(251 146 60 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(251 146 60 / 0.1) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* —— 薄雾紫 —— */
+html[data-skin='lavender'],
+[data-skin='lavender'].skin-preview-scene {
+  --font-sans: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+
+  --color-ganshale-page: #f5f3ff;
+  --color-ganshale-surface: #ffffff;
+  --color-ganshale-sidebar: #ede9fe;
+  --color-ganshale-elevated: #ede9fe;
+  --color-ganshale-track: #ddd6fe;
+  --color-ganshale-border: #ddd6fe;
+  --color-ganshale-muted: #6d28d9;
+  --color-ganshale-text: #4c1d95;
+  --color-ganshale-subtle: #c4b5fd;
+  --color-ganshale-accent: #7c3aed;
+  --color-ganshale-mint: #8b5cf6;
+  --color-ganshale-sky: #a78bfa;
+  --gs-app-glow-a: rgb(124 58 237 / 0.12);
+  --gs-app-glow-b: rgb(167 139 250 / 0.1);
+  --gs-app-grid-opacity: 0.22;
+  --gs-chrome-border: rgb(221 214 254);
+  --gs-chrome-bg: rgb(255 255 255 / 0.82);
+  --gs-nav-hover-bg: rgb(124 58 237 / 0.08);
+  --gs-nav-active-bg: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+  --gs-nav-active-fg: #ffffff;
+  --gs-nav-active-shadow: 0 0 18px rgb(124 58 237 / 0.22);
+  --gs-btn-border: rgb(221 214 254);
+  --gs-btn-bg: #ffffff;
+  --gs-btn-accent-bg: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+  --gs-btn-accent-hover-bg: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+  --gs-btn-accent-shadow: 0 1px 4px rgb(124 58 237 / 0.32);
+  --gs-btn-past-bg: linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%);
+  --gs-card-radius: 0.75rem;
+  --gs-card-border: rgb(221 214 254);
+  --gs-card-bg: rgb(255 255 255 / 0.9);
+  --gs-card-shadow: 0 1px 3px rgb(76 29 149 / 0.06);
+  --gs-card-hover-shadow: 0 8px 22px rgb(124 58 237 / 0.1);
+  --gs-section-icon: #7c3aed;
+  --gs-duration-live-color: #6d28d9;
+  --gs-duration-live-glow: 0 0 24px rgb(167 139 250 / 0.28);
+  --gs-office-today: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(167 139 250 / 0.14), transparent 55%);
+  --gs-office-past: radial-gradient(ellipse 90% 70% at 12% 8%, rgb(124 58 237 / 0.1), transparent 55%);
+  --gs-markdown-quote: rgb(124 58 237 / 0.42);
+}
+
+html[data-skin='lavender'] .gs-app-bg::before {
+  opacity: 0.26;
+  background-image: linear-gradient(rgb(167 139 250 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(167 139 250 / 0.1) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
 /* 浅色皮肤：弹窗/表单（深空、霓虹在各自块内已定义） */
 html[data-skin='default'],
 html:not([data-skin]),
@@ -780,7 +885,9 @@ html[data-skin='aurora'],
 html[data-skin='ocean'],
 html[data-skin='forest'],
 html[data-skin='ember'],
-html[data-skin='sakura'] {
+html[data-skin='sakura'],
+html[data-skin='sunset'],
+html[data-skin='lavender'] {
   --gs-modal-bg: var(--gs-card-bg);
   --gs-modal-border: var(--gs-card-border);
   --gs-modal-shadow: 0 16px 48px color-mix(in srgb, var(--color-ganshale-text) 14%, transparent),

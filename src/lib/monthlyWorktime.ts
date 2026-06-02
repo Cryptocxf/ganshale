@@ -5,9 +5,14 @@ import { aggregateByAppCategories } from './appCategoryAggregate'
 import {
   appTotalsFromWindowEvents,
   totalActiveSecondsWindow,
-  totalActiveSecondsWindowLive,
   totalSecondsWindowEvents,
 } from './aggregations'
+import {
+  sumOfficeElapsedForMonthThrough,
+  sumOfficeElapsedForMonthWeekBlock,
+  officeElapsedForDay,
+  type OfficeElapsedContext,
+} from './officeElapsed'
 import type { LiveForegroundSample } from './liveForeground'
 import { categoryChartColor } from './categoryBarColors'
 import { excludeGanshaleSelfWindowEvents } from './selfWindowFilter'
@@ -16,7 +21,6 @@ import {
   daysInLocalWeek,
   endOfLocalDay,
   endOfWeekSundayLocal,
-  isSameLocalCalendarDay,
   parseIso,
   parseYmdLocal,
   startOfLocalDay,
@@ -111,8 +115,11 @@ export function invalidateMonthlyWindowEventsCache(): void {
 
 export async function loadWindowEventsForMonth(monthAnchor: Date): Promise<AwEvent[]> {
   const key = monthEventsCacheKey(monthAnchor)
-  const cached = windowEventsForMonthCache.get(key)
-  if (cached) return cached
+  const isCurrentMonth = compareLocalCalendarMonth(monthAnchor) === 'current'
+  if (!isCurrentMonth) {
+    const cached = windowEventsForMonthCache.get(key)
+    if (cached) return cached
+  }
 
   const start = startOfMonthLocal(monthAnchor).toISOString()
   const end = endOfMonthLocal(monthAnchor).toISOString()
@@ -397,14 +404,21 @@ export function buildMonthlySummary(
   prevEvents: AwEvent[],
   categories: AppCategoryDef[],
   now = new Date(),
+  patterns: string[] = [],
 ): MonthlySummary {
   const monthKey = `${monthAnchor.getFullYear()}-${String(monthAnchor.getMonth() + 1).padStart(2, '0')}`
   const daySeconds = new Map<string, number>()
   let effectiveCount = 0
+  const staticCtx = {
+    patterns,
+    live: null,
+    nowMs: now.getTime(),
+    extrapolateLive: false,
+  } satisfies OfficeElapsedContext
 
   for (const day of daysInLocalMonth(monthAnchor)) {
     const ymd = toYmdLocal(day)
-    const sec = totalSecondsWindowEvents(windowEventsForLocalDay(events, day))
+    const sec = officeElapsedForDay(day, events, staticCtx)
     daySeconds.set(ymd, sec)
     if (sec >= EFFECTIVE_WORKDAY_MIN_SEC) effectiveCount += 1
   }
@@ -494,7 +508,7 @@ export function buildMonthlySummary(
   const prevDaySeconds = new Map<string, number>()
   for (const day of daysInLocalMonth(prevMonthAnchor)) {
     const ymd = toYmdLocal(day)
-    prevDaySeconds.set(ymd, totalSecondsWindowEvents(windowEventsForLocalDay(prevEvents, day)))
+    prevDaySeconds.set(ymd, officeElapsedForDay(day, prevEvents, staticCtx))
   }
   const prevWeekBlocksTotal = sumMonthWeekBlockSeconds(
     prevMonthAnchor,
@@ -641,51 +655,38 @@ export function sumMonthWeekBlockSeconds(
   )
 }
 
-function dayActiveSecondsLive(
-  day: Date,
-  events: AwEvent[],
-  live: LiveForegroundSample | null,
-  now: Date,
-  extrapolateToday: boolean,
-): number {
-  const dayEvents = windowEventsForLocalDay(events, day)
-  const isToday = isSameLocalCalendarDay(day, now)
-  return totalActiveSecondsWindowLive(
-    day,
-    dayEvents,
-    live,
-    now.getTime(),
-    isToday && extrapolateToday,
-  )
-}
-
 function sumMonthWeekBlockSecondsFromEvents(
   monthAnchor: Date,
   weekStart: Date,
   events: AwEvent[],
+  patterns: string[],
   now: Date,
   live: LiveForegroundSample | null,
   extrapolateToday: boolean,
+  pausedMsToday = 0,
 ): number {
   const first = startOfMonthLocal(monthAnchor)
   const last = endOfMonthLocal(monthAnchor)
-  let total = 0
-  for (const day of daysInLocalWeek(startOfWeekMondayLocal(weekStart))) {
-    if (day < first || day > last) continue
-    if (compareLocalCalendarDay(day, now) === 'future') continue
-    total += dayActiveSecondsLive(day, events, live, now, extrapolateToday)
+  const ctx: OfficeElapsedContext = {
+    patterns,
+    live,
+    nowMs: now.getTime(),
+    extrapolateLive: extrapolateToday,
+    pausedMsToday,
   }
-  return total
+  return sumOfficeElapsedForMonthWeekBlock(first, last, weekStart, events, ctx)
 }
 
-/** 本月 KPI 总活跃：已完成周块固定值 + 本周（周一至当日，可 live 递增） */
+/** 本月 KPI 总活跃：四周块累加（与每日/每周同源算法；已完成周块固定 + 本周 live） */
 export function computeMonthWeekBlocksTotalLive(
   monthAnchor: Date,
   events: AwEvent[],
+  patterns: string[],
   fixedCells: readonly MonthlyDayCell[],
   now = new Date(),
   live: LiveForegroundSample | null = null,
   extrapolateToday = false,
+  pausedMsToday = 0,
 ): number {
   const blocks = pickMonthWeekBlocks(monthAnchor)
   const isCurrentMonth = compareLocalCalendarMonth(monthAnchor, now) === 'current'
@@ -701,9 +702,11 @@ export function computeMonthWeekBlocksTotalLive(
           monthAnchor,
           block.weekStart,
           events,
+          patterns,
           now,
           live,
           true,
+          pausedMsToday,
         )
       )
     }
@@ -712,20 +715,23 @@ export function computeMonthWeekBlocksTotalLive(
   }, 0)
 }
 
-/** 本月 1 号至参考日（含）的活跃时长；参考日默认今天 */
+/** 本月 1 号至参考日（含）的办公时长；与每日页逐日累加一致 */
 export function sumMonthDaysThroughReference(
   monthAnchor: Date,
   events: AwEvent[],
+  patterns: string[],
   now = new Date(),
   live: LiveForegroundSample | null = null,
   extrapolateToday = false,
+  pausedMsToday = 0,
 ): number {
-  let total = 0
-  for (const day of daysInLocalMonth(monthAnchor)) {
-    if (compareLocalCalendarDay(day, now) === 'future') continue
-    total += dayActiveSecondsLive(day, events, live, now, extrapolateToday)
-  }
-  return total
+  return sumOfficeElapsedForMonthThrough(daysInLocalMonth(monthAnchor), events, {
+    patterns,
+    live,
+    nowMs: now.getTime(),
+    extrapolateLive: extrapolateToday,
+    pausedMsToday,
+  })
 }
 
 /** 整月活跃时长（上月环比分母等） */
@@ -749,14 +755,18 @@ export function buildMonthlyLiveKpi(
   prevEvents: AwEvent[],
   fixedCells: readonly MonthlyDayCell[],
   options: {
+    patterns?: string[]
     now?: Date
     live?: LiveForegroundSample | null
     extrapolateToday?: boolean
+    pausedMsToday?: number
   } = {},
 ): MonthlyLiveKpi {
+  const patterns = options.patterns ?? []
   const now = options.now ?? new Date()
   const live = options.live ?? null
   const extrapolateToday = options.extrapolateToday ?? false
+  const pausedMsToday = options.pausedMsToday ?? 0
   const monthKind = compareLocalCalendarMonth(monthAnchor, now)
 
   const weekBlocksTotalSeconds =
@@ -765,10 +775,12 @@ export function buildMonthlyLiveKpi(
       : computeMonthWeekBlocksTotalLive(
           monthAnchor,
           events,
+          patterns,
           fixedCells,
           now,
           live,
           extrapolateToday,
+          pausedMsToday,
         )
 
   const currentCompareSec =
@@ -779,9 +791,11 @@ export function buildMonthlyLiveKpi(
         : sumMonthDaysThroughReference(
             monthAnchor,
             events,
+            patterns,
             now,
             live,
             extrapolateToday,
+            pausedMsToday,
           )
 
   const prevCompareSec = sumMonthFullActiveSeconds(

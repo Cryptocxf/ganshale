@@ -1,4 +1,5 @@
 import type { AwEvent } from './awTypes'
+import { enqueueHeartbeat } from './heartbeatQueue'
 import * as store from './idbStore'
 
 function endMs(ev: AwEvent): number {
@@ -20,7 +21,7 @@ export type HeartbeatWindowOptions = {
  * Mirrors aw-server heartbeat merge: extend last event when payload matches
  * and the gap since its end is within pulsetime.
  */
-export async function heartbeatWindow(
+async function heartbeatWindowInner(
   bucketId: string,
   data: { app: string; title: string; appPath?: string },
   options: HeartbeatWindowOptions = {},
@@ -49,4 +50,13 @@ export async function heartbeatWindow(
     duration: 0,
     data: { ...data },
   })
+}
+
+/** 串行写库；成功后会更新 `getHeartbeatHealth().lastSuccessAtMs` */
+export function heartbeatWindow(
+  bucketId: string,
+  data: { app: string; title: string; appPath?: string },
+  options: HeartbeatWindowOptions = {},
+): Promise<void> {
+  return enqueueHeartbeat(() => heartbeatWindowInner(bucketId, data, options))
 }

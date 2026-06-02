@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMonthlyReport } from '../context/MonthlyReportContext'
 import { useGanshaleData } from '../context/useGanshaleData'
+import { useDashboardClockLive, useDashboardClockMs } from '../hooks/useDashboardClock'
 import { loadAppCategoryConfig } from '../lib/appCategoryConfig'
+import {
+  MONITORED_APPS_CHANGED_EVENT,
+  loadMonitoredAppPatterns,
+} from '../lib/monitoredAppsStore'
 import type { AwEvent } from '../lib/awTypes'
 import {
   addMonthsLocal,
@@ -30,15 +35,22 @@ function cachedMonthEvents(monthAnchor: Date): AwEvent[] {
   return peekCachedWindowEventsForMonth(monthAnchor) ?? []
 }
 
+function useMonitoredAppPatterns(): string[] {
+  const [patterns, setPatterns] = useState(() => loadMonitoredAppPatterns())
+  useEffect(() => {
+    const sync = () => setPatterns(loadMonitoredAppPatterns())
+    window.addEventListener(MONITORED_APPS_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(MONITORED_APPS_CHANGED_EVENT, sync)
+  }, [])
+  return patterns
+}
+
 export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => void }) {
   const { monthAnchor, setSummaryState } = useMonthlyReport()
-  const {
-    ready: dataReady,
-    setDay,
-    liveForeground,
-    windowTrackingActive,
-    collectionPausedByUser,
-  } = useGanshaleData()
+  const { ready: dataReady, setDay, liveForeground, getWorkdayPausedMs } = useGanshaleData()
+  const patterns = useMonitoredAppPatterns()
+  const clockMs = useDashboardClockMs()
+  const clockLive = useDashboardClockLive()
   const [events, setEvents] = useState<AwEvent[]>(() => cachedMonthEvents(monthAnchor))
   const [prevEvents, setPrevEvents] = useState<AwEvent[]>(() =>
     cachedMonthEvents(addMonthsLocal(monthAnchor, -1)),
@@ -48,20 +60,20 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
   const monthKind = useMemo(() => compareLocalCalendarMonth(monthAnchor), [monthAnchor])
 
   useEffect(() => {
-    if (monthKind !== 'current') return
+    if (monthKind !== 'current' || !clockLive) return
     const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
     return () => clearInterval(id)
-  }, [monthKind])
+  }, [monthKind, clockLive])
 
   useEffect(() => {
-    if (monthKind !== 'current' || !dataReady) return
+    if (monthKind !== 'current' || !dataReady || !clockLive) return
     const id = window.setInterval(() => {
       loadWindowEventsForMonth(monthAnchor)
         .then(setEvents)
         .catch(() => {})
     }, 2500)
     return () => clearInterval(id)
-  }, [monthKind, monthAnchor, dataReady])
+  }, [monthKind, monthAnchor, dataReady, clockLive])
 
   useEffect(() => {
     let cancelled = false
@@ -95,19 +107,20 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
   const summary = useMemo<MonthlySummary>(() => {
     const categories = loadAppCategoryConfig()
-    return buildMonthlySummary(monthAnchor, events, prevEvents, categories)
-  }, [monthAnchor, events, prevEvents])
+    return buildMonthlySummary(monthAnchor, events, prevEvents, categories, new Date(clockMs), patterns)
+  }, [monthAnchor, events, prevEvents, patterns, clockMs])
 
-  const extrapolateToday =
-    monthKind === 'current' && windowTrackingActive && !collectionPausedByUser
+  const extrapolateToday = monthKind === 'current'
 
   const liveKpi = useMemo(
     () => {
       void liveTick
       return buildMonthlyLiveKpi(monthAnchor, events, prevEvents, summary.calendarCells, {
-        now: new Date(),
+        patterns,
+        now: new Date(clockMs),
         live: liveForeground,
         extrapolateToday,
+        pausedMsToday: extrapolateToday ? getWorkdayPausedMs(clockMs) : 0,
       })
     },
     [
@@ -115,9 +128,12 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
       events,
       prevEvents,
       summary.calendarCells,
+      patterns,
       liveForeground,
       extrapolateToday,
+      clockMs,
       liveTick,
+      getWorkdayPausedMs,
     ],
   )
 
@@ -139,8 +155,8 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
       <section className={MONTHLY_MAIN_GRID_CLASS}>
         <div className={MONTHLY_MAIN_LEFT_COLUMN_CLASS}>
-          <MonthlyCategoryMatrix summary={summary} />
           <MonthlyWeekBlocksPanel monthAnchor={monthAnchor} summary={summary} />
+          <MonthlyCategoryMatrix summary={summary} />
         </div>
         <div className={MONTHLY_MAIN_RIGHT_COLUMN_CLASS}>
           <MonthlyActivityCalendar

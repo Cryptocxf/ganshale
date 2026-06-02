@@ -1,4 +1,18 @@
+import { llmUpstreamHeaders, resolveLlmFetchBaseUrl } from './llmFetchBaseUrl'
+
 export type ChatRole = 'system' | 'user' | 'assistant'
+
+function llmChatCompletionsUrl(configuredBaseUrl: string): string {
+  return `${resolveLlmFetchBaseUrl(configuredBaseUrl).replace(/\/+$/, '')}/chat/completions`
+}
+
+function llmRequestHeaders(configuredBaseUrl: string, apiKey: string): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+    ...llmUpstreamHeaders(configuredBaseUrl),
+  }
+}
 
 export type ChatMessageInput = {
   role: ChatRole
@@ -16,13 +30,10 @@ export async function streamChatCompletion(options: {
   signal?: AbortSignal
   onDelta: (text: string) => void
 }): Promise<void> {
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/chat/completions`
+  const url = llmChatCompletionsUrl(options.baseUrl)
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${options.apiKey}`,
-    },
+    headers: llmRequestHeaders(options.baseUrl, options.apiKey),
     body: JSON.stringify({
       model: options.model,
       messages: options.messages,
@@ -101,13 +112,10 @@ export async function chatCompletion(options: {
   maxTokens?: number
   signal?: AbortSignal
 }): Promise<string> {
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/chat/completions`
+  const url = llmChatCompletionsUrl(options.baseUrl)
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${options.apiKey}`,
-    },
+    headers: llmRequestHeaders(options.baseUrl, options.apiKey),
     body: JSON.stringify({
       model: options.model,
       messages: options.messages,

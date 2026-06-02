@@ -52,20 +52,31 @@
     "asarUnpack": [
       "**/node_modules/active-win/**/*"
     ],
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
     "npmRebuild": false,
     "win": {
       "target": [
         "nsis"
       ],
+      "executableName": "Ganshale",
       "icon": "public/ganshale-logo-app.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "language": "2052",
+      "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "干啥了",
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
+      "language": "2052",
       "installerHeaderIcon": "public/ganshale-logo-app.png"
     }
   }

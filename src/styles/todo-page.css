@@ -1,0 +1,191 @@
+/* 待办页：扁平卡片 + 标签/优先级色（随 data-bg 深色适配） */
+
+.todo-page {
+  --todo-page-bg: color-mix(in srgb, var(--color-ganshale-page) 88%, white);
+  --todo-card-bg: var(--color-ganshale-surface);
+  --todo-card-border: var(--color-ganshale-border);
+  --todo-muted: var(--color-ganshale-muted);
+  --todo-text: var(--color-ganshale-text);
+  --todo-subtle: var(--color-ganshale-subtle);
+  --todo-priority-high: #e24b4a;
+  --todo-priority-medium: #ef9f27;
+  --todo-priority-low: #97c459;
+}
+
+html[data-bg='black'] .todo-page {
+  --todo-page-bg: var(--color-ganshale-page);
+}
+
+.todo-stat-card {
+  border-radius: 12px;
+  border: 1px solid var(--todo-card-border);
+  background: var(--todo-card-bg);
+}
+
+.todo-task-card {
+  border-radius: 12px;
+  border: 1px solid var(--todo-card-border);
+  background: var(--todo-card-bg);
+}
+
+.todo-task-card--done {
+  opacity: 0.55;
+}
+
+.todo-priority-bar {
+  width: 4px;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-radius: 4px 0 0 4px;
+  margin: -1px 0 -1px -1px;
+}
+
+.todo-priority-bar--high {
+  background: var(--todo-priority-high);
+}
+
+.todo-priority-bar--medium {
+  background: var(--todo-priority-medium);
+}
+
+.todo-priority-bar--low {
+  background: var(--todo-priority-low);
+}
+
+.todo-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  padding: 0.125rem 0.5rem;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.todo-tag--work {
+  background: rgb(219 234 254);
+  color: rgb(29 78 216);
+}
+
+.todo-tag--design {
+  background: rgb(252 231 243);
+  color: rgb(190 24 93);
+}
+
+.todo-tag--meeting {
+  background: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
+
+.todo-tag--review {
+  background: rgb(255 237 213);
+  color: rgb(194 65 12);
+}
+
+.todo-tag--custom {
+  background: rgb(243 244 246);
+  color: rgb(55 65 81);
+}
+
+html[data-bg='black'] .todo-tag--work {
+  background: rgb(30 58 138 / 0.45);
+  color: rgb(147 197 253);
+}
+
+html[data-bg='black'] .todo-tag--design {
+  background: rgb(131 24 67 / 0.4);
+  color: rgb(251 207 232);
+}
+
+html[data-bg='black'] .todo-tag--meeting {
+  background: rgb(20 83 45 / 0.45);
+  color: rgb(134 239 172);
+}
+
+html[data-bg='black'] .todo-tag--review {
+  background: rgb(124 45 18 / 0.45);
+  color: rgb(253 186 116);
+}
+
+html[data-bg='black'] .todo-tag--custom {
+  background: rgb(55 65 81 / 0.45);
+  color: rgb(209 213 219);
+}
+
+.todo-check {
+  display: flex;
+  height: 1.125rem;
+  width: 1.125rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1.5px solid var(--todo-subtle);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.todo-check--on {
+  border-color: var(--todo-muted);
+  background: var(--todo-muted);
+  color: white;
+}
+
+html[data-bg='black'] .todo-check--on {
+  background: color-mix(in srgb, var(--todo-muted) 80%, white);
+}
+
+.todo-progress-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--todo-card-border) 65%, transparent);
+  overflow: hidden;
+}
+
+.todo-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--todo-text);
+  transition: width 0.25s ease;
+}
+
+.todo-tab {
+  position: relative;
+  padding-bottom: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--todo-muted);
+  transition: color 0.15s;
+}
+
+.todo-tab:hover {
+  color: var(--todo-text);
+}
+
+.todo-tab--active {
+  color: var(--todo-text);
+  font-weight: 600;
+}
+
+.todo-tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--todo-text);
+  border-radius: 1px;
+}
+
+.todo-group-badge {
+  display: inline-flex;
+  min-width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--todo-card-border) 55%, var(--todo-page-bg));
+  padding: 0 0.375rem;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--todo-muted);
+}

@@ -118,7 +118,8 @@ export function expandLlmNetworkError(msg: string): string {
   if (!/failed to fetch/i.test(msg) && msg !== 'Load failed') return msg
   return (
     `${msg}\n` +
-    '提示：请确认本机 OpenAI 兼容网关已启动。开发（npm run dev）且未配置 VITE_LLM_BASE_URL 时，请求会经本站 /__llm 由 Vite 转发到默认 http://127.0.0.1:15678（可用环境变量 VITE_LLM_PROXY_TARGET 修改）。' +
-    '若已设置 VITE_LLM_BASE_URL，请确认地址正确且服务端允许浏览器跨域，或避免在 HTTPS 页面上请求 HTTP 接口。'
+    '提示：请确认本机 OpenAI 兼容网关已启动，且端口、路径与「网关地址」一致（例如 15721 与 /gw/v1）。' +
+    '开发模式（npm run dev）下填写 127.0.0.1 / localhost 时会自动经本站 /__llm 转发，无需改成 5173 端口。' +
+    '若仍失败，检查网关进程是否在监听、防火墙是否拦截；公网 HTTPS 网关需允许浏览器跨域（CORS）。'
   )
 }

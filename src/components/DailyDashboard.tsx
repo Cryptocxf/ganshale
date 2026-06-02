@@ -1,7 +1,7 @@
 // AUTO-GENERATED — edit scripts/write-daily-dashboard.mjs then: npm run gen:dashboard
 
 import { AppWindow, Timer } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useGanshaleData } from '../context/useGanshaleData'
 import {
   currentForegroundSegmentLive,
@@ -15,7 +15,7 @@ import {
   foregroundMatchesMonitoredPatterns,
   loadMonitoredAppPatterns,
 } from '../lib/monitoredAppsStore'
-import { sumMonitoredWindowSecondsForDayLive } from '../lib/monitoredWorktime'
+import { officeElapsedForDay } from '../lib/officeElapsed'
 import {
   compareLocalCalendarDay,
   formatDatetimeZhWithWeekday,
@@ -46,7 +46,20 @@ import {
 import { WorkdayTimeline, workdayTimelineFromSegments } from './WorkdayTimeline'
 import { DashboardHeaderActionSlot } from './DashboardHeaderActionSlot'
 import { OfficeDurationHmsDisplay } from './OfficeDurationHmsDisplay'
-import { WindowEventTableBody, WindowTableHead } from './windowEventTable'
+import {
+  addToAppDurationCompareQueue,
+  loadAppDurationCompareQueue,
+  removeFromAppDurationCompareQueue,
+  syncCompareQueueFromWindowEvents,
+} from '../lib/appDurationCompareStore'
+import { useAppDurationCompareRevision } from '../hooks/useAppDurationCompareRevision'
+import { useDashboardClockLive, useDashboardClockMs } from '../hooks/useDashboardClock'
+import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
+import {
+  WindowEventTableBody,
+  WindowTableHead,
+  WINDOW_TABLE_PREVIEW_COLGROUP,
+} from './windowEventTable'
 import { WindowLogModal } from './WindowLogModal'
 
 function useMonitoredAppPatterns(): string[] {
@@ -59,17 +72,6 @@ function useMonitoredAppPatterns(): string[] {
   return patterns
 }
 
-const WINDOW_TABLE_COLGROUP = (
-  <colgroup>
-    <col className="w-[10%]" />
-    <col className="w-[12%]" />
-    <col className="w-[12%]" />
-    <col className="w-[12%]" />
-    <col className="w-[42%]" />
-    <col className="w-[12%]" />
-  </colgroup>
-)
-
 export function DailyDashboard() {
   const {
     day,
@@ -79,13 +81,38 @@ export function DailyDashboard() {
     refresh,
     windowTrackingActive,
     windowTrackingSupported,
+    windowRecordingHealthy,
+    workdayTimerPausedByUser,
     collectionPausedByUser,
     liveForeground,
+    getWorkdayPausedMs,
   } = useGanshaleData()
+  const clockMs = useDashboardClockMs()
+  const clockLive = useDashboardClockLive()
   const patterns = useMonitoredAppPatterns()
   const nameRev = useAppDisplayNamesRevision()
-  const [sessionTick, setSessionTick] = useState(0)
+  const compareRev = useAppDurationCompareRevision()
   const [windowLogModalOpen, setWindowLogModalOpen] = useState(false)
+
+  const compareQueue = useMemo(
+    () => loadAppDurationCompareQueue(day),
+    [day, compareRev],
+  )
+  const compareQueueSet = useMemo(() => new Set(compareQueue), [compareQueue])
+
+  const handleAddToCompare = useCallback(
+    (identityKey: string) => {
+      addToAppDurationCompareQueue(day, identityKey)
+    },
+    [day],
+  )
+
+  const handleRemoveFromCompare = useCallback(
+    (identityKey: string) => {
+      removeFromAppDurationCompareQueue(day, identityKey)
+    },
+    [day],
+  )
 
   const isSelectedToday = useMemo(() => isSameLocalCalendarDay(day, new Date()), [day])
   const selectedDayKind = useMemo(() => compareLocalCalendarDay(day), [day])
@@ -107,99 +134,91 @@ export function DailyDashboard() {
     )
   }, [windowEventsNet, patterns])
 
-  const extrapolateOfficeTotal =
-    isSelectedToday && windowTrackingActive && !collectionPausedByUser
-
-  useEffect(() => {
-    const id = window.setInterval(() => setSessionTick((n) => n + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
+  const officeTotalExtrapolate = isSelectedToday
 
   const timeline = useMemo(
     () =>
-      extrapolateOfficeTotal
+      officeTotalExtrapolate
         ? timelineFromWindowEventsLive(
             day,
             windowEventsNet,
             liveForeground,
-            Date.now(),
+            clockMs,
             true,
           )
         : timelineFromWindowEvents(day, rowsMonitored),
-    [
-      day,
-      windowEventsNet,
-      rowsMonitored,
-      liveForeground,
-      sessionTick,
-      extrapolateOfficeTotal,
-      nameRev,
-    ],
+    [day, windowEventsNet, rowsMonitored, liveForeground, clockMs, officeTotalExtrapolate, nameRev],
   )
   const timelineWorkday = useMemo(() => workdayTimelineFromSegments(timeline), [timeline])
 
   useEffect(() => {
-    void sessionTick
+    if (!clockLive) return
     persistLiveTodayFrozenSec(
-      sumMonitoredWindowSecondsForDayLive(
-        new Date(),
-        windowEventsTodayNet,
+      officeElapsedForDay(new Date(), windowEventsTodayNet, {
         patterns,
-        liveForeground,
-        Date.now(),
-        extrapolateOfficeTotal,
-      ),
+        live: liveForeground,
+        nowMs: clockMs,
+        extrapolateLive: true,
+        pausedMsToday: getWorkdayPausedMs(clockMs),
+      }),
     )
-  }, [sessionTick, windowEventsTodayNet, patterns, liveForeground, extrapolateOfficeTotal])
+  }, [clockMs, clockLive, windowEventsTodayNet, patterns, liveForeground, getWorkdayPausedMs])
 
-  const sessionElapsedSecRaw = useMemo(
+  const sessionElapsedSec = useMemo(
     () =>
-      sumMonitoredWindowSecondsForDayLive(
-        day,
-        windowEventsNet,
+      officeElapsedForDay(day, windowEventsNet, {
         patterns,
-        liveForeground,
-        Date.now(),
-        extrapolateOfficeTotal,
-      ),
-    [day, windowEventsNet, patterns, sessionTick, liveForeground, extrapolateOfficeTotal],
+        live: liveForeground,
+        nowMs: clockMs,
+        extrapolateLive: officeTotalExtrapolate,
+        pausedMsToday: officeTotalExtrapolate ? getWorkdayPausedMs(clockMs) : 0,
+      }),
+    [
+      day,
+      windowEventsNet,
+      patterns,
+      clockMs,
+      liveForeground,
+      officeTotalExtrapolate,
+      getWorkdayPausedMs,
+    ],
   )
 
-  const elapsedFloorRef = useRef<{ ymd: string; sec: number }>({ ymd: '', sec: 0 })
-  const todayYmd = day.toDateString()
-  if (elapsedFloorRef.current.ymd !== todayYmd) elapsedFloorRef.current = { ymd: todayYmd, sec: 0 }
-  elapsedFloorRef.current.sec = Math.max(elapsedFloorRef.current.sec, sessionElapsedSecRaw)
-  const sessionElapsedSec = elapsedFloorRef.current.sec
-
   useEffect(() => {
-    if (!ready || !isSelectedToday || !windowTrackingActive) return
+    if (!ready || !isSelectedToday || !clockLive) return
     const id = window.setInterval(() => void refresh(), 2500)
     return () => clearInterval(id)
-  }, [ready, isSelectedToday, windowTrackingActive, refresh])
+  }, [ready, isSelectedToday, clockLive, refresh])
 
   const allRows = useMemo(
     () => [...windowEventsNet].sort((a, b) => parseIso(b.timestamp) - parseIso(a.timestamp)),
     [windowEventsNet],
   )
 
+  useEffect(() => {
+    if (!ready) return
+    syncCompareQueueFromWindowEvents(day, allRows)
+  }, [ready, day, allRows])
+
   const windowPreviewRows = useMemo(
     () => allRows.slice(0, DASHBOARD_WINDOW_LOG_PREVIEW_ROWS),
     [allRows],
   )
+  const showWindowLogFooter = allRows.length > DASHBOARD_WINDOW_LOG_PREVIEW_ROWS
 
   const liveWindowSegment = useMemo(() => {
-    if (!extrapolateOfficeTotal) return null
+    if (!officeTotalExtrapolate) return null
     const { event, seconds } = currentForegroundSegmentLive(
       windowEventsNet,
       liveForeground,
-      Date.now(),
+      clockMs,
       true,
     )
     if (!event) return null
     return { eventId: event.id, seconds }
-  }, [windowEventsNet, liveForeground, extrapolateOfficeTotal, sessionTick])
+  }, [windowEventsNet, liveForeground, officeTotalExtrapolate, clockMs])
 
-  const nowDate = useMemo(() => new Date(), [sessionTick])
+  const nowDate = useMemo(() => new Date(clockMs), [clockMs])
 
   return (
     <div className={DASHBOARD_PAGE_CLASS}>
@@ -223,6 +242,8 @@ export function DailyDashboard() {
                   day={day}
                   windowTrackingActive={windowTrackingActive}
                   windowTrackingSupported={windowTrackingSupported}
+                  workdayTimerPausedByUser={workdayTimerPausedByUser}
+                  windowRecordingHealthy={windowRecordingHealthy}
                 />
               }
             >
@@ -237,7 +258,7 @@ export function DailyDashboard() {
           >
             <OfficeDurationHmsDisplay
               totalSec={sessionElapsedSec}
-              live={extrapolateOfficeTotal && selectedDayKind === 'today'}
+              live={clockLive && isSelectedToday}
             />
           </div>
           {selectedDayKind === 'today' ? (
@@ -259,7 +280,7 @@ export function DailyDashboard() {
       <WorkdayTimeline
         ready={ready}
         patternsCount={patterns.length}
-        liveSync={extrapolateOfficeTotal}
+        liveSync={clockLive && isSelectedToday}
         timeline={timeline}
         timelineWorkday={timelineWorkday}
       />
@@ -299,12 +320,25 @@ export function DailyDashboard() {
                 </p>
               ) : (
                 <div className={DASHBOARD_WINDOW_TABLE_FRAME_CLASS}>
-                  <div className={DASHBOARD_WINDOW_TABLE_SCROLL_CLASS}>
-                    <table className="w-full table-fixed border-collapse text-left">
-                      {WINDOW_TABLE_COLGROUP}
-                      <WindowTableHead />
-                      <WindowEventTableBody rows={windowPreviewRows} liveSegment={liveWindowSegment} />
-                    </table>
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className={DASHBOARD_WINDOW_TABLE_SCROLL_CLASS}>
+                      <table className="w-full table-fixed border-collapse text-left">
+                        {WINDOW_TABLE_PREVIEW_COLGROUP}
+                        <WindowTableHead showCompareColumn />
+                        <WindowEventTableBody
+                          rows={windowPreviewRows}
+                          liveSegment={liveWindowSegment}
+                          compareQueueSet={compareQueueSet}
+                          onAddToCompare={handleAddToCompare}
+                        />
+                      </table>
+                      {showWindowLogFooter ? (
+                        <DashboardPairPreviewFooter>
+                          仅展示近 {DASHBOARD_WINDOW_LOG_PREVIEW_ROWS}{' '}
+                          条记录，点击右上角「查看全部」可查看今日全部记录。
+                        </DashboardPairPreviewFooter>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               )}
@@ -313,7 +347,13 @@ export function DailyDashboard() {
         </div>
 
         <div className="gs-card relative flex h-full min-h-0 flex-col overflow-hidden">
-          <AppDurationCompare day={day} events={allRows} ready={ready} />
+          <AppDurationCompare
+            day={day}
+            events={allRows}
+            ready={ready}
+            compareQueue={compareQueue}
+            onRemoveFromCompare={handleRemoveFromCompare}
+          />
         </div>
       </section>
 

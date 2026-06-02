@@ -45,6 +45,8 @@ const LEGACY_BG: Record<string, BgPresetKey> = {
   plum: 'purple',
   ember: 'orange',
   ocean: 'blue',
+  sunset: 'orange',
+  lavender: 'purple',
 }
 
 function normalizeBgPreset(raw: unknown): BgPresetKey {

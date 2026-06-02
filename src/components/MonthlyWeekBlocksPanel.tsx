@@ -14,6 +14,7 @@ import {
 } from '../lib/weeklyReportHistoryStore'
 import { WeeklyReportHistoryModal } from './WeeklyReportHistoryModal'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
+import { DASHBOARD_CARD_INSET_X, DASHBOARD_CARD_INSET_TOP } from './dashboardLayout'
 
 const WEEK_TILE_CLASS = [
   'gs-day-tile--0',
@@ -67,8 +68,8 @@ export function MonthlyWeekBlocksPanel({
   const viewWeekKey = viewWeekStart ? toYmdLocal(viewWeekStart) : null
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mb-2 shrink-0">
+    <div className="gs-card flex h-full min-h-0 flex-col overflow-hidden">
+      <div className={[DASHBOARD_CARD_INSET_X, DASHBOARD_CARD_INSET_TOP, 'shrink-0 pb-0.5'].join(' ')}>
         <DashboardSectionTitle
           icon={CalendarRange}
           description={DASHBOARD_SECTION_DESCRIPTIONS.monthlyWeekBlocks}
@@ -76,7 +77,7 @@ export function MonthlyWeekBlocksPanel({
           本月各周
         </DashboardSectionTitle>
       </div>
-      <div className="grid h-full min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2">
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 px-2.5 pb-2.5 sm:px-3 sm:pb-3">
         {blocksWithMeta.map((block) => {
           const tileClass = WEEK_TILE_CLASS[block.index] ?? WEEK_TILE_CLASS[0]
           const activeClass = WEEK_TILE_ACTIVE_CLASS[block.index] ?? WEEK_TILE_ACTIVE_CLASS[0]

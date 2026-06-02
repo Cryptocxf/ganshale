@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useGanshaleData } from '../context/useGanshaleData'
+import { useDashboardClockLive, useDashboardClockMs } from '../hooks/useDashboardClock'
 import { useWeeklyReport } from '../context/WeeklyReportContext'
 import { currentForegroundSegmentLive } from '../lib/aggregations'
 import {
@@ -41,12 +42,9 @@ export function WeeklyDashboard() {
   useEffect(() => {
     setWeekStart(startOfWeekMondayLocal(new Date()))
   }, [setWeekStart])
-  const {
-    ready: dataReady,
-    liveForeground,
-    windowTrackingActive,
-    collectionPausedByUser,
-  } = useGanshaleData()
+  const { ready: dataReady, liveForeground, getWorkdayPausedMs } = useGanshaleData()
+  const clockMs = useDashboardClockMs()
+  const clockLive = useDashboardClockLive()
   const patterns = useMonitoredAppPatterns()
   const [currentWeekEvents, setCurrentWeekEvents] = useState<Awaited<
     ReturnType<typeof loadWindowEventsForWeekRange>
@@ -87,23 +85,22 @@ export function WeeklyDashboard() {
   }, [weekStart])
 
   useEffect(() => {
-    if (weekKind !== 'current') return
+    if (weekKind !== 'current' || !clockLive) return
     const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
     return () => clearInterval(id)
-  }, [weekKind])
+  }, [weekKind, clockLive])
 
   useEffect(() => {
-    if (weekKind !== 'current' || !dataReady) return
+    if (weekKind !== 'current' || !dataReady || !clockLive) return
     const id = window.setInterval(() => {
       loadWindowEventsForWeekRange(weekStart, 1)
         .then(setCurrentWeekEvents)
         .catch(() => {})
     }, 2500)
     return () => clearInterval(id)
-  }, [weekKind, weekStart, dataReady])
+  }, [weekKind, weekStart, dataReady, clockLive])
 
-  const extrapolateToday =
-    weekKind === 'current' && windowTrackingActive && !collectionPausedByUser
+  const extrapolateToday = weekKind === 'current'
 
   const weekEventsForUi = useMemo(() => {
     void liveTick
@@ -112,14 +109,14 @@ export function WeeklyDashboard() {
     const { event, seconds } = currentForegroundSegmentLive(
       currentWeekEvents,
       liveForeground,
-      Date.now(),
+      clockMs,
       true,
     )
     if (!event) return currentWeekEvents
     return currentWeekEvents.map((ev) =>
       ev.id === event.id ? { ...ev, duration: seconds } : ev,
     )
-  }, [currentWeekEvents, liveForeground, extrapolateToday, liveTick])
+  }, [currentWeekEvents, liveForeground, extrapolateToday, clockMs, liveTick])
 
   const currentSec = useMemo(() => {
     void liveTick
@@ -129,10 +126,20 @@ export function WeeklyDashboard() {
       events: currentWeekEvents,
       patterns,
       live: liveForeground,
-      now: new Date(),
+      now: new Date(clockMs),
       extrapolateToday,
+      pausedMsToday: extrapolateToday ? getWorkdayPausedMs(clockMs) : 0,
     })
-  }, [currentWeekEvents, weekStart, patterns, liveForeground, extrapolateToday, liveTick])
+  }, [
+    currentWeekEvents,
+    weekStart,
+    patterns,
+    liveForeground,
+    extrapolateToday,
+    clockMs,
+    liveTick,
+    getWorkdayPausedMs,
+  ])
 
   const prevSec = useMemo(() => {
     if (!prevWeekEvents) return 0

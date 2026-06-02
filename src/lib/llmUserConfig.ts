@@ -25,17 +25,9 @@ export const DEFAULT_LLM_API_KEY = ''
 /** @deprecated 发布版不再内置模型 ID */
 export const DEFAULT_GATEWAY_MODEL_ID = ''
 
-const LEGACY_SHIPPED_BASE_URLS = new Set([
-  'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
-  'http://127.0.0.1:15678/v1',
-])
+const LEGACY_SHIPPED_BASE_URLS = new Set(['http://127.0.0.1:15678/v1'])
 
-const LEGACY_SHIPPED_API_KEYS = new Set([
-  '3886B9B1-FABA-4694-85CB-11FC271D1F29',
-  'lingxiclaw-session-312374384',
-])
-
-const LEGACY_SHIPPED_MODEL_IDS = new Set(['qwen3-max', 'qwen3.5-hy'])
+const LEGACY_SHIPPED_API_KEYS = new Set(['lingxiclaw-session-312374384'])
 
 function isLegacyShippedBaseUrl(url: string): boolean {
   const t = url.trim().replace(/\/+$/, '')
@@ -45,11 +37,6 @@ function isLegacyShippedBaseUrl(url: string): boolean {
 function isLegacyShippedApiKey(key: string): boolean {
   const t = key.trim()
   return !t || LEGACY_SHIPPED_API_KEYS.has(t)
-}
-
-function isLegacyShippedModelId(modelId: string): boolean {
-  const t = modelId.trim()
-  return !t || LEGACY_SHIPPED_MODEL_IDS.has(t)
 }
 
 function buildTimeLlmBaseUrl(): string {
@@ -90,14 +77,12 @@ export function normalizeLlmConfigForStorage(
   return {
     baseUrl: !baseUrl || baseUrl === defaultBaseUrl || isLegacyShippedBaseUrl(baseUrl) ? '' : baseUrl,
     apiKey: !apiKey || apiKey === buildTimeLlmApiKey() || isLegacyShippedApiKey(apiKey) ? '' : apiKey,
-    gatewayModelId: isLegacyShippedModelId(gatewayModelId) ? '' : gatewayModelId,
+    gatewayModelId,
   }
 }
 
 function resolveStoredGatewayModelId(stored: string | undefined): string {
-  const t = stored?.trim() ?? ''
-  if (isLegacyShippedModelId(t)) return ''
-  return t
+  return stored?.trim() ?? ''
 }
 
 export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
@@ -459,12 +444,8 @@ export function loadLlmUserConfig(): LlmUserConfig {
           typeof stored.monthlyReportPrompt === 'string' ? stored.monthlyReportPrompt.trim() : ''
         const storedKey = typeof stored.apiKey === 'string' ? stored.apiKey.trim() : ''
         const storedBase = typeof stored.baseUrl === 'string' ? stored.baseUrl.trim() : ''
-        const storedModel =
-          typeof stored.gatewayModelId === 'string' ? stored.gatewayModelId.trim() : ''
         const shouldPersistLegacy =
-          isLegacyShippedApiKey(storedKey) ||
-          isLegacyShippedBaseUrl(storedBase) ||
-          isLegacyShippedModelId(storedModel)
+          isLegacyShippedApiKey(storedKey) || isLegacyShippedBaseUrl(storedBase)
         if (
           rawDaily !== config.dailyReportPrompt ||
           rawWeekly !== config.weeklyReportPrompt ||

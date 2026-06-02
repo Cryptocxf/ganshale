@@ -16,7 +16,7 @@ export function AppearanceSettings() {
       <p className="mt-1 text-[10px] text-ganshale-muted">
         切换配色与界面样式；「默认」为 Times + 微软雅黑，其余为设计技能原版字体
       </p>
-      <div className="mt-3 grid grid-cols-5 gap-x-1.5 gap-y-3">
+      <div className="mt-3 grid grid-cols-4 gap-x-1.5 gap-y-3">
         {SKIN_PRESETS.map((skin) => {
           const on = config.skin === skin.key
           return (

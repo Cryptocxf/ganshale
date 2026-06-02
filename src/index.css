@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './styles/skins.css';
 @import './styles/skin-preview.css';
+@import './styles/todo-page.css';
 
 @theme {
   /* 回退字体（默认风格在 skins.css 覆盖：英文 Times、中文微软雅黑） */
@@ -312,7 +313,7 @@
     --tw-ring-color: var(--gs-day-tile-active-ring-4, rgb(251 113 133 / 0.55));
   }
 
-  /* 每周：每日日报方块（周一至周日，统一背景，周末用边框色区分） */
+  /* 每周：每日日报方块（周一至周五实线；周末红色点线间隔线） */
   .gs-day-tile--weekday,
   .gs-day-tile--sat,
   .gs-day-tile--sun {
@@ -334,14 +335,20 @@
     );
   }
 
-  .gs-day-tile--sat {
-    border-color: var(--gs-day-tile-sat-border, var(--color-ganshale-sky));
-    border-width: 1.5px;
+  /* 周末点线：用 ::before 绘制，避免 Tailwind border 与 Windows 细点线不显 */
+  .gs-day-tile--sat,
+  .gs-day-tile--sun {
+    border: 1px solid transparent;
   }
 
-  .gs-day-tile--sun {
-    border-color: var(--gs-day-tile-sun-border, var(--color-ganshale-coral));
-    border-width: 1.5px;
+  .gs-day-tile--sat::before,
+  .gs-day-tile--sun::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    border: 2px dotted var(--gs-day-tile-weekend-border, rgb(248 113 113));
   }
 
   .gs-day-tile--today::after {

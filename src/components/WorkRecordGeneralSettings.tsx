@@ -88,6 +88,24 @@ export function WorkRecordGeneralSettings() {
           </div>
         </div>
       </div>
+
+      <label className={`flex shrink-0 cursor-pointer items-center gap-2 ${SETTINGS_FIELD_LABEL_CLASS}`}>
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 rounded border-ganshale-border text-ganshale-text focus:ring-ganshale-text/20"
+          checked={settings.reflectPromptEnabled}
+          onChange={(e) =>
+            persist({
+              ...settings,
+              reflectPromptEnabled: e.target.checked,
+            })
+          }
+        />
+        <span>开启小回顾弹窗</span>
+      </label>
+      <p className="text-[10px] leading-relaxed text-ganshale-subtle">
+        主窗口最小化后，切换应用且单段使用超过 10 分钟时弹出回顾（30 / 60 分钟仅影响文案）
+      </p>
     </div>
   )
 }

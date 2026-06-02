@@ -1,7 +1,9 @@
 import { ArrowDown, ArrowUp, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useDataRecords } from '../../context/DataRecordsContext'
 import { formatDuration } from '../../lib/aggregations'
 import { categoryChartColor } from '../../lib/categoryBarColors'
+import { getAppStoragePath } from '../../lib/dataManagement'
 import {
   DATA_RECORD_KIND_OPTIONS,
   DURATION_FILTER_OPTIONS,
@@ -246,6 +248,18 @@ export function DataRecordsView() {
     onAppSearch,
   } = useDataRecords()
 
+  const [storagePath, setStoragePath] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void getAppStoragePath().then((path) => {
+      if (!cancelled) setStoragePath(path)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const allPageSelected =
     pageRows.length > 0 && pageRows.every((r) => selectedIds.has(r.event.id))
 
@@ -264,7 +278,17 @@ export function DataRecordsView() {
   return (
     <div className={DATA_PAGE_CLASS}>
       <section className="gs-card flex min-h-0 flex-1 flex-col overflow-hidden p-2.5 sm:p-3">
-        <h2 className="mb-1 text-xs font-semibold text-ganshale-text">筛选条件</h2>
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <h2 className="text-xs font-semibold text-ganshale-text">筛选条件</h2>
+          {storagePath ? (
+            <p
+              className="max-w-[55%] truncate text-right text-[10px] text-ganshale-muted"
+              title={`存储路径：${storagePath}`}
+            >
+              存储路径：{storagePath}
+            </p>
+          ) : null}
+        </div>
 
         <FilterRow label="数据类型">
           <div className="flex flex-wrap gap-1">

@@ -164,6 +164,7 @@ export function TimeSettings() {
     saveWorkRecordSettings({
       ...workCurrent,
       systemRecordPeriod: workDefaults.systemRecordPeriod,
+      reflectPromptEnabled: workDefaults.reflectPromptEnabled,
     })
   }
 

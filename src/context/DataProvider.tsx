@@ -16,9 +16,17 @@ import {
 } from '../lib/timeutil'
 import {
   clearWorkdayClockOutPersist,
-  hasTodayClockOutPersisted,
   persistWorkdayClockOut,
 } from '../lib/clientSessionClock'
+import { APP_DATA_CHANGED_EVENT, notifyAppDataChanged } from '../lib/dataManagement'
+import {
+  clearWorkdayTimerPause,
+  hasTodayWorkdayTimerPaused,
+  persistWorkdayTimerPause,
+  readTodayWorkdayPauseStartMs,
+  totalWorkdayPausedMs,
+  type WorkdayPauseInterval,
+} from '../lib/workdayTimerPause'
 import {
   applyLocalMidnightRollover,
   createLocalMidnightWatcher,
@@ -32,16 +40,32 @@ import {
   seedIfEmpty,
 } from '../lib/seed'
 import { heartbeatWindow } from '../lib/heartbeat'
+import {
+  isHeartbeatStale,
+  markHeartbeatSuccess,
+  markTrackingPollSuccess,
+  resetHeartbeatHealth,
+} from '../lib/heartbeatQueue'
+import { identityFromLiveForeground } from '../lib/windowAppDisplay'
+import {
+  WINDOW_HEARTBEAT_STALE_MS,
+  WINDOW_HEARTBEAT_WATCHDOG_MS,
+  WINDOW_TRACKING_RECOVERY_COOLDOWN_MS,
+} from '../lib/windowTrackingHealth'
+import { invalidateMonthlyWindowEventsCache } from '../lib/monthlyWorktime'
 import { appendSessionReflection } from '../lib/sessionReflectionsStore'
 import {
-  isGanshaleSelfWindowRecord,
-  isWindowsExplorerApp,
-} from '../lib/selfWindowFilter'
+  appendManualWorkRecord,
+  WORK_RECORDS_UPDATED_EVENT,
+} from '../lib/workRecordStore'
+import { isWindowsExplorerApp } from '../lib/selfWindowFilter'
+import {
+  loadWorkRecordSettings,
+  syncReflectPromptEnabledToDesktop,
+} from '../lib/workRecordSettings'
 import { purgeElectronShellWindowEvents } from '../lib/purgeElectronEvents'
 
 import type { LiveForegroundSample } from '../lib/liveForeground'
-
-const ELECTRON_PURGE_DONE_KEY = 'ganshale-purged-electron-v1'
 
 export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -59,7 +83,18 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const [liveForeground, setLiveForeground] = useState<LiveForegroundSample | null>(null)
   const [windowTrackingActive, setWindowTrackingActive] = useState(false)
   const [windowTrackingSupported, setWindowTrackingSupported] = useState(false)
-  const [collectionPausedByUser, setCollectionPausedByUser] = useState(hasTodayClockOutPersisted)
+  const [recordingHealthTick, setRecordingHealthTick] = useState(0)
+  const [collectionPausedByUser, setCollectionPausedByUser] = useState(false)
+  const [workdayTimerPausedByUser, setWorkdayTimerPausedByUser] = useState(
+    hasTodayWorkdayTimerPaused,
+  )
+  const [timerPausedAtMs, setTimerPausedAtMs] = useState<number | null>(() =>
+    hasTodayWorkdayTimerPaused() ? Date.now() : null,
+  )
+  const [workdayPauseIntervals, setWorkdayPauseIntervals] = useState<WorkdayPauseInterval[]>(
+    () => [],
+  )
+  const workdayPauseStartMsRef = useRef<number | null>(readTodayWorkdayPauseStartMs())
   const lastLocalYmdRef = useRef(toYmdLocal(new Date()))
   const lastIndexedRefreshRef = useRef(0)
   const lastCountableForegroundRef = useRef<LiveForegroundSample | null>(null)
@@ -67,6 +102,26 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const splitNextCountableHeartbeatRef = useRef(false)
   const dayRef = useRef(day)
   dayRef.current = day
+  const workdayTimerPausedRef = useRef(workdayTimerPausedByUser)
+  workdayTimerPausedRef.current = workdayTimerPausedByUser
+  const lastRecoveryAtRef = useRef(0)
+  const lastForegroundIdentityKeyRef = useRef<string | null>(null)
+
+  const windowRecordingHealthy = useMemo(() => {
+    void recordingHealthTick
+    if (!windowTrackingActive || workdayTimerPausedByUser) return true
+    return !isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)
+  }, [windowTrackingActive, workdayTimerPausedByUser, recordingHealthTick])
+
+  const getWorkdayPausedMs = useCallback(
+    (_nowMs: number) =>
+      totalWorkdayPausedMs(workdayPauseIntervals, {
+        activeStartMs: workdayTimerPausedByUser ? workdayPauseStartMsRef.current : null,
+        activeEndMs:
+          workdayTimerPausedByUser && timerPausedAtMs != null ? timerPausedAtMs : null,
+      }),
+    [workdayPauseIntervals, workdayTimerPausedByUser, timerPausedAtMs],
+  )
 
   const load = useCallback(async () => {
     const start = startOfLocalDay(day).toISOString()
@@ -122,6 +177,11 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     }
   }, [load])
 
+  /** 桌面端：启动时将「小回顾弹窗」开关同步到主进程 */
+  useEffect(() => {
+    syncReflectPromptEnabledToDesktop(loadWorkRecordSettings())
+  }, [])
+
   /** 桌面端：最小化回顾弹窗提交后写入本地列表（供后续日报等使用） */
   useEffect(() => {
     const d = typeof window !== 'undefined' ? window.ganshaleDesktop : undefined
@@ -143,6 +203,12 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
         headline: typeof p.headline === 'string' ? p.headline : undefined,
         endedAt: typeof p.endedAt === 'string' ? p.endedAt : undefined,
       })
+      appendManualWorkRecord(new Date(), text)
+      try {
+        window.dispatchEvent(new CustomEvent(WORK_RECORDS_UPDATED_EVENT))
+      } catch {
+        /* ignore */
+      }
     })
     return () => {
       off?.()
@@ -153,13 +219,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const d = typeof window !== 'undefined' ? window.ganshaleDesktop : undefined
     if (!d?.startWindowTracking || !ready) return
-
-    if (collectionPausedByUser) {
-      void d.stopWindowTracking?.()
-      setWindowTrackingActive(false)
-      setLiveForeground(null)
-      return
-    }
 
     let unsubscribe: () => void = () => {}
     let cancelled = false
@@ -181,6 +240,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           return
         }
         setWindowTrackingActive(true)
+        markHeartbeatSuccess()
+        markTrackingPollSuccess()
         lastIndexedRefreshRef.current = Date.now()
         await load()
 
@@ -198,52 +259,60 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        const writeCountableHeartbeat = (sample: LiveForegroundSample, forceNew: boolean) => {
+          void heartbeatWindow(
+            BUCKET_WINDOW,
+            {
+              app: sample.app,
+              title: sample.title,
+              ...(sample.appPath ? { appPath: sample.appPath } : {}),
+            },
+            { forceNew },
+          ).then(() => {
+            const now = Date.now()
+            if (now - lastIndexedRefreshRef.current >= 2000) {
+              lastIndexedRefreshRef.current = now
+              void load()
+            }
+          })
+        }
+
         unsubscribe =
           d.onForegroundWindow?.((payload) => {
-            if (cancelled) return
+            if (cancelled || workdayTimerPausedRef.current) return
+            markTrackingPollSuccess()
+
             if (!payload) {
               const prev = lastCountableForegroundRef.current
               lastCountableForegroundRef.current = null
+              lastForegroundIdentityKeyRef.current = null
               setLiveForeground(null)
               if (prev) void flushCountableForeground(prev)
               return
             }
 
-            const skipped =
-              isGanshaleSelfWindowRecord(
-                payload.app,
-                payload.title,
-                payload.appPath,
-              ) || isWindowsExplorerApp(payload.app ?? '')
+            const skipped = isWindowsExplorerApp(payload.app ?? '')
 
             if (skipped) {
               const prev = lastCountableForegroundRef.current
               lastCountableForegroundRef.current = null
+              lastForegroundIdentityKeyRef.current = null
               setLiveForeground(payload)
               if (prev) void flushCountableForeground(prev)
               return
             }
 
+            const identityKey = identityFromLiveForeground(payload).identityKey
+            const identityChanged = identityKey !== lastForegroundIdentityKeyRef.current
+            lastForegroundIdentityKeyRef.current = identityKey
             lastCountableForegroundRef.current = payload
             setLiveForeground(payload)
-            void (async () => {
-              const forceNew = splitNextCountableHeartbeatRef.current
-              splitNextCountableHeartbeatRef.current = false
-              await heartbeatWindow(
-                BUCKET_WINDOW,
-                {
-                  app: payload.app,
-                  title: payload.title,
-                  ...(payload.appPath ? { appPath: payload.appPath } : {}),
-                },
-                { forceNew },
-              )
-              const now = Date.now()
-              if (now - lastIndexedRefreshRef.current >= 2000) {
-                lastIndexedRefreshRef.current = now
-                await load()
-              }
-            })()
+
+            const forceNew = splitNextCountableHeartbeatRef.current
+            if (forceNew) splitNextCountableHeartbeatRef.current = false
+            if (identityChanged || forceNew) {
+              writeCountableHeartbeat(payload, forceNew)
+            }
           }) ?? (() => {})
       } catch (e) {
         if (!cancelled) {
@@ -253,16 +322,63 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       }
     })()
 
+    const heartbeatTick = window.setInterval(() => {
+      if (cancelled || workdayTimerPausedRef.current) return
+      const sample = lastCountableForegroundRef.current
+      if (!sample) return
+      void heartbeatWindow(BUCKET_WINDOW, {
+        app: sample.app,
+        title: sample.title,
+        ...(sample.appPath ? { appPath: sample.appPath } : {}),
+      }).then(() => {
+        const now = Date.now()
+        if (now - lastIndexedRefreshRef.current >= 2000) {
+          lastIndexedRefreshRef.current = now
+          void load()
+        }
+      })
+    }, 5000)
+
+    const watchdog = window.setInterval(() => {
+      if (cancelled || workdayTimerPausedRef.current) return
+      setRecordingHealthTick((t) => t + 1)
+      if (!isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)) return
+      const now = Date.now()
+      if (now - lastRecoveryAtRef.current < WINDOW_TRACKING_RECOVERY_COOLDOWN_MS) return
+      lastRecoveryAtRef.current = now
+      void (async () => {
+        try {
+          await d.stopWindowTracking?.()
+          const started = await d.startWindowTracking?.()
+          if (cancelled) return
+          if (started?.ok) {
+            splitNextCountableHeartbeatRef.current = true
+            markTrackingPollSuccess()
+          } else if (started?.error) {
+            setError(started.error)
+          }
+        } catch (e) {
+          if (!cancelled) {
+            setError(e instanceof Error ? e.message : String(e))
+          }
+        }
+      })()
+    }, WINDOW_HEARTBEAT_WATCHDOG_MS)
+
     return () => {
       cancelled = true
+      clearInterval(heartbeatTick)
+      clearInterval(watchdog)
       unsubscribe()
       lastCountableForegroundRef.current = null
+      lastForegroundIdentityKeyRef.current = null
       splitNextCountableHeartbeatRef.current = false
+      resetHeartbeatHealth()
       void d.stopWindowTracking?.()
       setWindowTrackingActive(false)
       setLiveForeground(null)
     }
-  }, [ready, load, collectionPausedByUser])
+  }, [ready, load])
 
   useEffect(() => {
     return createLocalMidnightWatcher((detail) => {
@@ -270,12 +386,33 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       const wasViewingToday = toYmdLocal(dayRef.current) === detail.prevYmd
       applyLocalMidnightRollover(detail)
       setCollectionPausedByUser(false)
+      setWorkdayTimerPausedByUser(false)
+      setTimerPausedAtMs(null)
+      setWorkdayPauseIntervals([])
+      workdayPauseStartMsRef.current = null
+      clearWorkdayTimerPause()
       splitNextCountableHeartbeatRef.current = true
       if (wasViewingToday) {
         setDay(startOfLocalDay(new Date()))
       }
       void load()
     })
+  }, [load])
+
+  useEffect(() => {
+    const onDataChanged = () => {
+      invalidateMonthlyWindowEventsCache()
+      setWorkdayTimerPausedByUser(false)
+      setTimerPausedAtMs(null)
+      setWorkdayPauseIntervals([])
+      workdayPauseStartMsRef.current = null
+      clearWorkdayTimerPause()
+      clearWorkdayClockOutPersist()
+      splitNextCountableHeartbeatRef.current = true
+      void load()
+    }
+    window.addEventListener(APP_DATA_CHANGED_EVENT, onDataChanged)
+    return () => window.removeEventListener(APP_DATA_CHANGED_EVENT, onDataChanged)
   }, [load])
 
   const clockOutCollection = useCallback(() => {
@@ -288,7 +425,41 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     setCollectionPausedByUser(false)
   }, [])
 
+  const toggleWorkdayTimerPause = useCallback(() => {
+    const at = Date.now()
+    if (workdayTimerPausedRef.current) {
+      if (workdayPauseStartMsRef.current != null) {
+        setWorkdayPauseIntervals((prev) => [
+          ...prev,
+          { startMs: workdayPauseStartMsRef.current!, endMs: at },
+        ])
+      }
+      workdayPauseStartMsRef.current = null
+      setWorkdayTimerPausedByUser(false)
+      setTimerPausedAtMs(null)
+      clearWorkdayTimerPause()
+      splitNextCountableHeartbeatRef.current = true
+      void load()
+      return
+    }
+
+    workdayPauseStartMsRef.current = at
+    setWorkdayTimerPausedByUser(true)
+    setTimerPausedAtMs(at)
+    persistWorkdayTimerPause(at)
+    splitNextCountableHeartbeatRef.current = true
+    const sample = lastCountableForegroundRef.current
+    if (sample) {
+      void heartbeatWindow(BUCKET_WINDOW, {
+        app: sample.app,
+        title: sample.title,
+        ...(sample.appPath ? { appPath: sample.appPath } : {}),
+      }).then(() => load())
+    }
+  }, [load])
+
   const refresh = useCallback(async () => {
+    invalidateMonthlyWindowEventsCache()
     await load()
   }, [load])
 
@@ -319,15 +490,16 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       if (data?.format !== 'ganshale-aw-export' || data.version !== 1 || !data.buckets)
         throw new Error('文件格式不正确：需要 Ganshale AW 导出 JSON')
       await store.importExportPayload(data)
-      await load()
+      notifyAppDataChanged()
     },
-    [load],
+    [],
   )
 
   const clearAll = useCallback(async () => {
     await store.clearAllData()
-    await load()
-  }, [load])
+    store.resetDbConnection()
+    notifyAppDataChanged()
+  }, [])
 
   const resetDemo = useCallback(async () => {
     await resetDemoData()
@@ -342,17 +514,9 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    if (localStorage.getItem(ELECTRON_PURGE_DONE_KEY)) return
-    void (async () => {
-      try {
-        const removed = await purgeElectronShellWindowEvents(BUCKET_WINDOW)
-        localStorage.setItem(ELECTRON_PURGE_DONE_KEY, '1')
-        if (removed > 0) await load()
-      } catch {
-        /* ignore */
-      }
-    })()
-  }, [ready, load])
+    clearWorkdayClockOutPersist()
+    setCollectionPausedByUser(false)
+  }, [ready])
 
   const value = useMemo(
     () => ({
@@ -377,9 +541,14 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       liveForeground,
       windowTrackingActive,
       windowTrackingSupported,
+      windowRecordingHealthy,
       collectionPausedByUser,
       clockOutCollection,
       resumeCollection,
+      workdayTimerPausedByUser,
+      timerPausedAtMs,
+      getWorkdayPausedMs,
+      toggleWorkdayTimerPause,
       daysWithTimingData,
     }),
     [
@@ -402,9 +571,14 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       liveForeground,
       windowTrackingActive,
       windowTrackingSupported,
+      windowRecordingHealthy,
       collectionPausedByUser,
       clockOutCollection,
       resumeCollection,
+      workdayTimerPausedByUser,
+      timerPausedAtMs,
+      getWorkdayPausedMs,
+      toggleWorkdayTimerPause,
       daysWithTimingData,
     ],
   )

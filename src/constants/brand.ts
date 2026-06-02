@@ -10,11 +10,17 @@ export const APP_WINDOW_TITLE = APP_DISPLAY_NAME
 /** @deprecated 请用 {@link APP_WINDOW_TITLE} */
 export const APP_DOCUMENT_TITLE = APP_WINDOW_TITLE
 
+/** Vite `base`（Electron 打包为 `./`，须用相对路径，避免 file:// 下 `/logo.png` 指向磁盘根目录） */
+const brandAsset = (file: string) => `${import.meta.env.BASE_URL}${file}`
+
 /** 入场页（`public/ganshale-splash.png`，桌面「入场」图稿） */
-export const BRAND_LOGO_SPLASH_SRC = '/ganshale-splash.png'
+export const BRAND_LOGO_SPLASH_SRC = brandAsset('ganshale-splash.png')
 
 /** 应用内 Logo（侧栏、关于、任务栏等，`public/ganshale-logo-app.png`） */
-export const BRAND_LOGO_APP_SRC = '/ganshale-logo-app.png'
+export const BRAND_LOGO_APP_SRC = brandAsset('ganshale-logo-app.png')
+
+/** OpenClaw 应用图标（`public/openclaw-favicon-32.png`） */
+export const OPENCLAW_ICON_SRC = brandAsset('openclaw-favicon-32.png')
 
 /** @deprecated 请用 {@link BRAND_LOGO_APP_SRC} 或 {@link BRAND_LOGO_SPLASH_SRC} */
 export const BRAND_LOGO_SRC = BRAND_LOGO_APP_SRC

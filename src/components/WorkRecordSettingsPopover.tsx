@@ -117,6 +117,19 @@ export function WorkRecordSettingsModal({
             </select>
           </div>
 
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-ganshale-text">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 rounded border-ganshale-border"
+              checked={draft.reflectPromptEnabled}
+              disabled={disabled}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, reflectPromptEnabled: e.target.checked }))
+              }
+            />
+            开启小回顾弹窗
+          </label>
+
           <div className={`flex justify-end gap-2 pt-2 ${GS_MODAL_FOOTER_DIVIDER_CLASS}`}>
             <button type="button" className={DASHBOARD_HEADER_ACTION_BTN_CLASS} onClick={onCancel}>
               取消

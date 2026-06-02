@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>干啥了 · 待办提醒</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          'Segoe UI',
+          'PingFang SC',
+          'Microsoft YaHei',
+          system-ui,
+          sans-serif;
+        background: linear-gradient(165deg, #fff9f5 0%, #f3f6ff 55%, #faf8ff 100%);
+        color: #2d2a32;
+        min-height: 100vh;
+        padding: 0.85rem 1rem;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        border-radius: 0.85rem;
+        padding: 0.85rem 0.95rem;
+        box-shadow: 0 10px 32px rgba(60, 50, 90, 0.12);
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #e85d04;
+        margin-bottom: 0.35rem;
+      }
+      h1 {
+        font-size: 0.92rem;
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 0 0 0.45rem;
+      }
+      .stars {
+        color: #f59e0b;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.35rem;
+      }
+      p {
+        margin: 0;
+        font-size: 0.72rem;
+        line-height: 1.45;
+        color: #6b6574;
+      }
+      button {
+        margin-top: 0.75rem;
+        width: 100%;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 0.55rem;
+        cursor: pointer;
+        background: #27272a;
+        color: #fff;
+      }
+      button:hover {
+        opacity: 0.92;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge">待办提醒</div>
+      <div class="stars" id="stars"></div>
+      <h1 id="title">—</h1>
+      <p id="body"></p>
+      <button type="button" id="ok">知道了</button>
+    </div>
+    <script>
+      const api = window.todoReminder
+      api.onInit((meta) => {
+        document.getElementById('title').textContent = meta.title || '待办'
+        document.getElementById('body').textContent = meta.body || ''
+        const n = Math.min(5, Math.max(1, Number(meta.priority) || 1))
+        document.getElementById('stars').textContent = '★'.repeat(n)
+      })
+      document.getElementById('ok').addEventListener('click', () => api.dismiss())
+    </script>
+  </body>
+</html>

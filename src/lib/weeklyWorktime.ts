@@ -1,7 +1,7 @@
 import type { AwEvent } from './awTypes'
 import { formatDurationHmsZh } from './aggregations'
 import { loadDailyReportHistory } from './dailyReportHistoryStore'
-import { sumMonitoredWindowSecondsForDayLive } from './monitoredWorktime'
+import { officeElapsedForDay, sumOfficeElapsedForWeek } from './officeElapsed'
 import type { LiveForegroundSample } from './liveForeground'
 import { excludeGanshaleSelfWindowEvents } from './selfWindowFilter'
 import {
@@ -68,6 +68,8 @@ export type SumWeekOfficeOptions = {
   now?: Date
   /** 今日是否按采集中规则累计（仅本周有效） */
   extrapolateToday?: boolean
+  /** 今日累计暂停毫秒（与每日页暂停一致） */
+  pausedMsToday?: number
 }
 
 export function sumOfficeSecondsForWeek({
@@ -77,26 +79,15 @@ export function sumOfficeSecondsForWeek({
   live,
   now = new Date(),
   extrapolateToday = false,
+  pausedMsToday = 0,
 }: SumWeekOfficeOptions): number {
-  let pastSec = 0
-  let todaySec = 0
-  for (const day of daysInLocalWeek(weekStartMonday)) {
-    const dayKind = compareLocalCalendarDay(day, now)
-    if (dayKind === 'future') continue
-    const dayEvents = windowEventsForLocalDay(events, day)
-    const isToday = isSameLocalCalendarDay(day, now)
-    const sec = sumMonitoredWindowSecondsForDayLive(
-      day,
-      dayEvents,
-      patterns,
-      live,
-      now.getTime(),
-      isToday && extrapolateToday,
-    )
-    if (isToday) todaySec = sec
-    else pastSec += sec
-  }
-  return pastSec + todaySec
+  return sumOfficeElapsedForWeek(weekStartMonday, events, {
+    patterns,
+    live,
+    nowMs: now.getTime(),
+    extrapolateLive: extrapolateToday,
+    pausedMsToday,
+  })
 }
 
 /** 当日办公时长（与每日页、周柱状图共用） */
@@ -107,16 +98,15 @@ export function officeSecondsForLocalDay(
   live: LiveForegroundSample | null,
   now: Date,
   extrapolateToday: boolean,
+  pausedMsToday = 0,
 ): number {
-  const dayEvents = windowEventsForLocalDay(events, day)
-  return sumMonitoredWindowSecondsForDayLive(
-    day,
-    dayEvents,
+  return officeElapsedForDay(day, events, {
     patterns,
     live,
-    now.getTime(),
-    isSameLocalCalendarDay(day, now) && extrapolateToday,
-  )
+    nowMs: now.getTime(),
+    extrapolateLive: extrapolateToday,
+    pausedMsToday,
+  })
 }
 
 /** 当周内有日报记录的日历日（周一至周日；默认不含未来日） */
@@ -260,13 +250,12 @@ export function countWorkDaysInWeek({
   let n = 0
   for (const day of daysInLocalWeek(weekStartMonday)) {
     if (compareLocalCalendarDay(day, now) === 'future') continue
-    const dayEvents = windowEventsForLocalDay(events, day)
-    const sec = sumMonitoredWindowSecondsForDayLive(
+    const sec = officeSecondsForLocalDay(
       day,
-      dayEvents,
+      events,
       patterns,
       live,
-      now.getTime(),
+      now,
       isSameLocalCalendarDay(day, now) && extrapolateToday,
     )
     if (sec > 0) n += 1

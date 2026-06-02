@@ -7,14 +7,19 @@ export const DASHBOARD_CARD_INSET_BOTTOM = 'pb-2.5 sm:pb-3'
 export const DASHBOARD_PAIR_ICON_SIZE = 24
 export const DASHBOARD_PAIR_ROW_HEIGHT_PX = 40
 export const DASHBOARD_PAIR_TABLE_HEAD_PX = 28
-export const DASHBOARD_WINDOW_LOG_PREVIEW_ROWS = 6
-export const DASHBOARD_DURATION_PREVIEW_ROWS = 7
+export const DASHBOARD_WINDOW_LOG_PREVIEW_ROWS = 20
+export const DASHBOARD_DURATION_PREVIEW_ROWS = 10
+/** 今日工作记录预览区最多展示行数（超出可滚动） */
+export const DASHBOARD_WORK_RECORD_PREVIEW_ROWS = 8
 export const DASHBOARD_WINDOW_LIST_BODY_MAX_PX =
   DASHBOARD_WINDOW_LOG_PREVIEW_ROWS * DASHBOARD_PAIR_ROW_HEIGHT_PX
 export const DASHBOARD_DURATION_BODY_MAX_PX =
   DASHBOARD_DURATION_PREVIEW_ROWS * DASHBOARD_PAIR_ROW_HEIGHT_PX
 export const DASHBOARD_WINDOW_TABLE_SCROLL_MAX_PX =
   DASHBOARD_PAIR_TABLE_HEAD_PX + DASHBOARD_WINDOW_LIST_BODY_MAX_PX
+export const DASHBOARD_WORK_RECORD_ROW_HEIGHT_PX = 32
+export const DASHBOARD_WORK_RECORD_PREVIEW_MAX_PX =
+  DASHBOARD_WORK_RECORD_PREVIEW_ROWS * DASHBOARD_WORK_RECORD_ROW_HEIGHT_PX
 
 /** 日看板卡片标题栏右侧操作按钮（统一尺寸，配合 invisible 占位） */
 export const DASHBOARD_HEADER_ACTION_BTN_CLASS =
@@ -156,22 +161,24 @@ export const MONTHLY_KPI_SECTION_CLASS = [
 /** 每月页主体：左列分类+周块，右列活跃日历+智能摘要（各自独立行高） */
 export const MONTHLY_MAIN_GRID_CLASS = [
   'grid min-h-0 flex-[5] grid-cols-1 gap-2 overflow-hidden',
-  'md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.64fr)] md:grid-rows-1 md:gap-3',
-  '[&>*]:min-h-0 [&>*]:min-w-0 [&>*]:overflow-hidden',
+  'md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.64fr)] md:grid-rows-1 md:items-stretch md:gap-3',
+  '[&>*]:h-full [&>*]:min-h-0 [&>*]:min-w-0 [&>*]:overflow-hidden',
 ].join(' ')
 
-/** 左列：分类矩阵 / 周块（原 0.98 : 1.02） */
+/** 左列：本月各周 / 分类矩阵（行高比例与右列活跃日历、智能摘要对齐 1.18 : 0.82） */
 export const MONTHLY_MAIN_LEFT_COLUMN_CLASS = [
   'flex min-h-0 flex-col gap-2 overflow-hidden md:gap-3',
-  '[&>*:first-child]:min-h-0 [&>*:first-child]:flex-[0.98]',
-  '[&>*:last-child]:min-h-0 [&>*:last-child]:flex-[1.02]',
+  '[&>*]:h-full [&>*]:min-h-0 [&>*]:min-w-0',
+  '[&>*:first-child]:flex-[1.18]',
+  '[&>*:last-child]:flex-[0.82]',
 ].join(' ')
 
-/** 右列：活跃日历 +20% 高度，智能摘要对应降低（1.18 : 0.82） */
+/** 右列：活跃日历 + 智能摘要（1.18 : 0.82，与左列对齐） */
 export const MONTHLY_MAIN_RIGHT_COLUMN_CLASS = [
   'flex min-h-0 flex-col gap-2 overflow-hidden md:gap-3',
-  '[&>*:first-child]:min-h-0 [&>*:first-child]:flex-[1.18]',
-  '[&>*:last-child]:min-h-0 [&>*:last-child]:flex-[0.82]',
+  '[&>*]:h-full [&>*]:min-h-0 [&>*]:min-w-0',
+  '[&>*:first-child]:flex-[1.18]',
+  '[&>*:last-child]:flex-[0.82]',
 ].join(' ')
 
 /** @deprecated 使用 MONTHLY_MAIN_GRID_CLASS */
@@ -185,6 +192,9 @@ export const SECONDARY_PAGE_CONTENT_CLASS = 'w-full min-w-0 space-y-3'
 
 /** 数据页：铺满内容区，区块间距与 AppChrome 四边等距留白配合 */
 export const DATA_PAGE_CLASS = 'flex min-h-0 flex-1 flex-col'
+
+/** 待办页：单栏滚动布局 */
+export const TODO_PAGE_CLASS = 'flex min-h-0 flex-1 flex-col overflow-hidden'
 /** @deprecated 请使用 APP_CHROME_INSET_X_COMPACT */
 export const APP_CHROME_INSET_X_DEFAULT = APP_CHROME_INSET_X_COMPACT
 

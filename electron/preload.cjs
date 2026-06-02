@@ -34,11 +34,6 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
 
   getStoragePath: () => ipcRenderer.invoke('ganshale:get-storage-path'),
 
-  pickStorageDirectory: () => ipcRenderer.invoke('ganshale:pick-storage-directory'),
-
-  setStorageDirectory: (nextPath) =>
-    ipcRenderer.invoke('ganshale:set-storage-directory', nextPath),
-
   /** @param {string} query */
   /** @returns {Promise<{ ok: boolean; hits?: { name: string; path?: string }[]; error?: string }>} */
   searchLocalApps: (query) => ipcRenderer.invoke('ganshale:search-local-apps', query),
@@ -51,6 +46,38 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
    * @param {(payload: ForegroundPayload) => void} callback
    * @returns {() => void} unsubscribe
    */
+  /**
+   * 主窗口 `ready-to-show` 并已 `show()` 后触发；用于启动页在窗口可见后再计时。
+   * @param {() => void} callback
+   * @returns {() => void} unsubscribe
+   */
+  onMainWindowShown: (callback) => {
+    const channel = 'ganshale:main-window-shown'
+    let listener = null
+    let cancelled = false
+    const run = () => {
+      if (cancelled) return
+      try {
+        callback()
+      } catch {
+        /* ignore */
+      }
+    }
+    void ipcRenderer.invoke('ganshale:was-main-window-shown').then((shown) => {
+      if (cancelled) return
+      if (shown) {
+        run()
+        return
+      }
+      listener = () => run()
+      ipcRenderer.once(channel, listener)
+    })
+    return () => {
+      cancelled = true
+      if (listener) ipcRenderer.removeListener(channel, listener)
+    }
+  },
+
   onForegroundWindow: (callback) => {
     const channel = 'ganshale:foreground-window'
     const listener = (_event, payload) => {
@@ -71,6 +98,16 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
    * @param {(payload: Record<string, unknown>) => void} callback
    * @returns {() => void} unsubscribe
    */
+  /**
+   * 待办提醒：主进程在屏幕右下角弹出小窗
+   * @param {{ todoId?: string; title: string; body?: string; priority?: number }} payload
+   */
+  showTodoReminder: (payload) => ipcRenderer.invoke('ganshale:show-todo-reminder', payload),
+
+  /** 与设置页「开启小回顾弹窗」同步 */
+  setReflectPromptEnabled: (enabled) =>
+    ipcRenderer.invoke('ganshale:set-reflect-prompt-enabled', enabled),
+
   onSessionReflection: (callback) => {
     const channel = 'ganshale:session-reflection'
     const listener = (_event, payload) => {

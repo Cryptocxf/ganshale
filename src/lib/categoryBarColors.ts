@@ -22,6 +22,7 @@ const KNOWN_CATEGORY_COLORS: Record<string, string> = {
   'cat-doc': '#2563eb',
   'cat-dev': '#16a34a',
   'cat-comms': '#ea580c',
+  'cat-search': '#9333ea',
 }
 
 /** 未分类：琥珀橙实色（图例/列表） */

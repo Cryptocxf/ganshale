@@ -1,22 +1,27 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { aggregateByAppCategories } from '../lib/appCategoryAggregate'
 import {
+  APP_CATEGORY_CONFIG_CHANGED_EVENT,
   loadAppCategoryConfig,
   UNCATEGORIZED_ID,
   type AppCategoryDef,
 } from '../lib/appCategoryConfig'
+import { useAppCategoryConfigRevision } from '../hooks/useAppCategoryConfigRevision'
 import {
-  categoryChartColor,
-  isUncategorizedCategoryId,
-  UNCATEGORIZED_BAR,
-} from '../lib/categoryBarColors'
+  buildCategoryLegendTemplate,
+  buildCategoryStackSegments,
+  type CategoryChartLegendItem,
+} from '../lib/appCategoryChartItems'
+import { isUncategorizedCategoryId, UNCATEGORIZED_BAR } from '../lib/categoryBarColors'
 import { currentForegroundSegmentLive } from '../lib/aggregations'
+import { useGanshaleData } from '../context/useGanshaleData'
 import { barHeightPct, buildYTickHours, ceilYMaxHours, yTickBottomPct } from '../lib/weeklyDayBarChart'
 import { formatBarDurationZh, officeSecondsForLocalDay } from '../lib/weeklyWorktime'
 import {
   compareLocalCalendarWeek,
   daysInLocalWeek,
+  isSameLocalCalendarDay,
   toYmdLocal,
 } from '../lib/timeutil'
 import type { AwEvent } from '../lib/awTypes'
@@ -36,8 +41,6 @@ function formatMdLabel(ymd: string): string {
   const [, m, d] = ymd.split('-')
   return `${m}-${d}`
 }
-
-type LegendItem = { id: string; label: string; color: string }
 
 type DayStack = {
   key: string
@@ -59,16 +62,6 @@ function segmentHeightInBarPct(
     return stackSec > 0 ? (segSeconds / stackSec) * 100 : 0
   }
   return (segSeconds / barSec) * 100
-}
-
-function buildLegend(categories: AppCategoryDef[]): LegendItem[] {
-  const items = categories.map((c, i) => ({
-    id: c.id,
-    label: c.name,
-    color: categoryChartColor(c.id, i),
-  }))
-  items.push({ id: UNCATEGORIZED_ID, label: '其他', color: UNCATEGORIZED_BAR })
-  return items
 }
 
 function segmentBarClass(categoryId: string): string {
@@ -102,10 +95,20 @@ export function WeeklyDailyDurationDistribution({
   ready: boolean
 }) {
   const weekKind = compareLocalCalendarWeek(weekStart)
+  const { getWorkdayPausedMs } = useGanshaleData()
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
-  const categories = useMemo(() => loadAppCategoryConfig(), [])
-  const legend = useMemo(() => buildLegend(categories), [categories])
-  const legendOrder = useMemo(() => legend.map((l) => l.id), [legend])
+  const categoryRev = useAppCategoryConfigRevision()
+  const [categories, setCategories] = useState<AppCategoryDef[]>(() => loadAppCategoryConfig())
+
+  useEffect(() => {
+    const sync = () => setCategories(loadAppCategoryConfig())
+    window.addEventListener(APP_CATEGORY_CONFIG_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(APP_CATEGORY_CONFIG_CHANGED_EVENT, sync)
+  }, [])
+
+  useEffect(() => {
+    setCategories(loadAppCategoryConfig())
+  }, [categoryRev])
 
   const eventsForUi = useMemo(() => {
     if (!extrapolateToday) return events
@@ -118,34 +121,27 @@ export function WeeklyDailyDurationDistribution({
     const now = new Date()
     return daysInLocalWeek(weekStart).map((day, i) => {
       const { buckets } = aggregateByAppCategories(day, eventsForUi, categories)
-      const segments = legendOrder
-        .map((id) => {
-          const item = legend.find((l) => l.id === id)
-          const seconds = buckets[id]?.seconds ?? 0
-          if (seconds <= 0) return null
-          return {
-            id,
-            label: item?.label ?? '其他',
-            seconds: Math.round(seconds),
-            color: item?.color ?? UNCATEGORIZED_BAR,
-          }
-        })
-        .filter((s): s is NonNullable<typeof s> => s != null)
+      const dayItems = buildCategoryStackSegments(categories, buckets)
+      const segments = dayItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        seconds: item.seconds,
+        color: item.color,
+      }))
 
-      const detailCategories = legendOrder
-        .map((id) => {
-          const bucket = buckets[id]
+      const detailCategories = dayItems
+        .map((item) => {
+          const bucket = buckets[item.id]
           if (!bucket || bucket.seconds <= 0) return null
-          const item = legend.find((l) => l.id === id)
           const apps = Object.entries(bucket.apps)
             .map(([exe, sec]) => ({ exe, seconds: Math.round(sec) }))
             .filter((a) => a.seconds > 0)
             .sort((a, b) => b.seconds - a.seconds)
           return {
-            id,
-            label: item?.label ?? '其他',
-            color: item?.color ?? UNCATEGORIZED_BAR,
-            seconds: Math.round(bucket.seconds),
+            id: item.id,
+            label: item.label,
+            color: item.color,
+            seconds: item.seconds,
             apps,
           }
         })
@@ -158,7 +154,10 @@ export function WeeklyDailyDurationDistribution({
         patterns,
         live,
         now,
-        extrapolateToday,
+        extrapolateToday && isSameLocalCalendarDay(day, now),
+        extrapolateToday && isSameLocalCalendarDay(day, now)
+          ? getWorkdayPausedMs(now.getTime())
+          : 0,
       )
 
       return {
@@ -171,16 +170,12 @@ export function WeeklyDailyDurationDistribution({
         categories: detailCategories,
       }
     })
-  }, [
-    weekStart,
-    eventsForUi,
-    categories,
-    legend,
-    legendOrder,
-    patterns,
-    live,
-    extrapolateToday,
-  ])
+  }, [weekStart, eventsForUi, categories, patterns, live, extrapolateToday, getWorkdayPausedMs])
+
+  const categoryLegendTemplate = useMemo(
+    () => buildCategoryLegendTemplate(categories),
+    [categories],
+  )
 
   const peakKey = useMemo(() => {
     let best = dayStacks[0]?.key ?? ''
@@ -194,13 +189,17 @@ export function WeeklyDailyDurationDistribution({
     return best
   }, [dayStacks])
 
-  const activeLegend = useMemo(() => {
+  const activeLegend = useMemo((): CategoryChartLegendItem[] => {
     const ids = new Set<string>()
     for (const d of dayStacks) {
       for (const seg of d.segments) ids.add(seg.id)
     }
-    return legend.filter((item) => ids.has(item.id))
-  }, [dayStacks, legend])
+    const out = categoryLegendTemplate.filter((item) => ids.has(item.id))
+    if (ids.has(UNCATEGORIZED_ID)) {
+      out.push({ id: UNCATEGORIZED_ID, label: '其他', color: UNCATEGORIZED_BAR })
+    }
+    return out
+  }, [dayStacks, categoryLegendTemplate])
 
   const yMaxHours = useMemo(() => {
     let maxSec = 0
@@ -262,7 +261,9 @@ export function WeeklyDailyDurationDistribution({
                   }
                   aria-hidden
                 />
-                {item.label}
+                <span className="font-medium" style={{ color: item.color }}>
+                  {item.label}
+                </span>
               </span>
             ))}
           </div>

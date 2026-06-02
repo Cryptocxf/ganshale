@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { AwEvent } from '../lib/awTypes'
 import { APP_CATEGORY_CONFIG_CHANGED_EVENT } from '../lib/appCategoryConfig'
+import { APP_DATA_CHANGED_EVENT } from '../lib/dataManagement'
 import {
   buildCategoryFilterOptions,
   buildReportRecordRows,
@@ -17,6 +18,7 @@ import {
   daysInFilterMonth,
   defaultDataRecordsFilters,
   filterDataRecordRows,
+  initialFiltersForRecordKind,
   normalizeFiltersForRecordKind,
   normalizeTimeFilterParts,
   paginateRows,
@@ -86,6 +88,7 @@ export function DataRecordsProvider({ children }: { children: ReactNode }) {
   const [appSearchDraft, setAppSearchDraft] = useState('')
   const [windowEvents, setWindowEvents] = useState<AwEvent[]>([])
   const [reportRefresh, setReportRefresh] = useState(0)
+  const [dataRevision, setDataRevision] = useState(0)
   const [loading, setLoading] = useState(true)
   const [categoryOptions, setCategoryOptions] = useState(() => buildCategoryFilterOptions())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -134,7 +137,12 @@ export function DataRecordsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const patchRecordKind = useCallback((recordKind: DataRecordKind) => {
-    setDraftFilters((prev) => normalizeFiltersForRecordKind({ ...prev, recordKind }))
+    const next = initialFiltersForRecordKind(recordKind)
+    setDraftFilters(next)
+    setAppliedFilters(next)
+    setAppSearchDraft('')
+    setSelectedIds(new Set())
+    setDetailRow(null)
   }, [])
 
   useEffect(() => {
@@ -147,6 +155,18 @@ export function DataRecordsProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(WEEKLY_REPORT_HISTORY_CHANGED_EVENT, bump)
       window.removeEventListener(MONTHLY_REPORT_HISTORY_CHANGED_EVENT, bump)
     }
+  }, [])
+
+  useEffect(() => {
+    const onDataChanged = () => {
+      setWindowEvents([])
+      setReportRefresh((n) => n + 1)
+      setDataRevision((n) => n + 1)
+      setSelectedIds(new Set())
+      setDetailRow(null)
+    }
+    window.addEventListener(APP_DATA_CHANGED_EVENT, onDataChanged)
+    return () => window.removeEventListener(APP_DATA_CHANGED_EVENT, onDataChanged)
   }, [])
 
   useEffect(() => {
@@ -176,7 +196,7 @@ export function DataRecordsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [fetchKey, appliedFilters.recordKind])
+  }, [fetchKey, appliedFilters.recordKind, dataRevision])
 
   useEffect(() => {
     if (appliedFilters.recordKind !== 'window') setLoading(false)

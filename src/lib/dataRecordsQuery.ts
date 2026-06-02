@@ -523,3 +523,11 @@ export function normalizeFiltersForRecordKind(
   }
   return next
 }
+
+/** 切换数据类型时的默认筛选（不含上一类型的已应用条件） */
+export function initialFiltersForRecordKind(recordKind: DataRecordKind): DataRecordsFilterState {
+  return normalizeFiltersForRecordKind({
+    ...defaultDataRecordsFilters(),
+    recordKind,
+  })
+}

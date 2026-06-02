@@ -121,6 +121,21 @@ export const DASHBOARD_SECTION_DESCRIPTIONS = {
     '关键发现不一定惊喜，但至少比瞎编趋势靠谱。',
     '汇报前先过一眼：免得领导问「数据呢」时现场卡壳。',
   ],
+
+  todoQuickCapture: [
+    '脑子一热就忘？先写下来，别让待办只活在微信「稍后处理」里。',
+    '待办不写进列表，只会在深夜突然袭击你的良心。',
+    '点击空白就能开写——比「新建一条」少一次仪式感，多一分真的会做。',
+    'Enter 保存，Shift+Enter 换行：适合话多但不想开 Word 的你。',
+    '提醒时间到了会弹窗——比你的拖延更有时间观念。',
+  ],
+  todoList: [
+    '本周本月本季本年度：总有一个时间范围能证明你不是在瞎忙。',
+    '点表头「时间」「优先等级」排序——让最急的先露脸，最水的往后站。',
+    '星星越多越要紧：五星待办盯着你，一星待办随缘。',
+    '勾掉一条算一条，列表变短比咖啡更能提神。',
+    '删了就是真的删了——比「心理已完成」诚实多了。',
+  ],
 } as const satisfies Record<string, readonly string[]>
 
 export type DashboardSectionDescriptionKey = keyof typeof DASHBOARD_SECTION_DESCRIPTIONS

@@ -2,13 +2,22 @@
 
 import { isDocTypeIdentityKey } from './windowAppDisplay'
 
-export const APP_CATEGORY_STORAGE_KEY = 'ganshale-app-category-config-v2'
+export const APP_CATEGORY_STORAGE_KEY = 'ganshale-app-category-config-v3'
+const APP_CATEGORY_STORAGE_KEY_V2 = 'ganshale-app-category-config-v2'
 const APP_CATEGORY_STORAGE_KEY_V1 = 'ganshale-app-category-config-v1'
 export const APP_CATEGORY_CONFIG_CHANGED_EVENT = 'ganshale-app-category-config-changed'
 
 export const UNCATEGORIZED_ID = '__uncategorized__'
 
-export const FIXED_CATEGORY_IDS = ['cat-dev', 'cat-comms', 'cat-doc'] as const
+export const FIXED_CATEGORY_IDS = ['cat-dev', 'cat-comms', 'cat-doc', 'cat-search'] as const
+
+/** 内置分类默认归属（用户未改过配置时生效；改过后以 localStorage 为准） */
+export const DEFAULT_CATEGORY_KEYWORDS: Record<(typeof FIXED_CATEGORY_IDS)[number], string[]> = {
+  'cat-dev': ['vscode', 'cursor'],
+  'cat-comms': ['moa', 'weixin', 'emobile'],
+  'cat-doc': ['word', 'excel', 'ppt', 'pdf', 'obsidian'],
+  'cat-search': ['chrome', 'claude'],
+}
 
 /** 与 lucide 图标名对应，便于序列化 */
 export type AppCategoryIconId =
@@ -47,19 +56,25 @@ export const DEFAULT_APP_CATEGORIES: AppCategoryDef[] = [
     id: 'cat-dev',
     name: '开发',
     iconId: 'code-2',
-    keywords: [],
+    keywords: [...DEFAULT_CATEGORY_KEYWORDS['cat-dev']],
   },
   {
     id: 'cat-comms',
     name: '沟通',
     iconId: 'message-circle',
-    keywords: [],
+    keywords: [...DEFAULT_CATEGORY_KEYWORDS['cat-comms']],
   },
   {
     id: 'cat-doc',
     name: '文档',
     iconId: 'file-text',
-    keywords: [],
+    keywords: [...DEFAULT_CATEGORY_KEYWORDS['cat-doc']],
+  },
+  {
+    id: 'cat-search',
+    name: '搜索',
+    iconId: 'briefcase',
+    keywords: [...DEFAULT_CATEGORY_KEYWORDS['cat-search']],
   },
 ]
 
@@ -99,6 +114,14 @@ export function normalizeAssignmentKey(keyword: string): string {
   if (exe === 'code.exe' || exe === 'code-insiders.exe' || exe === 'code - insiders.exe') {
     return 'vscode'
   }
+  if (exe === 'cursor.exe' || exe === 'cursor') return 'cursor'
+  if (exe === 'chrome.exe' || exe === 'chrome') return 'chrome'
+  if (exe === 'claude.exe' || exe === 'claude') return 'claude'
+  if (exe === 'obsidian.exe' || exe === 'obsidian') return 'obsidian'
+  if (exe === 'moa.exe' || exe === 'moa') return 'moa'
+  if (exe === 'emobile.exe' || exe === 'emobile' || exe === 'mobileoffice.exe' || exe === 'mobileoffice') {
+    return 'emobile'
+  }
   if (exe === 'wps.exe' || exe === 'wps') return 'wps'
   return k
 }
@@ -137,7 +160,7 @@ export function normalizeCategoryList(raw: unknown): AppCategoryDef[] {
     if (!saved) return d
     return {
       ...d,
-      name: saved.name,
+      name: saved.id === 'cat-doc' && saved.name === '文档处理' ? d.name : saved.name,
       iconId: saved.iconId,
       keywords: sanitizeAssignedApps(saved.keywords),
     }
@@ -159,11 +182,31 @@ function migrateFromV1(): AppCategoryDef[] | null {
   try {
     const raw = localStorage.getItem(APP_CATEGORY_STORAGE_KEY_V1)
     if (!raw) return null
-    const migrated = normalizeCategoryList(JSON.parse(raw) as unknown)
-    return migrated.map((c) => ({ ...c, keywords: [] }))
+    return seedDefaultKeywords(normalizeCategoryList(JSON.parse(raw) as unknown))
   } catch {
     return null
   }
+}
+
+function migrateFromV2(): AppCategoryDef[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(APP_CATEGORY_STORAGE_KEY_V2)
+    if (!raw) return null
+    const normalized = normalizeCategoryList(JSON.parse(raw) as unknown)
+    return seedDefaultKeywords(normalized)
+  } catch {
+    return null
+  }
+}
+
+/** 仅对仍为空的内置分类填入默认应用（用户已保存过的 keywords 不覆盖） */
+export function seedDefaultKeywords(categories: AppCategoryDef[]): AppCategoryDef[] {
+  return categories.map((c) => {
+    const defaults = DEFAULT_CATEGORY_KEYWORDS[c.id as (typeof FIXED_CATEGORY_IDS)[number]]
+    if (!defaults?.length || c.keywords.length > 0) return c
+    return { ...c, keywords: sanitizeAssignedApps(defaults) }
+  })
 }
 
 export function loadAppCategoryConfig(): AppCategoryDef[] {
@@ -171,10 +214,15 @@ export function loadAppCategoryConfig(): AppCategoryDef[] {
   try {
     let raw = localStorage.getItem(APP_CATEGORY_STORAGE_KEY)
     if (!raw) {
-      const migrated = migrateFromV1()
-      if (migrated) {
-        saveAppCategoryConfig(migrated)
-        return migrated
+      const fromV2 = migrateFromV2()
+      if (fromV2) {
+        saveAppCategoryConfig(fromV2)
+        return fromV2
+      }
+      const fromV1 = migrateFromV1()
+      if (fromV1) {
+        saveAppCategoryConfig(fromV1)
+        return fromV1
       }
       return structuredClone(DEFAULT_APP_CATEGORIES)
     }
@@ -301,7 +349,9 @@ export function resetCategoryInList(
   const def = DEFAULT_APP_CATEGORIES.find((d) => d.id === categoryId)
   if (def) {
     return categories.map((c) =>
-      c.id === categoryId ? { ...c, name: def.name, keywords: [] } : c,
+      c.id === categoryId
+        ? { ...c, name: def.name, keywords: [...def.keywords] }
+        : c,
     )
   }
   return categories.filter((c) => c.id !== categoryId)

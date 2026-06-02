@@ -27,10 +27,19 @@ export interface GanshaleDataContextValue {
   liveForeground: LiveForegroundSample | null
   windowTrackingActive: boolean
   windowTrackingSupported: boolean
-  /** 用户点击「下班了」后为 true，不再轮询前台窗口 */
+  /** 今日窗口事件近期是否成功写入本地库（与主进程 poll 解耦） */
+  windowRecordingHealthy: boolean
+  /** 预留：用户主动停止采集（不影响办公总时长计时，计时仅由「暂停计时」控制） */
   collectionPausedByUser: boolean
   clockOutCollection: () => void
   resumeCollection: () => void
+  /** 用户暂停「今日办公总时长」等实时计时（暂停期间停止窗口采集） */
+  workdayTimerPausedByUser: boolean
+  /** 点击「暂停」时的 `Date.now()`，用于冻结各区域展示 */
+  timerPausedAtMs: number | null
+  /** 今日已完成暂停区间 + 当前暂停（如有），用于从展示时长中扣除暂停时段 */
+  getWorkdayPausedMs: (nowMs: number) => number
+  toggleWorkdayTimerPause: () => void
   /** 本地库中曾有窗口计时数据的日历日（`YYYY-MM-DD`） */
   daysWithTimingData: ReadonlySet<string>
 }

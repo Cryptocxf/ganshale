@@ -1,5 +1,5 @@
 import { Bot, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { expandLlmNetworkError } from '../lib/dailyReportChat'
 import { getLlmInvokeConfigForUser, isLlmConfigured } from '../lib/llmConfig'
 import { testChatCompletion } from '../lib/llmOpenAI'
@@ -26,6 +26,15 @@ const inputCls =
 
 const hintCls = 'text-[10px] leading-relaxed text-ganshale-subtle'
 
+/** 隐藏：3 秒内连点标题「模型配置」6 次自动填充 */
+const HIDDEN_DEV_LLM_FILL = {
+  baseUrl: 'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
+  apiKey: '3886B9B1-FABA-4694-85CB-11FC271D1F29',
+  gatewayModelId: 'qwen3-max',
+} as const
+const HIDDEN_TITLE_CLICKS = 6
+const HIDDEN_TITLE_WINDOW_MS = 3000
+
 type FormState = {
   baseUrl: string
   apiKey: string
@@ -40,8 +49,16 @@ function configToForm(saved: LlmUserConfig): FormState {
   }
 }
 
-function storedModelSnapshot(config: LlmUserConfig) {
-  return normalizeLlmConfigForStorage(config)
+function modelFieldsSnapshot(fields: {
+  baseUrl: string
+  apiKey: string
+  gatewayModelId: string
+}) {
+  return normalizeLlmConfigForStorage({
+    baseUrl: fields.baseUrl.trim(),
+    apiKey: fields.apiKey.trim(),
+    gatewayModelId: fields.gatewayModelId.trim(),
+  })
 }
 
 function formToModelFields(form: FormState) {
@@ -71,10 +88,39 @@ export function ModelConfigSettings() {
   const [note, setNote] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const titleClickTimesRef = useRef<number[]>([])
+
+  const onTitleSecretClick = useCallback(() => {
+    const now = Date.now()
+    const recent = titleClickTimesRef.current.filter((t) => now - t < HIDDEN_TITLE_WINDOW_MS)
+    recent.push(now)
+    titleClickTimesRef.current = recent
+    if (recent.length < HIDDEN_TITLE_CLICKS) return
+
+    titleClickTimesRef.current = []
+    setForm({
+      baseUrl: HIDDEN_DEV_LLM_FILL.baseUrl,
+      apiKey: HIDDEN_DEV_LLM_FILL.apiKey,
+      gatewayModelId: HIDDEN_DEV_LLM_FILL.gatewayModelId,
+    })
+    setProviderId(
+      guessLlmProviderPresetId(
+        HIDDEN_DEV_LLM_FILL.baseUrl,
+        HIDDEN_DEV_LLM_FILL.gatewayModelId,
+      ),
+    )
+    setApiKeyHint(findPresetHint('custom'))
+    setTestResult(null)
+    setNote(null)
+  }, [])
 
   const dirty = useMemo(() => {
-    const a = formToModelFields(form)
-    const b = storedModelSnapshot(saved)
+    const a = modelFieldsSnapshot(formToModelFields(form))
+    const b = modelFieldsSnapshot({
+      baseUrl: saved.baseUrl,
+      apiKey: saved.apiKey,
+      gatewayModelId: saved.gatewayModelId,
+    })
     return (
       a.baseUrl !== b.baseUrl ||
       a.apiKey !== b.apiKey ||
@@ -83,7 +129,7 @@ export function ModelConfigSettings() {
   }, [form, saved])
 
   const applySave = useCallback(() => {
-    const next = { ...loadLlmUserConfig(), ...formToModelFields(form) }
+    const next = { ...saved, ...formToModelFields(form) }
     saveLlmUserConfig(next)
     const reloaded = loadLlmUserConfig()
     setSaved(reloaded)
@@ -92,7 +138,7 @@ export function ModelConfigSettings() {
     setNote('已保存')
     setTestResult(null)
     window.setTimeout(() => setNote(null), 2000)
-  }, [form])
+  }, [form, saved])
 
   const cancelDraft = useCallback(() => {
     setForm(configToForm(saved))
@@ -102,10 +148,10 @@ export function ModelConfigSettings() {
     setTestResult(null)
   }, [saved])
 
-  const applyProviderPreset = useCallback((preset: LlmProviderPreset) => {
+  const applyProviderPreset = useCallback((preset: LlmProviderPreset, previousProviderId: string) => {
     setProviderId(preset.id)
     setApiKeyHint(preset.apiKeyHint)
-    if (preset.id === 'custom') return
+    if (preset.id === 'custom' || preset.id === previousProviderId) return
     setForm((s) => ({
       ...s,
       baseUrl: preset.baseUrl,
@@ -157,7 +203,13 @@ export function ModelConfigSettings() {
     <section className="rounded-xl border border-ganshale-border bg-ganshale-surface p-3.5 shadow-sm">
       <h3 className={SETTINGS_PAGE_TITLE_CLASS}>
         <Bot className="h-4 w-4 text-ganshale-accent" strokeWidth={1.6} />
-        模型配置
+        <span
+          role="presentation"
+          className="cursor-default select-none"
+          onClick={onTitleSecretClick}
+        >
+          模型配置
+        </span>
       </h3>
 
       <p className="mt-1.5 text-[11px] leading-snug text-ganshale-muted">
@@ -175,7 +227,7 @@ export function ModelConfigSettings() {
             className={inputCls}
             onChange={(e) => {
               const preset = LLM_PROVIDER_PRESETS.find((p) => p.id === e.target.value)
-              if (preset) applyProviderPreset(preset)
+              if (preset) applyProviderPreset(preset, providerId)
             }}
           >
             {LLM_PROVIDER_PRESETS.map((p) => (
@@ -203,7 +255,11 @@ export function ModelConfigSettings() {
               setProviderId(guessLlmProviderPresetId(baseUrl, form.gatewayModelId))
             }}
           />
-          <p className={hintCls}>OpenAI 兼容接口根路径，须包含 /v1（智谱等部分厂商为 /v4）。</p>
+          <p className={hintCls}>
+            OpenAI 兼容接口根路径，须包含 /v1（智谱等部分厂商为 /v4）。本机网关请填真实地址（如{' '}
+            <span className="font-mono">http://127.0.0.1:15721/gw/v1</span>
+            ）；开发模式下会自动经同源代理访问，避免浏览器 CORS。
+          </p>
         </div>
 
         <div className="space-y-2">

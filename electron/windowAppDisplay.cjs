@@ -55,6 +55,14 @@ function resolveForegroundIdentityKey(app, title = '', appPath = '') {
     return 'vscode'
   }
 
+  /** 与 src/lib/windowAppDisplay.ts APP_IDENTITY_ALIASES 的 identityKey 一致 */
+  const IDENTITY_KEY_ALIASES = {
+    baidunetdiskunite: 'baidunetdisk',
+    'chuanyun-view': 'chuanyun',
+    openclaw: 'openclaw',
+  }
+  if (IDENTITY_KEY_ALIASES[exe]) return IDENTITY_KEY_ALIASES[exe]
+
   return exe || 'unknown'
 }
 

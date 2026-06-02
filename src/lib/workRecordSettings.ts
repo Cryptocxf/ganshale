@@ -15,6 +15,8 @@ export const DEFAULT_WORK_RECORD_SYSTEM_PROMPT =
 export type WorkRecordSettings = {
   aiAutoSummaryEnabled: boolean
   systemRecordPeriod: SystemRecordPeriodId
+  /** 主窗口最小化后切换应用时的「小回顾」独立弹窗 */
+  reflectPromptEnabled: boolean
 }
 
 export const WORK_RECORD_SETTINGS_CHANGED_EVENT = 'ganshale-work-record-settings-changed'
@@ -64,10 +66,15 @@ export function isAiAutoSummaryActive(settings: WorkRecordSettings): boolean {
   return settings.aiAutoSummaryEnabled
 }
 
+export function isReflectPromptEnabled(settings: WorkRecordSettings): boolean {
+  return settings.reflectPromptEnabled !== false
+}
+
 function defaultSettings(): WorkRecordSettings {
   return {
     aiAutoSummaryEnabled: true,
     systemRecordPeriod: '30m',
+    reflectPromptEnabled: true,
   }
 }
 
@@ -106,10 +113,16 @@ function parseStoredSettings(raw: string): WorkRecordSettings {
     systemRecordPeriod = j.systemRecordPeriod
   }
 
+  const reflectPromptEnabled =
+    typeof j.reflectPromptEnabled === 'boolean'
+      ? j.reflectPromptEnabled
+      : fallback.reflectPromptEnabled
+
   if (!aiAutoSummaryEnabled) {
     return {
       aiAutoSummaryEnabled: false,
       systemRecordPeriod: normalizePeriodForEnabled(systemRecordPeriod, fallback.systemRecordPeriod),
+      reflectPromptEnabled,
     }
   }
 
@@ -119,6 +132,7 @@ function parseStoredSettings(raw: string): WorkRecordSettings {
       systemRecordPeriod,
       fallback.systemRecordPeriod,
     ),
+    reflectPromptEnabled,
   }
 }
 
@@ -148,6 +162,7 @@ function migrateFromV1(): WorkRecordSettings | null {
       systemRecordPeriod: aiAutoSummaryEnabled
         ? normalizePeriodForEnabled(systemRecordPeriod, base.systemRecordPeriod)
         : base.systemRecordPeriod,
+      reflectPromptEnabled: base.reflectPromptEnabled,
     }
   } catch {
     return null
@@ -175,9 +190,16 @@ export function saveWorkRecordSettings(settings: WorkRecordSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(settings))
     window.dispatchEvent(new Event(WORK_RECORD_SETTINGS_CHANGED_EVENT))
+    syncReflectPromptEnabledToDesktop(settings)
   } catch {
     /* quota */
   }
+}
+
+/** Electron 主进程小回顾开关与 localStorage 对齐 */
+export function syncReflectPromptEnabledToDesktop(settings: WorkRecordSettings): void {
+  if (typeof window === 'undefined') return
+  void window.ganshaleDesktop?.setReflectPromptEnabled?.(isReflectPromptEnabled(settings))
 }
 
 export function systemRecordIntervalMs(settings: WorkRecordSettings): number | null {

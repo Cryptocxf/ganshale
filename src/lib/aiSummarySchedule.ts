@@ -148,6 +148,7 @@ export function aiSummaryWindowBounds(
   const intervalMs = systemRecordIntervalMs({
     aiAutoSummaryEnabled: true,
     systemRecordPeriod: periodId,
+    reflectPromptEnabled: true,
   })
   const last = loadLastAiSummaryAt(day)
   let startMs = last ?? (intervalMs != null ? endMs - intervalMs : dayStart)

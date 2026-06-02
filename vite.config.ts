@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -32,6 +33,13 @@ export default defineConfig(({ command, mode }) => {
           target: llmProxyTarget,
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/__llm/, ''),
+          // 设置页填写 http://127.0.0.1:15721/... 时由请求头指定真实 upstream
+          router: (req: IncomingMessage) => {
+            const raw = req.headers['x-llm-upstream']
+            const upstream = typeof raw === 'string' ? raw.trim() : ''
+            if (upstream && /^https?:\/\//i.test(upstream)) return upstream
+            return llmProxyTarget
+          },
         },
       },
     },

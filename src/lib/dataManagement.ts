@@ -6,9 +6,26 @@ import {
   startOfMonthLocal,
   toYmdLocal,
 } from './timeutil'
+import { APP_DURATION_COMPARE_CHANGED_EVENT } from './appDurationCompareStore'
+import {
+  clearWorkdayClockOutPersist,
+  FROZEN_TIMER_STORAGE_KEY,
+} from './clientSessionClock'
+import { DAILY_REPORT_HISTORY_CHANGED_EVENT } from './dailyReportHistoryStore'
+import { invalidateMonthlyWindowEventsCache } from './monthlyWorktime'
+import { MONTHLY_REPORT_HISTORY_CHANGED_EVENT } from './monthlyReportHistoryStore'
+import { clearWorkdayTimerPause } from './workdayTimerPause'
+import { WEEKLY_REPORT_HISTORY_CHANGED_EVENT } from './weeklyReportHistoryStore'
 import * as store from './idbStore'
 import { BUCKET_AFK, BUCKET_WEB, BUCKET_WINDOW } from './seed'
 import { SESSION_REFLECTIONS_STORAGE_KEY } from './sessionReflectionsStore'
+import { WORK_RECORDS_UPDATED_EVENT } from './workRecordStore'
+
+export const APP_DATA_CHANGED_EVENT = 'ganshale-app-data-changed'
+
+const LEGACY_FROZEN_TIMER_STORAGE_KEY = 'ganshale-workday-timer-frozen-v1'
+const WINDOW_REMARKS_STORAGE_KEY = 'ganshale-window-remarks-v1'
+const APP_DURATION_COMPARE_PREFIX = 'ganshale-app-duration-compare-v1:'
 
 const DAY_KEY_PREFIXES = [
   'ganshale-work-records:',
@@ -30,6 +47,48 @@ const AI_SUMMARY_PREFIXES = [
 export type DataClearFilter =
   | { mode: 'all' }
   | { mode: 'range'; year: number; month?: number; day?: number }
+
+function clearFrozenTimerStorage(filter: DataClearFilter): void {
+  if (typeof window === 'undefined') return
+  if (filter.mode === 'all') {
+    localStorage.removeItem(FROZEN_TIMER_STORAGE_KEY)
+    localStorage.removeItem(LEGACY_FROZEN_TIMER_STORAGE_KEY)
+    return
+  }
+  try {
+    const raw = localStorage.getItem(FROZEN_TIMER_STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return
+    const map = { ...(parsed as Record<string, number>) }
+    let changed = false
+    for (const ymd of Object.keys(map)) {
+      if (!ymdInFilter(ymd, filter)) continue
+      delete map[ymd]
+      changed = true
+    }
+    if (!changed) return
+    if (Object.keys(map).length === 0) localStorage.removeItem(FROZEN_TIMER_STORAGE_KEY)
+    else localStorage.setItem(FROZEN_TIMER_STORAGE_KEY, JSON.stringify(map))
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearSessionTimerState(): void {
+  clearWorkdayTimerPause()
+  clearWorkdayClockOutPersist()
+}
+
+export function notifyAppDataChanged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(APP_DATA_CHANGED_EVENT))
+  window.dispatchEvent(new CustomEvent(DAILY_REPORT_HISTORY_CHANGED_EVENT))
+  window.dispatchEvent(new CustomEvent(WEEKLY_REPORT_HISTORY_CHANGED_EVENT))
+  window.dispatchEvent(new CustomEvent(MONTHLY_REPORT_HISTORY_CHANGED_EVENT))
+  window.dispatchEvent(new CustomEvent(WORK_RECORDS_UPDATED_EVENT))
+  window.dispatchEvent(new Event(APP_DURATION_COMPARE_CHANGED_EVENT))
+}
 
 function ymdInFilter(ymd: string, filter: DataClearFilter): boolean {
   if (filter.mode === 'all') return true
@@ -121,15 +180,23 @@ function clearLocalStorageByFilter(filter: DataClearFilter): number {
       }
     }
 
+    if (!shouldRemove && key.startsWith(APP_DURATION_COMPARE_PREFIX)) {
+      shouldRemove = ymdInFilter(key.slice(APP_DURATION_COMPARE_PREFIX.length), filter)
+    }
+    if (!shouldRemove && filter.mode === 'all' && key === WINDOW_REMARKS_STORAGE_KEY) {
+      shouldRemove = true
+    }
+
     if (shouldRemove) {
       localStorage.removeItem(key)
       removed += 1
     }
   }
 
+  clearFrozenTimerStorage(filter)
+
   if (filter.mode === 'all') {
     localStorage.removeItem(SESSION_REFLECTIONS_STORAGE_KEY)
-    localStorage.removeItem('ganshale-workday-timer-frozen-v1')
   } else {
     try {
       const raw = localStorage.getItem(SESSION_REFLECTIONS_STORAGE_KEY)
@@ -153,66 +220,71 @@ function clearLocalStorageByFilter(filter: DataClearFilter): number {
   return removed
 }
 
+function isActivityLocalStorageKey(key: string): boolean {
+  return (
+    key.startsWith('ganshale-work-records') ||
+    key.startsWith('ganshale-daily-report') ||
+    key.startsWith('ganshale-weekly-report') ||
+    key.startsWith('ganshale-monthly-report') ||
+    key.startsWith(APP_DURATION_COMPARE_PREFIX) ||
+    AI_SUMMARY_PREFIXES.some((p) => key.startsWith(p)) ||
+    key === SESSION_REFLECTIONS_STORAGE_KEY ||
+    key === WINDOW_REMARKS_STORAGE_KEY ||
+    key === FROZEN_TIMER_STORAGE_KEY ||
+    key === LEGACY_FROZEN_TIMER_STORAGE_KEY
+  )
+}
+
 export async function clearScopedAppData(filter: DataClearFilter): Promise<{
   eventsDeleted: number
   localKeysRemoved: number
 }> {
   let eventsDeleted = 0
+  let localKeysRemoved = 0
 
   if (filter.mode === 'all') {
-    const eventsDeleted = await store.countEvents()
+    eventsDeleted = await store.countEvents()
     await store.clearAllData()
+    store.resetDbConnection()
     const keys = Object.keys(localStorage)
-    let localKeysRemoved = 0
     for (const key of keys) {
-      if (
-        key.startsWith('ganshale-work-records') ||
-        key.startsWith('ganshale-daily-report') ||
-        key.startsWith('ganshale-weekly-report') ||
-        key.startsWith('ganshale-monthly-report') ||
-        AI_SUMMARY_PREFIXES.some((p) => key.startsWith(p)) ||
-        key === SESSION_REFLECTIONS_STORAGE_KEY ||
-        key === 'ganshale-workday-timer-frozen-v1'
-      ) {
+      if (isActivityLocalStorageKey(key)) {
         localStorage.removeItem(key)
         localKeysRemoved += 1
       }
     }
-    return { eventsDeleted, localKeysRemoved }
-  }
-
-  const range = resolveEventRange(filter)
-  if (range) {
-    for (const bucketId of [BUCKET_WINDOW, BUCKET_WEB, BUCKET_AFK]) {
-      eventsDeleted += await store.deleteEventsInRange(
-        bucketId,
-        range.start.toISOString(),
-        range.end.toISOString(),
-      )
+    clearSessionTimerState()
+  } else {
+    const range = resolveEventRange(filter)
+    if (range) {
+      for (const bucketId of [BUCKET_WINDOW, BUCKET_WEB, BUCKET_AFK]) {
+        eventsDeleted += await store.deleteEventsInRange(
+          bucketId,
+          range.start.toISOString(),
+          range.end.toISOString(),
+        )
+      }
+    }
+    localKeysRemoved = clearLocalStorageByFilter(filter)
+    if (eventsDeleted > 0) {
+      localStorage.removeItem(WINDOW_REMARKS_STORAGE_KEY)
+    }
+    if (ymdInFilter(toYmdLocal(new Date()), filter)) {
+      clearSessionTimerState()
     }
   }
 
-  const localKeysRemoved = clearLocalStorageByFilter(filter)
+  invalidateMonthlyWindowEventsCache()
+  notifyAppDataChanged()
   return { eventsDeleted, localKeysRemoved }
 }
 
 const STORAGE_IPC_TIMEOUT_MS = 5000
 
-const BROWSER_STORAGE_FALLBACK = {
-  path: 'IndexedDB · ganshale_aw',
-  canChange: false,
-  hint: '浏览器模式下数据保存在本机 IndexedDB，无法在应用内更改存储目录。',
-} as const
-
-export async function getStorageLocationLabel(): Promise<{
-  path: string
-  canChange: boolean
-  hint: string
-}> {
+/** 读取应用数据目录；Electron 下为安装目录旁的 `data` 文件夹。 */
+export async function getAppStoragePath(): Promise<string | null> {
   const desktop = typeof window !== 'undefined' ? window.ganshaleDesktop : undefined
-  if (!desktop?.getStoragePath) {
-    return { ...BROWSER_STORAGE_FALLBACK }
-  }
+  if (!desktop?.getStoragePath) return null
 
   try {
     const res = await Promise.race([
@@ -224,20 +296,9 @@ export async function getStorageLocationLabel(): Promise<{
         )
       }),
     ])
-    if (res.ok && res.path) {
-      return {
-        path: res.path,
-        canChange: true,
-        hint: '窗口记录保存在此目录下的 IndexedDB 中；更改后需重启应用生效。',
-      }
-    }
+    if (res.ok && res.path) return res.path.replace(/\\/g, '/')
   } catch {
-    /* fall through to fallback below */
+    /* ignore */
   }
-
-  return {
-    path: BROWSER_STORAGE_FALLBACK.path,
-    canChange: false,
-    hint: '无法读取 Electron 存储目录，请完全退出并重新打开客户端；若仍失败，数据仍在默认 IndexedDB 中。',
-  }
+  return null
 }
