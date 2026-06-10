@@ -1042,6 +1042,42 @@ ipcMain.handle('ganshale:open-path-in-folder', async (_event, targetPath) => {
   }
 })
 
+/**
+ * 将日报/周报/月报 Markdown 写入 Obsidian Vault（自动创建子目录）。
+ * @param {{ vaultPath?: string; relativePath?: string; content?: string }} payload
+ */
+ipcMain.handle('ganshale:write-obsidian-report', async (_event, payload) => {
+  try {
+    const vaultPath = String(payload?.vaultPath ?? '').trim()
+    const relativePath = String(payload?.relativePath ?? '')
+      .trim()
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+    const content = String(payload?.content ?? '')
+    if (!vaultPath) return { ok: false, error: 'Vault 路径为空' }
+    if (!relativePath) return { ok: false, error: '相对路径为空' }
+    if (!content.trim()) return { ok: false, error: '报告内容为空' }
+    if (relativePath.includes('..')) return { ok: false, error: '非法相对路径' }
+
+    const vaultResolved = path.resolve(vaultPath)
+    const filePath = path.resolve(vaultResolved, ...relativePath.split('/'))
+    const vaultNorm = vaultResolved.toLowerCase()
+    const fileNorm = filePath.toLowerCase()
+    if (fileNorm !== vaultNorm && !fileNorm.startsWith(`${vaultNorm}${path.sep}`)) {
+      return { ok: false, error: '目标路径超出 Vault 范围' }
+    }
+
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.promises.writeFile(filePath, content, 'utf8')
+    return { ok: true, filePath }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+})
+
 function createWindow() {
   mainWindowHasShown = false
   const win = new BrowserWindow({

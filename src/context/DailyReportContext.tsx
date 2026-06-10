@@ -251,9 +251,16 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
         if (opts?.saveToHistory) {
           appendDailyReportHistory(day, normalized)
           void syncReportToObsidian('daily', day, normalized).then((res) => {
-            if (!res.ok && !res.skipped) {
-              console.warn('[ganshale] Obsidian 日报导出失败:', res.error)
+            if (res.skipped) return
+            if (!res.ok) {
+              const msg = `Obsidian 导出失败：${res.error ?? '未知错误'}`
+              console.warn('[ganshale]', msg)
+              setToast(msg)
+              window.setTimeout(() => setToast(null), 6000)
+              return
             }
+            setToast(`已写入 Obsidian：${res.filePath ?? '日报'}`)
+            window.setTimeout(() => setToast(null), 4000)
           })
         }
         if (normalized !== body && assistantId) {

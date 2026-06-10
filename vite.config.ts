@@ -27,6 +27,10 @@ export default defineConfig(({ command, mode }) => {
       host: '127.0.0.1',
       port: 5180,
       strictPort: true,
+      // 勿监听 release/：与 electron-builder 并行打包时会锁住 win-unpacked 导致 EPERM
+      watch: {
+        ignored: ['**/release/**', '**/dist/**', '**/data/**'],
+      },
       proxy: {
         // 浏览器直连网关常因 CORS 失败（Failed to fetch）；开发时走同源再由 Vite 转发。
         '/__llm': {

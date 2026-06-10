@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "predev": "node scripts/free-dev-port.mjs",
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:127.0.0.1:5180 && electron .\"",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:127.0.0.1:5180 && node scripts/dev-electron-watch.mjs\"",
     "dev:web": "vite",
     "build": "tsc -b && vite build",
     "gen:dashboard": "node scripts/write-daily-dashboard.mjs",
@@ -46,7 +46,7 @@
   "build": {
     "appId": "net.ganshale.desktop",
     "productName": "干啥了",
-    "icon": "public/ganshale-logo-app.png",
+    "icon": "build/icon.ico",
     "directories": {
       "output": "release"
     },
@@ -64,8 +64,8 @@
         "nsis"
       ],
       "executableName": "Ganshale",
-      "icon": "public/ganshale-logo-app.png",
-      "signAndEditExecutable": false
+      "icon": "build/icon.ico",
+      "signExecutable": false
     },
     "nsis": {
       "oneClick": false,
@@ -79,7 +79,8 @@
         "en_US"
       ],
       "language": "2052",
-      "installerHeaderIcon": "public/ganshale-logo-app.png"
+      "installerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     }
   }
 }
