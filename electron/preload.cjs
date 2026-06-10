@@ -34,6 +34,13 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
 
   getStoragePath: () => ipcRenderer.invoke('ganshale:get-storage-path'),
 
+  /**
+   * @param {{ vaultPath: string; relativePath: string; content: string }} payload
+   * @returns {Promise<{ ok: boolean; filePath?: string; error?: string }>}
+   */
+  writeObsidianReport: (payload) =>
+    ipcRenderer.invoke('ganshale:write-obsidian-report', payload),
+
   /** @param {string} query */
   /** @returns {Promise<{ ok: boolean; hits?: { name: string; path?: string }[]; error?: string }>} */
   searchLocalApps: (query) => ipcRenderer.invoke('ganshale:search-local-apps', query),
@@ -120,6 +127,26 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
     ipcRenderer.on(channel, listener)
     return () => {
       ipcRenderer.removeListener(channel, listener)
+    }
+  },
+
+  /**
+   * 屏幕锁屏状态变更：锁屏时回调 true，解锁时回调 false。
+   * @param {(locked: boolean) => void} callback
+   * @returns {() => void} unsubscribe
+   */
+  onScreenLockChange: (callback) => {
+    const lockListener = () => {
+      try { callback(true) } catch { /* ignore */ }
+    }
+    const unlockListener = () => {
+      try { callback(false) } catch { /* ignore */ }
+    }
+    ipcRenderer.on('ganshale:screen-locked', lockListener)
+    ipcRenderer.on('ganshale:screen-unlocked', unlockListener)
+    return () => {
+      ipcRenderer.removeListener('ganshale:screen-locked', lockListener)
+      ipcRenderer.removeListener('ganshale:screen-unlocked', unlockListener)
     }
   },
 })

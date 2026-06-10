@@ -42,7 +42,7 @@ export function WeeklyDashboard() {
   useEffect(() => {
     setWeekStart(startOfWeekMondayLocal(new Date()))
   }, [setWeekStart])
-  const { ready: dataReady, liveForeground, getWorkdayPausedMs } = useGanshaleData()
+  const { ready: dataReady, liveForeground, windowTrackingPaused } = useGanshaleData()
   const clockMs = useDashboardClockMs()
   const clockLive = useDashboardClockLive()
   const patterns = useMonitoredAppPatterns()
@@ -100,7 +100,7 @@ export function WeeklyDashboard() {
     return () => clearInterval(id)
   }, [weekKind, weekStart, dataReady, clockLive])
 
-  const extrapolateToday = weekKind === 'current'
+  const extrapolateToday = weekKind === 'current' && !windowTrackingPaused
 
   const weekEventsForUi = useMemo(() => {
     void liveTick
@@ -128,7 +128,6 @@ export function WeeklyDashboard() {
       live: liveForeground,
       now: new Date(clockMs),
       extrapolateToday,
-      pausedMsToday: extrapolateToday ? getWorkdayPausedMs(clockMs) : 0,
     })
   }, [
     currentWeekEvents,
@@ -138,7 +137,6 @@ export function WeeklyDashboard() {
     extrapolateToday,
     clockMs,
     liveTick,
-    getWorkdayPausedMs,
   ])
 
   const prevSec = useMemo(() => {

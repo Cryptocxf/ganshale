@@ -44,8 +44,8 @@ export function WindowDwellPrompt() {
     windowEvents,
     liveForeground,
     windowTrackingActive,
+    windowTrackingPaused,
     collectionPausedByUser,
-    workdayTimerPausedByUser,
   } = useGanshaleData()
 
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -59,7 +59,7 @@ export function WindowDwellPrompt() {
   const draftRef = useRef('')
 
   const extrapolate = Boolean(
-    ready && windowTrackingActive && !collectionPausedByUser && !workdayTimerPausedByUser,
+    ready && windowTrackingActive && !windowTrackingPaused && !collectionPausedByUser,
   )
 
   const liveSeg = useMemo(
@@ -76,10 +76,10 @@ export function WindowDwellPrompt() {
   const liveSegmentId = liveSeg.event?.id
 
   useEffect(() => {
-    if (!windowTrackingActive || collectionPausedByUser || workdayTimerPausedByUser) return
+    if (!windowTrackingActive || windowTrackingPaused || collectionPausedByUser) return
     const id = window.setInterval(() => setNowMs(Date.now()), 1500)
     return () => clearInterval(id)
-  }, [windowTrackingActive, collectionPausedByUser, workdayTimerPausedByUser])
+  }, [windowTrackingActive, windowTrackingPaused, collectionPausedByUser])
 
   useEffect(() => {
     const id = liveSeg.event?.id ?? null

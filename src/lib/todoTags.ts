@@ -1,3 +1,5 @@
+import type { TodoPriorityLevel } from './todoStore'
+
 export type TodoTagId = string
 
 export const PRESET_TODO_TAG_IDS = ['work', 'design', 'meeting', 'review'] as const
@@ -28,29 +30,38 @@ export function normalizeTodoTags(raw: unknown): TodoTagId[] {
   return out
 }
 
+const PRESET_TAG_SLUGS = PRESET_TODO_TAG_IDS
+
+/** 自定义标签映射到预设配色，保证卡片上与默认标签同款 pill 样式 */
+function customTagColorSlug(id: TodoTagId): PresetTodoTagId {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash + id.charCodeAt(i) * (i + 1)) % 9973
+  }
+  return PRESET_TAG_SLUGS[hash % PRESET_TAG_SLUGS.length]!
+}
+
 export function tagLabel(id: TodoTagId): string {
   return TODO_TAG_OPTIONS.find((o) => o.id === id)?.label ?? id
 }
 
 /** 标签 pill 样式（浅色模式；深色见 todo-page.css 覆盖） */
 export function tagPillClass(id: TodoTagId): string {
-  if (isPresetTodoTagId(id)) {
-    return `todo-tag todo-tag--${id}`
-  }
-  return 'todo-tag todo-tag--custom'
+  const slug = isPresetTodoTagId(id) ? id : customTagColorSlug(id)
+  return `todo-tag todo-tag--${slug}`
 }
 
 export type TodoPriorityBand = 'high' | 'medium' | 'low'
 
 export function priorityBandFromLevel(level: number): TodoPriorityBand {
-  if (level >= 4) return 'high'
-  if (level >= 3) return 'medium'
+  if (level >= 8) return 'high'
+  if (level >= 4) return 'medium'
   return 'low'
 }
 
-export function priorityLevelFromBand(band: TodoPriorityBand): 1 | 3 | 5 {
-  if (band === 'high') return 5
-  if (band === 'medium') return 3
+export function priorityLevelFromBand(band: TodoPriorityBand): TodoPriorityLevel {
+  if (band === 'high') return 9
+  if (band === 'medium') return 5
   return 1
 }
 

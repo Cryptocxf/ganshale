@@ -50,6 +50,12 @@ interface GanshaleDesktopBridge {
   openPathInFolder: (targetPath: string) => Promise<{ ok: boolean; error?: string }>
   /** 当前 userData 目录（安装目录下 data） */
   getStoragePath: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  /** 写入 Obsidian Vault 中的 Markdown 报告 */
+  writeObsidianReport?: (payload: {
+    vaultPath: string
+    relativePath: string
+    content: string
+  }) => Promise<{ ok: boolean; filePath?: string; error?: string }>
   /** 主进程 `app.getFileIcon`，返回 PNG data URL */
   getFileIcon: (filePath: string) => Promise<string | null>
   /** 主窗口已显示（`ready-to-show` 之后），用于启动页计时 */
@@ -64,6 +70,8 @@ interface GanshaleDesktopBridge {
     priority?: number
   }) => Promise<{ ok: boolean; error?: string }>
   setReflectPromptEnabled?: (enabled: boolean) => Promise<{ ok: boolean }>
+  /** 屏幕锁屏状态变更：锁屏 true / 解锁 false */
+  onScreenLockChange?: (cb: (locked: boolean) => void) => () => void
 }
 
 declare global {

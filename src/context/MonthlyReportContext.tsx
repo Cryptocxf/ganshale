@@ -25,9 +25,9 @@ import {
   shouldFireAutoMonthlyReport,
 } from '../lib/monthlyReportAutoSchedule'
 import { appendMonthlyReportHistory } from '../lib/monthlyReportHistoryStore'
+import { syncReportToObsidian } from '../lib/obsidianReportExport'
 import {
-  addMonthsLocal,
-  loadWindowEventsForMonth,
+  prefetchMonthlyWindowEvents,
   type MonthlySummary,
 } from '../lib/monthlyWorktime'
 import { startOfMonthLocal } from '../lib/timeutil'
@@ -71,8 +71,14 @@ export function MonthlyReportProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setSummaryState = useCallback((ready: boolean, next: MonthlySummary | null) => {
-    setSummaryReady(ready)
-    setSummary(next)
+    setSummaryReady((prev) => (prev === ready ? prev : ready))
+    setSummary((prev) => {
+      if (next === null) return prev === null ? prev : null
+      if (prev?.monthKey === next.monthKey && prev.weekBlocksTotalSeconds === next.weekBlocksTotalSeconds) {
+        return prev
+      }
+      return next
+    })
   }, [])
 
   const closeReportModal = useCallback(() => setReportModalOpen(false), [])
@@ -88,10 +94,7 @@ export function MonthlyReportProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const month = startOfMonthLocal(new Date())
-    const prevMonth = addMonthsLocal(month, -1)
-    void loadWindowEventsForMonth(month)
-    void loadWindowEventsForMonth(prevMonth)
+    prefetchMonthlyWindowEvents(startOfMonthLocal(new Date()))
   }, [])
 
   const runGenerate = useCallback(async () => {
@@ -139,6 +142,11 @@ export function MonthlyReportProvider({ children }: { children: ReactNode }) {
         const normalized = normalizeMonthlyReportTitleDate(body, monthAnchor)
         setReportText(normalized)
         appendMonthlyReportHistory(monthAnchor, normalized)
+        void syncReportToObsidian('monthly', monthAnchor, normalized).then((res) => {
+          if (!res.ok && !res.skipped) {
+            console.warn('[ganshale] Obsidian 月报导出失败:', res.error)
+          }
+        })
       }
     }
   }, [monthAnchor])

@@ -23,6 +23,7 @@ import {
   normalizeWeeklyReportTitleDate,
 } from '../lib/weeklyReportGeneration'
 import { appendWeeklyReportHistory } from '../lib/weeklyReportHistoryStore'
+import { syncReportToObsidian } from '../lib/obsidianReportExport'
 import { startOfWeekMondayLocal } from '../lib/timeutil'
 import { WeeklyReportHistoryModal } from '../components/WeeklyReportHistoryModal'
 import { WeeklyReportResultModal } from '../components/WeeklyReportResultModal'
@@ -113,6 +114,11 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
         const normalized = normalizeWeeklyReportTitleDate(body, weekStart)
         setReportText(normalized)
         appendWeeklyReportHistory(weekStart, normalized)
+        void syncReportToObsidian('weekly', weekStart, normalized).then((res) => {
+          if (!res.ok && !res.skipped) {
+            console.warn('[ganshale] Obsidian 周报导出失败:', res.error)
+          }
+        })
       }
     }
   }, [weekStart])

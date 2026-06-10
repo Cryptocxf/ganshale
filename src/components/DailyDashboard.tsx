@@ -54,6 +54,7 @@ import {
 } from '../lib/appDurationCompareStore'
 import { useAppDurationCompareRevision } from '../hooks/useAppDurationCompareRevision'
 import { useDashboardClockLive, useDashboardClockMs } from '../hooks/useDashboardClock'
+import { useMonotonicOfficeSec } from '../hooks/useMonotonicOfficeSec'
 import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
 import {
   WindowEventTableBody,
@@ -76,16 +77,14 @@ export function DailyDashboard() {
   const {
     day,
     windowEvents,
-    windowEventsToday,
     ready,
     refresh,
     windowTrackingActive,
     windowTrackingSupported,
+    windowTrackingPaused,
     windowRecordingHealthy,
-    workdayTimerPausedByUser,
     collectionPausedByUser,
     liveForeground,
-    getWorkdayPausedMs,
   } = useGanshaleData()
   const clockMs = useDashboardClockMs()
   const clockLive = useDashboardClockLive()
@@ -122,11 +121,6 @@ export function DailyDashboard() {
     [windowEvents],
   )
 
-  const windowEventsTodayNet = useMemo(
-    () => excludeGanshaleSelfWindowEvents(windowEventsToday),
-    [windowEventsToday],
-  )
-
   const rowsMonitored = useMemo(() => {
     if (!patterns.length) return windowEventsNet
     return windowEventsNet.filter((ev) =>
@@ -134,7 +128,8 @@ export function DailyDashboard() {
     )
   }, [windowEventsNet, patterns])
 
-  const officeTotalExtrapolate = isSelectedToday
+  const officeTotalExtrapolate = isSelectedToday && !windowTrackingPaused
+  const officeTimerLive = clockLive && isSelectedToday && !windowTrackingPaused
 
   const timeline = useMemo(
     () =>
@@ -151,19 +146,6 @@ export function DailyDashboard() {
   )
   const timelineWorkday = useMemo(() => workdayTimelineFromSegments(timeline), [timeline])
 
-  useEffect(() => {
-    if (!clockLive) return
-    persistLiveTodayFrozenSec(
-      officeElapsedForDay(new Date(), windowEventsTodayNet, {
-        patterns,
-        live: liveForeground,
-        nowMs: clockMs,
-        extrapolateLive: true,
-        pausedMsToday: getWorkdayPausedMs(clockMs),
-      }),
-    )
-  }, [clockMs, clockLive, windowEventsTodayNet, patterns, liveForeground, getWorkdayPausedMs])
-
   const sessionElapsedSec = useMemo(
     () =>
       officeElapsedForDay(day, windowEventsNet, {
@@ -171,24 +153,25 @@ export function DailyDashboard() {
         live: liveForeground,
         nowMs: clockMs,
         extrapolateLive: officeTotalExtrapolate,
-        pausedMsToday: officeTotalExtrapolate ? getWorkdayPausedMs(clockMs) : 0,
       }),
-    [
-      day,
-      windowEventsNet,
-      patterns,
-      clockMs,
-      liveForeground,
-      officeTotalExtrapolate,
-      getWorkdayPausedMs,
-    ],
+    [day, windowEventsNet, patterns, clockMs, liveForeground, officeTotalExtrapolate],
+  )
+
+  const displayElapsedSec = useMonotonicOfficeSec(
+    sessionElapsedSec,
+    isSelectedToday && clockLive,
   )
 
   useEffect(() => {
-    if (!ready || !isSelectedToday || !clockLive) return
+    if (!officeTimerLive) return
+    persistLiveTodayFrozenSec(displayElapsedSec)
+  }, [clockMs, officeTimerLive, displayElapsedSec])
+
+  useEffect(() => {
+    if (!ready || !isSelectedToday || !clockLive || windowTrackingPaused) return
     const id = window.setInterval(() => void refresh(), 2500)
     return () => clearInterval(id)
-  }, [ready, isSelectedToday, clockLive, refresh])
+  }, [ready, isSelectedToday, clockLive, windowTrackingPaused, refresh])
 
   const allRows = useMemo(
     () => [...windowEventsNet].sort((a, b) => parseIso(b.timestamp) - parseIso(a.timestamp)),
@@ -242,7 +225,6 @@ export function DailyDashboard() {
                   day={day}
                   windowTrackingActive={windowTrackingActive}
                   windowTrackingSupported={windowTrackingSupported}
-                  workdayTimerPausedByUser={workdayTimerPausedByUser}
                   windowRecordingHealthy={windowRecordingHealthy}
                 />
               }
@@ -257,8 +239,8 @@ export function DailyDashboard() {
             ].join(' ')}
           >
             <OfficeDurationHmsDisplay
-              totalSec={sessionElapsedSec}
-              live={clockLive && isSelectedToday}
+              totalSec={displayElapsedSec}
+              live={officeTimerLive}
             />
           </div>
           {selectedDayKind === 'today' ? (
@@ -280,7 +262,7 @@ export function DailyDashboard() {
       <WorkdayTimeline
         ready={ready}
         patternsCount={patterns.length}
-        liveSync={clockLive && isSelectedToday}
+        liveSync={officeTimerLive}
         timeline={timeline}
         timelineWorkday={timelineWorkday}
       />

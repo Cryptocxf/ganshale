@@ -39,6 +39,7 @@ import {
   normalizeDailyReportTitleDate,
 } from '../lib/dailyReportGeneration'
 import { appendDailyReportHistory } from '../lib/dailyReportHistoryStore'
+import { syncReportToObsidian } from '../lib/obsidianReportExport'
 import { LOCAL_MIDNIGHT_EVENT } from '../lib/localMidnight'
 import { buildWorkRecordBlock, loadWorkRecords } from '../lib/workRecordStore'
 import { loadDailyReportGenerationPrompt } from '../lib/llmUserConfig'
@@ -249,6 +250,11 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
         const normalized = normalizeDailyReportTitleDate(body, day)
         if (opts?.saveToHistory) {
           appendDailyReportHistory(day, normalized)
+          void syncReportToObsidian('daily', day, normalized).then((res) => {
+            if (!res.ok && !res.skipped) {
+              console.warn('[ganshale] Obsidian 日报导出失败:', res.error)
+            }
+          })
         }
         if (normalized !== body && assistantId) {
           setMessages((prev) => {

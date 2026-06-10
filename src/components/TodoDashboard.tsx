@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTodoClockMs, useTodos } from '../hooks/useTodos'
 import { computeTodoViewStats, type TodoViewTab } from '../lib/todoView'
 import { TodoCreateModal } from './todo/TodoCreateModal'
+import { TodoHistoryModal } from './todo/TodoHistoryModal'
 import { TodoPageHeader } from './todo/TodoPageHeader'
 import { TodoStatsPanel } from './todo/TodoStatsPanel'
 import { TodoTaskGroupList } from './todo/TodoTaskGroupList'
@@ -12,6 +13,7 @@ export function TodoDashboard() {
   const nowMs = useTodoClockMs()
   const [tab, setTab] = useState<TodoViewTab>('today')
   const [createOpen, setCreateOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const stats = useMemo(
     () => computeTodoViewStats(items, tab, nowMs),
@@ -21,7 +23,10 @@ export function TodoDashboard() {
   return (
     <div className="todo-page flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--todo-page-bg)]">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-        <TodoPageHeader onNew={() => setCreateOpen(true)} />
+        <TodoPageHeader
+          onNew={() => setCreateOpen(true)}
+          onHistory={() => setHistoryOpen(true)}
+        />
 
         <div className="mt-4">
           <TodoViewTabs tab={tab} onChange={setTab} />
@@ -37,6 +42,11 @@ export function TodoDashboard() {
       </div>
 
       <TodoCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <TodoHistoryModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        items={items}
+      />
     </div>
   )
 }

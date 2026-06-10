@@ -15,7 +15,6 @@ import {
 } from '../lib/appCategoryChartItems'
 import { isUncategorizedCategoryId, UNCATEGORIZED_BAR } from '../lib/categoryBarColors'
 import { currentForegroundSegmentLive } from '../lib/aggregations'
-import { useGanshaleData } from '../context/useGanshaleData'
 import { barHeightPct, buildYTickHours, ceilYMaxHours, yTickBottomPct } from '../lib/weeklyDayBarChart'
 import { formatBarDurationZh, officeSecondsForLocalDay } from '../lib/weeklyWorktime'
 import {
@@ -95,7 +94,6 @@ export function WeeklyDailyDurationDistribution({
   ready: boolean
 }) {
   const weekKind = compareLocalCalendarWeek(weekStart)
-  const { getWorkdayPausedMs } = useGanshaleData()
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
   const categoryRev = useAppCategoryConfigRevision()
   const [categories, setCategories] = useState<AppCategoryDef[]>(() => loadAppCategoryConfig())
@@ -155,9 +153,6 @@ export function WeeklyDailyDurationDistribution({
         live,
         now,
         extrapolateToday && isSameLocalCalendarDay(day, now),
-        extrapolateToday && isSameLocalCalendarDay(day, now)
-          ? getWorkdayPausedMs(now.getTime())
-          : 0,
       )
 
       return {
@@ -170,7 +165,7 @@ export function WeeklyDailyDurationDistribution({
         categories: detailCategories,
       }
     })
-  }, [weekStart, eventsForUi, categories, patterns, live, extrapolateToday, getWorkdayPausedMs])
+  }, [weekStart, eventsForUi, categories, patterns, live, extrapolateToday])
 
   const categoryLegendTemplate = useMemo(
     () => buildCategoryLegendTemplate(categories),

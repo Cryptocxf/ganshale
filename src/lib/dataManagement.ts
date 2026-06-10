@@ -14,7 +14,6 @@ import {
 import { DAILY_REPORT_HISTORY_CHANGED_EVENT } from './dailyReportHistoryStore'
 import { invalidateMonthlyWindowEventsCache } from './monthlyWorktime'
 import { MONTHLY_REPORT_HISTORY_CHANGED_EVENT } from './monthlyReportHistoryStore'
-import { clearWorkdayTimerPause } from './workdayTimerPause'
 import { WEEKLY_REPORT_HISTORY_CHANGED_EVENT } from './weeklyReportHistoryStore'
 import * as store from './idbStore'
 import { BUCKET_AFK, BUCKET_WEB, BUCKET_WINDOW } from './seed'
@@ -76,7 +75,6 @@ function clearFrozenTimerStorage(filter: DataClearFilter): void {
 }
 
 function clearSessionTimerState(): void {
-  clearWorkdayTimerPause()
   clearWorkdayClockOutPersist()
 }
 

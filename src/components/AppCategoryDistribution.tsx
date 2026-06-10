@@ -565,7 +565,7 @@ export function AppCategoryDistribution({
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [chartHoverId, setChartHoverId] = useState<string | null>(null)
   const [liveTick, setLiveTick] = useState(0)
-  const { liveForeground } = useGanshaleData()
+  const { liveForeground, windowTrackingPaused } = useGanshaleData()
   const clockMs = useDashboardClockMs()
   const weekMode = weekStartMonday != null
   const selectedDayKind = useMemo(
@@ -577,16 +577,15 @@ export function AppCategoryDistribution({
   )
   const isFutureDay = weekMode ? selectedDayKind === 'future' : selectedDayKind === 'future'
 
-  const { workdayTimerPausedByUser } = useGanshaleData()
   useEffect(() => {
-    if (workdayTimerPausedByUser) return
     const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
     return () => window.clearInterval(id)
-  }, [workdayTimerPausedByUser])
+  }, [])
 
   const eventsForAgg = useMemo(() => {
     void liveTick
     const today = isSameLocalCalendarDay(day, new Date())
+    if (windowTrackingPaused) return events
     if (!today) return events
     const { event, seconds } = currentForegroundSegmentLive(
       events,
@@ -596,7 +595,7 @@ export function AppCategoryDistribution({
     )
     if (!event) return events
     return events.map((ev) => (ev.id === event.id ? { ...ev, duration: seconds } : ev))
-  }, [day, events, liveForeground, clockMs, liveTick])
+  }, [day, events, liveForeground, windowTrackingPaused, clockMs, liveTick])
 
   const { buckets } = useMemo(
     () =>

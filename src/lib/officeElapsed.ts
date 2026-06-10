@@ -1,7 +1,6 @@
 import type { AwEvent } from './awTypes'
 import type { LiveForegroundSample } from './liveForeground'
 import { sumMonitoredWindowSecondsForDayLive } from './monitoredWorktime'
-import { officeSecondsAfterPause } from './workdayTimerPause'
 import { compareLocalCalendarDay, daysInLocalWeek, isSameLocalCalendarDay } from './timeutil'
 import { windowEventsForLocalDay } from './weeklyWorktime'
 
@@ -12,13 +11,6 @@ export type OfficeElapsedContext = {
   nowMs: number
   /** 所选为今天且为当前月/周视图时，是否 live 外推 */
   extrapolateLive?: boolean
-  /** 今日累计暂停毫秒（仅今日生效） */
-  pausedMsToday?: number
-}
-
-function pausedMsForDay(day: Date, ctx: OfficeElapsedContext): number {
-  if (!ctx.extrapolateLive) return 0
-  return isSameLocalCalendarDay(day, new Date(ctx.nowMs)) ? (ctx.pausedMsToday ?? 0) : 0
 }
 
 /** 单日办公时长（与每日页「今日办公总时长」同源） */
@@ -28,7 +20,7 @@ export function officeElapsedForDay(
   ctx: OfficeElapsedContext,
 ): number {
   const extrapolate = Boolean(ctx.extrapolateLive && isSameLocalCalendarDay(day, new Date(ctx.nowMs)))
-  const raw = sumMonitoredWindowSecondsForDayLive(
+  return sumMonitoredWindowSecondsForDayLive(
     day,
     windowEventsForLocalDay(events, day),
     ctx.patterns,
@@ -36,8 +28,6 @@ export function officeElapsedForDay(
     ctx.nowMs,
     extrapolate,
   )
-  const pausedMs = pausedMsForDay(day, ctx)
-  return pausedMs > 0 ? officeSecondsAfterPause(raw, pausedMs) : raw
 }
 
 function sumOfficeElapsedForDays(

@@ -46,10 +46,11 @@ const APP_IDENTITY_ALIASES: Record<string, { displayName: string; identityKey: s
   baidunetdiskunite: { displayName: '百度网盘', identityKey: 'baidunetdisk' },
   'chuanyun-view': { displayName: '移动云电脑', identityKey: 'chuanyun' },
   openclaw: { displayName: 'OpenClaw', identityKey: 'openclaw' },
-  moa: { displayName: 'MOA', identityKey: 'moa' },
+  moa: { displayName: '移动办公', identityKey: 'moa' },
   emobile: { displayName: '移动办公', identityKey: 'emobile' },
   mobileoffice: { displayName: '移动办公', identityKey: 'emobile' },
   claude: { displayName: 'Claude', identityKey: 'claude' },
+  sdpclient: { displayName: 'SDP', identityKey: 'sdpclient' },
 }
 
 function isGanshaleAppIdentity(exe: string, title: string, appPath: string): boolean {
@@ -61,10 +62,10 @@ function isGanshaleAppIdentity(exe: string, title: string, appPath: string): boo
 
 /** 窗口标题 / 路径中的扩展名（优先于进程名） */
 const DOC_EXT: Record<DocTypeIdentityKey, RegExp> = {
-  pdf: /\.pdf(\s|$| -|\)|\]|\[|，|,)/i,
-  ppt: /\.pptx?(\s|$| -|\)|\]|\[|，|,)/i,
-  excel: /\.(xlsx?|xls)(\s|$| -|\)|\]|\[|，|,)/i,
-  word: /\.(docx?|doc)(\s|$| -|\)|\]|\[|，|,)/i,
+  pdf: /\.pdf(\s|$| -|—|\)|\]|\[|，|,)/i,
+  ppt: /\.pptx?(\s|$| -|—|\)|\]|\[|，|,)/i,
+  excel: /\.(xlsx?|xls)(\s|$| -|—|\)|\]|\[|，|,)/i,
+  word: /\.(docx?|doc)(\s|$| -|—|\)|\]|\[|，|,)/i,
 }
 
 function haystack(title: string, appPath: string): string {
@@ -75,6 +76,16 @@ function detectDocKind(h: string): DocTypeIdentityKey | null {
   for (const kind of DOC_TYPE_IDENTITY_KEYS) {
     if (DOC_EXT[kind].test(h)) return kind
   }
+  return null
+}
+
+/** WPS 窗口标题格式更宽松：匹配 WPS 标签页中的文档类型标识 */
+function detectDocKindWps(h: string): DocTypeIdentityKey | null {
+  // WPS 标题常见格式："文件名.docx - WPS Office" 或 "WPS 文字/PDF/表格/演示"
+  if (/wps\s*(文字|word)/i.test(h) || /\.doc/i.test(h)) return 'word'
+  if (/wps\s*(表格|excel)/i.test(h) || /\.xls/i.test(h)) return 'excel'
+  if (/wps\s*(演示|ppt|presentation)/i.test(h) || /\.ppt/i.test(h)) return 'ppt'
+  if (/wps\s*(pdf)/i.test(h) || /\.pdf/i.test(h)) return 'pdf'
   return null
 }
 
@@ -117,11 +128,19 @@ export function resolveWindowAppIdentity(
   if (exe === 'acrobat' || exe === 'acrord32') return identityForDocKind('pdf', processApp)
 
   if (exe === 'wps' || h.includes('/office6/wps') || h.includes('kingsoft/wps')) {
+    // WPS 打开文档时，优先按标题/路径推送的文档类型显示，
+    // 避免额外多出一条"WPS"记录。
+    const docFromWpsTitle = detectDocKindWps(h)
+    if (docFromWpsTitle) return identityForDocKind(docFromWpsTitle, processApp)
     return { displayName: 'WPS', identityKey: 'wps', processApp }
   }
 
   if (exe === 'code' || exe === 'code-insiders' || exe === 'code - insiders') {
     return { displayName: 'VS Code', identityKey: 'vscode', processApp }
+  }
+
+  if (exe.startsWith('trae')) {
+    return { displayName: 'Trae', identityKey: 'trae', processApp }
   }
 
   if (isGanshaleAppIdentity(exe, String(title ?? ''), String(appPath ?? ''))) {

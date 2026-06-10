@@ -20,14 +20,6 @@ import {
 } from '../lib/clientSessionClock'
 import { APP_DATA_CHANGED_EVENT, notifyAppDataChanged } from '../lib/dataManagement'
 import {
-  clearWorkdayTimerPause,
-  hasTodayWorkdayTimerPaused,
-  persistWorkdayTimerPause,
-  readTodayWorkdayPauseStartMs,
-  totalWorkdayPausedMs,
-  type WorkdayPauseInterval,
-} from '../lib/workdayTimerPause'
-import {
   applyLocalMidnightRollover,
   createLocalMidnightWatcher,
 } from '../lib/localMidnight'
@@ -83,18 +75,9 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const [liveForeground, setLiveForeground] = useState<LiveForegroundSample | null>(null)
   const [windowTrackingActive, setWindowTrackingActive] = useState(false)
   const [windowTrackingSupported, setWindowTrackingSupported] = useState(false)
+  const [windowTrackingPaused, setWindowTrackingPaused] = useState(false)
   const [recordingHealthTick, setRecordingHealthTick] = useState(0)
   const [collectionPausedByUser, setCollectionPausedByUser] = useState(false)
-  const [workdayTimerPausedByUser, setWorkdayTimerPausedByUser] = useState(
-    hasTodayWorkdayTimerPaused,
-  )
-  const [timerPausedAtMs, setTimerPausedAtMs] = useState<number | null>(() =>
-    hasTodayWorkdayTimerPaused() ? Date.now() : null,
-  )
-  const [workdayPauseIntervals, setWorkdayPauseIntervals] = useState<WorkdayPauseInterval[]>(
-    () => [],
-  )
-  const workdayPauseStartMsRef = useRef<number | null>(readTodayWorkdayPauseStartMs())
   const lastLocalYmdRef = useRef(toYmdLocal(new Date()))
   const lastIndexedRefreshRef = useRef(0)
   const lastCountableForegroundRef = useRef<LiveForegroundSample | null>(null)
@@ -102,26 +85,15 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const splitNextCountableHeartbeatRef = useRef(false)
   const dayRef = useRef(day)
   dayRef.current = day
-  const workdayTimerPausedRef = useRef(workdayTimerPausedByUser)
-  workdayTimerPausedRef.current = workdayTimerPausedByUser
   const lastRecoveryAtRef = useRef(0)
   const lastForegroundIdentityKeyRef = useRef<string | null>(null)
+  const screenLockedRef = useRef(false)
 
   const windowRecordingHealthy = useMemo(() => {
     void recordingHealthTick
-    if (!windowTrackingActive || workdayTimerPausedByUser) return true
+    if (!windowTrackingActive) return true
     return !isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)
-  }, [windowTrackingActive, workdayTimerPausedByUser, recordingHealthTick])
-
-  const getWorkdayPausedMs = useCallback(
-    (_nowMs: number) =>
-      totalWorkdayPausedMs(workdayPauseIntervals, {
-        activeStartMs: workdayTimerPausedByUser ? workdayPauseStartMsRef.current : null,
-        activeEndMs:
-          workdayTimerPausedByUser && timerPausedAtMs != null ? timerPausedAtMs : null,
-      }),
-    [workdayPauseIntervals, workdayTimerPausedByUser, timerPausedAtMs],
-  )
+  }, [windowTrackingActive, recordingHealthTick])
 
   const load = useCallback(async () => {
     const start = startOfLocalDay(day).toISOString()
@@ -149,6 +121,9 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     setEventCount(n)
     setDaysWithTimingData(timingDays)
   }, [day])
+
+  const loadRef = useRef(load)
+  loadRef.current = load
 
   const initialHydrateRef = useRef(false)
 
@@ -221,6 +196,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     if (!d?.startWindowTracking || !ready) return
 
     let unsubscribe: () => void = () => {}
+    let unsubLock: () => void = () => {}
     let cancelled = false
 
     void (async () => {
@@ -240,10 +216,11 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           return
         }
         setWindowTrackingActive(true)
+        setWindowTrackingPaused(false)
         markHeartbeatSuccess()
         markTrackingPollSuccess()
         lastIndexedRefreshRef.current = Date.now()
-        await load()
+        await loadRef.current()
 
         const flushCountableForeground = async (sample: LiveForegroundSample) => {
           await heartbeatWindow(BUCKET_WINDOW, {
@@ -252,11 +229,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
             ...(sample.appPath ? { appPath: sample.appPath } : {}),
           })
           splitNextCountableHeartbeatRef.current = true
-          const now = Date.now()
-          if (now - lastIndexedRefreshRef.current >= 800) {
-            lastIndexedRefreshRef.current = now
-            await load()
-          }
+          lastIndexedRefreshRef.current = Date.now()
+          await loadRef.current()
         }
 
         const writeCountableHeartbeat = (sample: LiveForegroundSample, forceNew: boolean) => {
@@ -272,15 +246,16 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
             const now = Date.now()
             if (now - lastIndexedRefreshRef.current >= 2000) {
               lastIndexedRefreshRef.current = now
-              void load()
+              void loadRef.current()
             }
           })
         }
 
         unsubscribe =
           d.onForegroundWindow?.((payload) => {
-            if (cancelled || workdayTimerPausedRef.current) return
+            if (cancelled) return
             markTrackingPollSuccess()
+            if (screenLockedRef.current) return
 
             if (!payload) {
               const prev = lastCountableForegroundRef.current
@@ -304,6 +279,12 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
             const identityKey = identityFromLiveForeground(payload).identityKey
             const identityChanged = identityKey !== lastForegroundIdentityKeyRef.current
+            const prevCountable = lastCountableForegroundRef.current
+
+            if (identityChanged && prevCountable) {
+              void flushCountableForeground(prevCountable)
+            }
+
             lastForegroundIdentityKeyRef.current = identityKey
             lastCountableForegroundRef.current = payload
             setLiveForeground(payload)
@@ -314,6 +295,29 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
               writeCountableHeartbeat(payload, forceNew)
             }
           }) ?? (() => {})
+
+        // 监听屏幕锁屏：锁屏时 flush 当前前台段并暂停心跳；解锁时恢复。
+        unsubLock = d.onScreenLockChange?.((locked) => {
+          if (cancelled) return
+          screenLockedRef.current = locked
+          setWindowTrackingPaused(locked)
+          if (locked) {
+            // 锁屏：flush 当前前台段，清空状态
+            const prev = lastCountableForegroundRef.current
+            lastCountableForegroundRef.current = null
+            lastForegroundIdentityKeyRef.current = null
+            setLiveForeground(null)
+            if (prev) void flushCountableForeground(prev)
+            // 重置健康检测，防止看门狗误触发
+            markHeartbeatSuccess()
+            markTrackingPollSuccess()
+          } else {
+            // 解锁：恢复健康状态，心跳 tick 会自动恢复写入
+            markHeartbeatSuccess()
+            markTrackingPollSuccess()
+            lastRecoveryAtRef.current = Date.now()
+          }
+        }) ?? (() => {})
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))
@@ -323,7 +327,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     })()
 
     const heartbeatTick = window.setInterval(() => {
-      if (cancelled || workdayTimerPausedRef.current) return
+      if (cancelled) return
+      if (screenLockedRef.current) return
       const sample = lastCountableForegroundRef.current
       if (!sample) return
       void heartbeatWindow(BUCKET_WINDOW, {
@@ -334,13 +339,14 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
         const now = Date.now()
         if (now - lastIndexedRefreshRef.current >= 2000) {
           lastIndexedRefreshRef.current = now
-          void load()
+          void loadRef.current()
         }
       })
     }, 5000)
 
     const watchdog = window.setInterval(() => {
-      if (cancelled || workdayTimerPausedRef.current) return
+      if (cancelled) return
+      if (screenLockedRef.current) return
       setRecordingHealthTick((t) => t + 1)
       if (!isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)) return
       const now = Date.now()
@@ -370,15 +376,17 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       clearInterval(heartbeatTick)
       clearInterval(watchdog)
       unsubscribe()
+      unsubLock()
       lastCountableForegroundRef.current = null
       lastForegroundIdentityKeyRef.current = null
       splitNextCountableHeartbeatRef.current = false
       resetHeartbeatHealth()
       void d.stopWindowTracking?.()
       setWindowTrackingActive(false)
+      setWindowTrackingPaused(false)
       setLiveForeground(null)
     }
-  }, [ready, load])
+  }, [ready])
 
   useEffect(() => {
     return createLocalMidnightWatcher((detail) => {
@@ -386,11 +394,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       const wasViewingToday = toYmdLocal(dayRef.current) === detail.prevYmd
       applyLocalMidnightRollover(detail)
       setCollectionPausedByUser(false)
-      setWorkdayTimerPausedByUser(false)
-      setTimerPausedAtMs(null)
-      setWorkdayPauseIntervals([])
-      workdayPauseStartMsRef.current = null
-      clearWorkdayTimerPause()
       splitNextCountableHeartbeatRef.current = true
       if (wasViewingToday) {
         setDay(startOfLocalDay(new Date()))
@@ -402,11 +405,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onDataChanged = () => {
       invalidateMonthlyWindowEventsCache()
-      setWorkdayTimerPausedByUser(false)
-      setTimerPausedAtMs(null)
-      setWorkdayPauseIntervals([])
-      workdayPauseStartMsRef.current = null
-      clearWorkdayTimerPause()
       clearWorkdayClockOutPersist()
       splitNextCountableHeartbeatRef.current = true
       void load()
@@ -425,41 +423,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     setCollectionPausedByUser(false)
   }, [])
 
-  const toggleWorkdayTimerPause = useCallback(() => {
-    const at = Date.now()
-    if (workdayTimerPausedRef.current) {
-      if (workdayPauseStartMsRef.current != null) {
-        setWorkdayPauseIntervals((prev) => [
-          ...prev,
-          { startMs: workdayPauseStartMsRef.current!, endMs: at },
-        ])
-      }
-      workdayPauseStartMsRef.current = null
-      setWorkdayTimerPausedByUser(false)
-      setTimerPausedAtMs(null)
-      clearWorkdayTimerPause()
-      splitNextCountableHeartbeatRef.current = true
-      void load()
-      return
-    }
-
-    workdayPauseStartMsRef.current = at
-    setWorkdayTimerPausedByUser(true)
-    setTimerPausedAtMs(at)
-    persistWorkdayTimerPause(at)
-    splitNextCountableHeartbeatRef.current = true
-    const sample = lastCountableForegroundRef.current
-    if (sample) {
-      void heartbeatWindow(BUCKET_WINDOW, {
-        app: sample.app,
-        title: sample.title,
-        ...(sample.appPath ? { appPath: sample.appPath } : {}),
-      }).then(() => load())
-    }
-  }, [load])
-
   const refresh = useCallback(async () => {
-    invalidateMonthlyWindowEventsCache()
     await load()
   }, [load])
 
@@ -541,14 +505,11 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       liveForeground,
       windowTrackingActive,
       windowTrackingSupported,
+      windowTrackingPaused,
       windowRecordingHealthy,
       collectionPausedByUser,
       clockOutCollection,
       resumeCollection,
-      workdayTimerPausedByUser,
-      timerPausedAtMs,
-      getWorkdayPausedMs,
-      toggleWorkdayTimerPause,
       daysWithTimingData,
     }),
     [
@@ -571,14 +532,11 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       liveForeground,
       windowTrackingActive,
       windowTrackingSupported,
+      windowTrackingPaused,
       windowRecordingHealthy,
       collectionPausedByUser,
       clockOutCollection,
       resumeCollection,
-      workdayTimerPausedByUser,
-      timerPausedAtMs,
-      getWorkdayPausedMs,
-      toggleWorkdayTimerPause,
       daysWithTimingData,
     ],
   )

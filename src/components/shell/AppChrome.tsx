@@ -8,7 +8,6 @@ import {
   Settings2,
 } from 'lucide-react'
 import { DailyDatePicker } from '../DailyDatePicker'
-import { WorkdayTimerToggle } from '../WorkdayTimerToggle'
 import { DailyReportHeaderActions } from '../DailyReportHeaderActions'
 import { MonthlyDatePicker } from '../MonthlyDatePicker'
 import { MonthlyReportHeaderActions } from '../MonthlyReportHeaderActions'
@@ -28,6 +27,7 @@ import {
   APP_CHROME_INSET_X_COMPACT,
   DAILY_CHROME_HEADER_TOOLBAR_MIN_H_CLASS,
 } from '../dashboardLayout'
+import { prefetchMonthlyWindowEvents } from '../../lib/monthlyWorktime'
 import type { NavKey } from '../../data/mock'
 
 const nav: { key: NavKey; label: string; icon: typeof Calendar }[] = [
@@ -115,6 +115,12 @@ export function AppChrome({
                       key={key}
                       type="button"
                       onClick={() => onNavigate(key)}
+                      onMouseEnter={
+                        key === 'monthly' ? () => prefetchMonthlyWindowEvents() : undefined
+                      }
+                      onFocus={
+                        key === 'monthly' ? () => prefetchMonthlyWindowEvents() : undefined
+                      }
                       className={[
                         'gs-nav-pill text-ganshale-muted',
                         on ? 'gs-nav-pill--active' : '',
@@ -134,7 +140,6 @@ export function AppChrome({
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 md:shrink-0">
               {active === 'daily' ? (
                 <>
-                  <WorkdayTimerToggle day={day} />
                   <DailyDatePicker
                     day={day}
                     daysWithTimingData={daysWithTimingData}

@@ -1,26 +1,16 @@
 import { Plus, X } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 import { fromDatetimeLocalValue } from '../../lib/todoCountdown'
-import {
-  priorityLevelFromBand,
-  TODO_TAG_OPTIONS,
-  type TodoPriorityBand,
-  type TodoTagId,
-} from '../../lib/todoTags'
-import { addTodo } from '../../lib/todoStore'
+import { TODO_TAG_OPTIONS, type TodoTagId } from '../../lib/todoTags'
+import { addTodo, type TodoPriorityLevel } from '../../lib/todoStore'
 import { toYmdLocal } from '../../lib/timeutil'
 import { GS_FIELD_INPUT_MD_CLASS, GS_MODAL_HEADER_DIVIDER_CLASS } from '../dashboardLayout'
 import { DashboardModalRoot } from '../DashboardModalRoot'
-
-const PRIORITY_OPTIONS: { id: TodoPriorityBand; label: string }[] = [
-  { id: 'high', label: '高' },
-  { id: 'medium', label: '中' },
-  { id: 'low', label: '低' },
-]
+import { TodoStarRating } from './TodoStarRating'
 
 export function TodoCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [title, setTitle] = useState('')
-  const [priority, setPriority] = useState<TodoPriorityBand>('medium')
+  const [priority, setPriority] = useState<TodoPriorityLevel>(3)
   const [tags, setTags] = useState<TodoTagId[]>(['work'])
   const [customTagInput, setCustomTagInput] = useState('')
   const [deadlineLocal, setDeadlineLocal] = useState('')
@@ -28,7 +18,7 @@ export function TodoCreateModal({ open, onClose }: { open: boolean; onClose: () 
 
   const reset = () => {
     setTitle('')
-    setPriority('medium')
+    setPriority(3)
     setTags(['work'])
     setCustomTagInput('')
     setDeadlineLocal('')
@@ -68,7 +58,7 @@ export function TodoCreateModal({ open, onClose }: { open: boolean; onClose: () 
       scheduledDate: toYmdLocal(new Date()),
       deadlineAt,
       reminderAt,
-      priority: priorityLevelFromBand(priority),
+      priority,
       tags,
     })
     handleClose()
@@ -110,26 +100,12 @@ export function TodoCreateModal({ open, onClose }: { open: boolean; onClose: () 
           />
         </label>
 
-        <fieldset>
-          <legend className="text-[11px] font-medium text-ganshale-muted">优先级</legend>
-          <div className="mt-2 flex gap-2">
-            {PRIORITY_OPTIONS.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setPriority(o.id)}
-                className={[
-                  'flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition',
-                  priority === o.id
-                    ? 'border-ganshale-text bg-ganshale-text text-white'
-                    : 'border-ganshale-border bg-ganshale-surface text-ganshale-text hover:bg-ganshale-elevated',
-                ].join(' ')}
-              >
-                {o.label}
-              </button>
-            ))}
+        <div>
+          <p className="text-[11px] font-medium text-ganshale-muted">优先级</p>
+          <div className="mt-2">
+            <TodoStarRating value={priority} onChange={setPriority} size="lg" emphasized />
           </div>
-        </fieldset>
+        </div>
 
         <fieldset>
           <legend className="text-[11px] font-medium text-ganshale-muted">标签</legend>
@@ -159,9 +135,12 @@ export function TodoCreateModal({ open, onClose }: { open: boolean; onClose: () 
                   key={tag}
                   type="button"
                   onClick={() => toggleTag(tag)}
-                  className="rounded-[10px] border border-ganshale-text bg-ganshale-elevated px-2.5 py-1 text-[11px] font-medium text-ganshale-text"
+                  className={[
+                    'rounded-[10px] border px-2.5 py-1 text-[11px] font-medium transition',
+                    'border-ganshale-text bg-ganshale-elevated text-ganshale-text',
+                  ].join(' ')}
                 >
-                  {tag} ×
+                  {tag}
                 </button>
               ))}
           </div>

@@ -16,6 +16,7 @@ import {
   saveWorkRecordSettings,
 } from '../lib/workRecordSettings'
 import { WorkRecordGeneralSettings } from './WorkRecordGeneralSettings'
+import { ObsidianReportSettings } from './ObsidianReportSettings'
 import {
   SETTINGS_FIELD_LABEL_CLASS,
   SETTINGS_PAGE_TITLE_CLASS,
@@ -281,6 +282,8 @@ export function TimeSettings() {
             在每月选定日期的整点，为本月自动生成月报（31 日在短月取当月最后一天）
           </p>
         </AutoReportScheduleRow>
+
+        <ObsidianReportSettings />
 
         <div className="border-t border-ganshale-border pt-4">
           <button

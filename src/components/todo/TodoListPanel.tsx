@@ -1,69 +1,23 @@
-import { ArrowDown, ArrowUp, CheckCircle2, Circle, ListTodo, Trash2 } from 'lucide-react'
+import { CheckCircle2, Circle, ListTodo, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { formatDeadlineLabel } from '../../lib/todoCountdown'
 import { isTodoInPeriod, type TodoPeriod } from '../../lib/todoCalendar'
 import { DASHBOARD_SECTION_DESCRIPTIONS } from '../../lib/dashboardSectionDescriptions'
 import { deleteTodo, setTodoCompleted, type TodoItem } from '../../lib/todoStore'
+import {
+  nextTodoSortState,
+  sortTodoItems,
+  type TodoSortDirection,
+  type TodoSortField,
+} from '../../lib/todoSort'
 import { DashboardSectionTitle } from '../DashboardSectionTitle'
 import {
   DASHBOARD_CARD_INSET_X,
   DASHBOARD_CARD_INSET_TOP,
 } from '../dashboardLayout'
+import { TodoSortHeader } from './TodoSortHeader'
 import { TodoStarsReadonly } from './TodoStarRating'
 import { TodoPeriodSwitcher } from './TodoPeriodSwitcher'
-
-type SortField = 'time' | 'priority'
-type SortDirection = 'asc' | 'desc'
-
-function sortTimeMs(item: TodoItem): number {
-  if (item.deadlineAt) {
-    const t = Date.parse(item.deadlineAt)
-    if (!Number.isNaN(t)) return t
-  }
-  const d = Date.parse(`${item.scheduledDate}T23:59:59`)
-  return Number.isNaN(d) ? 0 : d
-}
-
-function SortHeader({
-  label,
-  field,
-  sortField,
-  sortDirection,
-  onToggle,
-}: {
-  label: string
-  field: SortField
-  sortField: SortField
-  sortDirection: SortDirection
-  onToggle: (field: SortField) => void
-}) {
-  const active = sortField === field
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(field)}
-      className="inline-flex w-full items-center justify-center gap-0.5 text-ganshale-subtle transition hover:text-ganshale-text"
-    >
-      <span>{label}</span>
-      <span className="inline-flex flex-col leading-none" aria-hidden>
-        <ArrowUp
-          className={[
-            'h-2.5 w-2.5',
-            active && sortDirection === 'asc' ? 'text-ganshale-text' : 'text-ganshale-muted/35',
-          ].join(' ')}
-          strokeWidth={2.5}
-        />
-        <ArrowDown
-          className={[
-            '-mt-0.5 h-2.5 w-2.5',
-            active && sortDirection === 'desc' ? 'text-ganshale-text' : 'text-ganshale-muted/35',
-          ].join(' ')}
-          strokeWidth={2.5}
-        />
-      </span>
-    </button>
-  )
-}
 
 export function TodoListPanel({
   items,
@@ -76,31 +30,18 @@ export function TodoListPanel({
   onPeriodChange: (p: TodoPeriod) => void
   nowMs: number
 }) {
-  const [sortField, setSortField] = useState<SortField>('time')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [sortField, setSortField] = useState<TodoSortField>('time')
+  const [sortDirection, setSortDirection] = useState<TodoSortDirection>('asc')
 
-  const onSortToggle = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortField(field)
-      setSortDirection(field === 'priority' ? 'desc' : 'asc')
-    }
+  const onSortToggle = (field: TodoSortField) => {
+    const next = nextTodoSortState(field, sortField, sortDirection)
+    setSortField(next.field)
+    setSortDirection(next.direction)
   }
 
   const sorted = useMemo(() => {
     const visible = items.filter((t) => isTodoInPeriod(t, period, new Date(nowMs)))
-    const dir = sortDirection === 'asc' ? 1 : -1
-    return [...visible].sort((a, b) => {
-      if (sortField === 'priority') {
-        if (a.priority !== b.priority) return (a.priority - b.priority) * dir
-        return sortTimeMs(a) - sortTimeMs(b)
-      }
-      const ta = sortTimeMs(a)
-      const tb = sortTimeMs(b)
-      if (ta !== tb) return (ta - tb) * dir
-      return b.priority - a.priority
-    })
+    return sortTodoItems(visible, sortField, sortDirection, 'deadline')
   }, [items, period, nowMs, sortField, sortDirection])
 
   return (
@@ -130,21 +71,23 @@ export function TodoListPanel({
               <th className="w-10 px-2 py-2 text-center">序号</th>
               <th className="min-w-[10rem] px-2 py-2">内容</th>
               <th className="w-[7.5rem] px-2 py-2 text-center">
-                <SortHeader
+                <TodoSortHeader
                   label="时间"
                   field="time"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onToggle={onSortToggle}
+                  className="w-full justify-center"
                 />
               </th>
               <th className="w-[5.5rem] px-2 py-2 text-center">
-                <SortHeader
+                <TodoSortHeader
                   label="优先等级"
                   field="priority"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onToggle={onSortToggle}
+                  className="w-full justify-center"
                 />
               </th>
             </tr>

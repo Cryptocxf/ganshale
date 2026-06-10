@@ -119,7 +119,7 @@ export function expandLlmNetworkError(msg: string): string {
   return (
     `${msg}\n` +
     '提示：请确认本机 OpenAI 兼容网关已启动，且端口、路径与「网关地址」一致（例如 15721 与 /gw/v1）。' +
-    '开发模式（npm run dev）下填写 127.0.0.1 / localhost 时会自动经本站 /__llm 转发，无需改成 5173 端口。' +
+    '开发模式（npm run dev）下填写 127.0.0.1 / localhost 时会自动经本站 /__llm 转发，无需改成 5180 端口。' +
     '若仍失败，检查网关进程是否在监听、防火墙是否拦截；公网 HTTPS 网关需允许浏览器跨域（CORS）。'
   )
 }

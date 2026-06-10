@@ -68,8 +68,6 @@ export type SumWeekOfficeOptions = {
   now?: Date
   /** 今日是否按采集中规则累计（仅本周有效） */
   extrapolateToday?: boolean
-  /** 今日累计暂停毫秒（与每日页暂停一致） */
-  pausedMsToday?: number
 }
 
 export function sumOfficeSecondsForWeek({
@@ -79,14 +77,12 @@ export function sumOfficeSecondsForWeek({
   live,
   now = new Date(),
   extrapolateToday = false,
-  pausedMsToday = 0,
 }: SumWeekOfficeOptions): number {
   return sumOfficeElapsedForWeek(weekStartMonday, events, {
     patterns,
     live,
     nowMs: now.getTime(),
     extrapolateLive: extrapolateToday,
-    pausedMsToday,
   })
 }
 
@@ -98,14 +94,12 @@ export function officeSecondsForLocalDay(
   live: LiveForegroundSample | null,
   now: Date,
   extrapolateToday: boolean,
-  pausedMsToday = 0,
 ): number {
   return officeElapsedForDay(day, events, {
     patterns,
     live,
     nowMs: now.getTime(),
     extrapolateLive: extrapolateToday,
-    pausedMsToday,
   })
 }
 

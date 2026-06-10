@@ -22,10 +22,10 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins: [react(), tailwindcss()],
     // Align with Electron + wait-on: default "localhost" may bind ::1 only on Windows,
-    // so http://127.0.0.1:5173 would never become ready.
+    // so http://127.0.0.1:5180 would never become ready.
     server: {
       host: '127.0.0.1',
-      port: 5173,
+      port: 5180,
       strictPort: true,
       proxy: {
         // 浏览器直连网关常因 CORS 失败（Failed to fetch）；开发时走同源再由 Vite 转发。

@@ -6,13 +6,11 @@ export function CollectionStatusBadge({
   day,
   windowTrackingActive,
   windowTrackingSupported,
-  workdayTimerPausedByUser = false,
   windowRecordingHealthy = true,
 }: {
   day: Date
   windowTrackingActive: boolean
   windowTrackingSupported: boolean
-  workdayTimerPausedByUser?: boolean
   windowRecordingHealthy?: boolean
 }) {
   if (!windowTrackingSupported) return null
@@ -25,8 +23,6 @@ export function CollectionStatusBadge({
     label = '未开始'
   } else if (dayKind === 'past') {
     label = '已完成'
-  } else if (workdayTimerPausedByUser) {
-    label = '已暂停'
   } else if (!windowTrackingActive) {
     label = '未采集'
   } else if (!windowRecordingHealthy) {

@@ -1,7 +1,24 @@
 import { normalizeTodoTags, type TodoTagId } from './todoTags'
 import { toYmdLocal } from './timeutil'
 
-export type TodoPriorityLevel = 1 | 2 | 3 | 4 | 5
+export const TODO_MIN_PRIORITY = 1
+export const TODO_MAX_PRIORITY = 10
+
+export type TodoPriorityLevel =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+
+export const TODO_PRIORITY_LEVELS: readonly TodoPriorityLevel[] = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+] as const
 
 export type TodoItem = {
   id: string
@@ -35,8 +52,8 @@ function notify() {
 
 function clampPriority(n: number): TodoPriorityLevel {
   const v = Math.round(n)
-  if (v <= 1) return 1
-  if (v >= 5) return 5
+  if (v <= TODO_MIN_PRIORITY) return TODO_MIN_PRIORITY
+  if (v >= TODO_MAX_PRIORITY) return TODO_MAX_PRIORITY
   return v as TodoPriorityLevel
 }
 
@@ -184,6 +201,19 @@ export function updateTodo(
     return merged
   })
   saveTodos(sortTodos(next))
+}
+
+/** 批量更新待办标题（一键优化） */
+export function batchUpdateTodoTitles(updates: Record<string, string>): number {
+  let count = 0
+  const next = loadTodos().map((t) => {
+    const title = updates[t.id]?.trim()
+    if (!title || title === t.title) return t
+    count++
+    return { ...t, title }
+  })
+  if (count > 0) saveTodos(sortTodos(next))
+  return count
 }
 
 export function setTodoCompleted(id: string, completed: boolean): void {

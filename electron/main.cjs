@@ -555,6 +555,75 @@ function stopWindowTracking() {
   reflectLastTickMinimized = false
 }
 
+function trackingWebContentsAlive() {
+  const wc = trackingWebContents
+  return Boolean(wc && !wc.isDestroyed() && !wc.isLoading())
+}
+
+/** 安全发送前台窗口事件；页面重载/HMR 导致 frame 销毁时返回 false 并停止轮询。 */
+function trackingSendForeground(payload) {
+  if (!trackingWebContentsAlive()) {
+    stopWindowTracking()
+    return false
+  }
+  try {
+    trackingWebContents.send('ganshale:foreground-window', payload)
+    return true
+  } catch (err) {
+    console.warn('[ganshale] foreground send failed:', err instanceof Error ? err.message : err)
+    stopWindowTracking()
+    return false
+  }
+}
+
+async function trackingPoll() {
+  if (!trackingWebContentsAlive()) {
+    stopWindowTracking()
+    return
+  }
+  const fn = await getActiveWin()
+  if (!trackingWebContentsAlive()) {
+    stopWindowTracking()
+    return
+  }
+  if (!fn) return
+  try {
+    const raw = await fn()
+    if (!trackingWebContentsAlive()) {
+      stopWindowTracking()
+      return
+    }
+    if (!raw) {
+      trackingPrevForegroundKey = null
+      trackingSendForeground(null)
+      return
+    }
+    const mapped = mapForeground(raw)
+    if (!mapped) {
+      trackingPrevForegroundKey = null
+      trackingSendForeground(null)
+      return
+    }
+    const key = trackingForegroundKey(mapped)
+    const now = Date.now()
+    if (key !== trackingPrevForegroundKey) {
+      trackingPrevForegroundKey = key
+      trackingSegmentStartTs = now
+    }
+    mapped.segmentStartedAt = new Date(trackingSegmentStartTs).toISOString()
+    if (!trackingSendForeground(mapped)) return
+    handleReflectFocusTransition(mainBrowserWindow, mapped, now)
+  } catch (err) {
+    console.error('[ganshale] active-win poll:', err)
+  }
+}
+
+function startTrackingPollTimer() {
+  if (trackingTimer) return
+  if (!trackingWebContentsAlive()) return
+  trackingTimer = setInterval(() => void trackingPoll(), POLL_MS)
+}
+
 const { resolveForegroundIdentityKey } = require('./windowAppDisplay.cjs')
 
 /** @param {{ app: string; title?: string; appPath?: string }} mapped */
@@ -667,40 +736,7 @@ ipcMain.handle('ganshale:start-window-tracking', async (event) => {
   if (!win) return { ok: false, error: 'no-browser-window' }
   mainBrowserWindow = win
   trackingWebContents = win.webContents
-
-  trackingTimer = setInterval(async () => {
-    if (!trackingWebContents || trackingWebContents.isDestroyed()) {
-      stopWindowTracking()
-      return
-    }
-    const fn = await getActiveWin()
-    if (!fn) return
-    try {
-      const raw = await fn()
-      if (!raw) {
-        trackingPrevForegroundKey = null
-        trackingWebContents.send('ganshale:foreground-window', null)
-        return
-      }
-      const mapped = mapForeground(raw)
-      if (!mapped) {
-        trackingPrevForegroundKey = null
-        trackingWebContents.send('ganshale:foreground-window', null)
-        return
-      }
-      const key = trackingForegroundKey(mapped)
-      const now = Date.now()
-      if (key !== trackingPrevForegroundKey) {
-        trackingPrevForegroundKey = key
-        trackingSegmentStartTs = now
-      }
-      mapped.segmentStartedAt = new Date(trackingSegmentStartTs).toISOString()
-      trackingWebContents.send('ganshale:foreground-window', mapped)
-      handleReflectFocusTransition(mainBrowserWindow, mapped, now)
-    } catch (err) {
-      console.error('[ganshale] active-win poll:', err)
-    }
-  }, POLL_MS)
+  startTrackingPollTimer()
 
   return { ok: true, intervalMs: POLL_MS }
 })
@@ -1062,6 +1098,18 @@ function createWindow() {
     }
   })
 
+  contents.on('did-start-navigation', () => {
+    if (trackingWebContents === contents) stopWindowTracking()
+  })
+
+  contents.on('destroyed', () => {
+    if (trackingWebContents === contents) stopWindowTracking()
+  })
+
+  contents.on('render-process-gone', () => {
+    if (trackingWebContents === contents) stopWindowTracking()
+  })
+
   contents.on('did-fail-load', (_e, code, desc, url) => {
     startupLog.write('did-fail-load', code, desc, url)
     if (win.isDestroyed()) return
@@ -1077,7 +1125,7 @@ function createWindow() {
   })
 
   if (isDev) {
-    win.loadURL('http://127.0.0.1:5173/')
+    win.loadURL('http://127.0.0.1:5180/')
   } else {
     const indexHtml = path.join(__dirname, '..', 'dist', 'index.html')
     if (!fs.existsSync(indexHtml)) {

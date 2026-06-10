@@ -15,7 +15,7 @@ import {
 } from './officeElapsed'
 import type { LiveForegroundSample } from './liveForeground'
 import { categoryChartColor } from './categoryBarColors'
-import { excludeGanshaleSelfWindowEvents } from './selfWindowFilter'
+import { excludeGanshaleSelfWindowEvents, shouldSkipWindowEventForStats } from './selfWindowFilter'
 import {
   compareLocalCalendarDay,
   daysInLocalWeek,
@@ -34,7 +34,6 @@ import {
   addWeeksMondayLocal,
   formatCompareDeltaAbsZh,
   isoWeekNumberLocal,
-  windowEventsForLocalDay,
   type WeekCompareTone,
 } from './weeklyWorktime'
 import * as store from './idbStore'
@@ -85,6 +84,24 @@ export function compareLocalCalendarMonth(
   return 'current'
 }
 
+/**
+ * 一次性预分区：将事件按本地日期分桶，避免后续上百次 `windowEventsForLocalDay` 全量扫描。
+ * 返回 `Map<YYYY-MM-DD, AwEvent[]>`。
+ */
+export function partitionEventsByDay(events: readonly AwEvent[]): Map<string, AwEvent[]> {
+  const map = new Map<string, AwEvent[]>()
+  for (const ev of events) {
+    if (shouldSkipWindowEventForStats(ev)) continue
+    const ts = parseIso(ev.timestamp)
+    if (Number.isNaN(ts)) continue
+    const ymd = toYmdLocal(new Date(ts))
+    const arr = map.get(ymd)
+    if (arr) arr.push(ev)
+    else map.set(ymd, [ev])
+  }
+  return map
+}
+
 export function formatMonthPickerLabel(d: Date): string {
   return `${d.getFullYear()}年${d.getMonth() + 1}月`
 }
@@ -113,10 +130,17 @@ export function invalidateMonthlyWindowEventsCache(): void {
   windowEventsForMonthCache.clear()
 }
 
-export async function loadWindowEventsForMonth(monthAnchor: Date): Promise<AwEvent[]> {
+export type LoadMonthEventsOptions = {
+  /** 跳过内存缓存，强制从 IndexedDB 读取 */
+  force?: boolean
+}
+
+export async function loadWindowEventsForMonth(
+  monthAnchor: Date,
+  options: LoadMonthEventsOptions = {},
+): Promise<AwEvent[]> {
   const key = monthEventsCacheKey(monthAnchor)
-  const isCurrentMonth = compareLocalCalendarMonth(monthAnchor) === 'current'
-  if (!isCurrentMonth) {
+  if (!options.force) {
     const cached = windowEventsForMonthCache.get(key)
     if (cached) return cached
   }
@@ -127,6 +151,12 @@ export async function loadWindowEventsForMonth(monthAnchor: Date): Promise<AwEve
   const events = excludeGanshaleSelfWindowEvents(rows)
   windowEventsForMonthCache.set(key, events)
   return events
+}
+
+/** 预取当月与上月窗口事件（导航悬停或应用启动时调用） */
+export function prefetchMonthlyWindowEvents(monthAnchor = startOfMonthLocal(new Date())): void {
+  void loadWindowEventsForMonth(monthAnchor)
+  void loadWindowEventsForMonth(addMonthsLocal(monthAnchor, -1))
 }
 
 function elapsedDaysInMonth(monthAnchor: Date, now: Date): number {
@@ -246,14 +276,16 @@ export type MonthlySummary = {
 
 function aggregateCategoriesForMonth(
   monthAnchor: Date,
-  events: AwEvent[],
+  dayEventsMap: Map<string, AwEvent[]>,
   categories: AppCategoryDef[],
 ): Map<string, number> {
   const totals = new Map<string, number>()
   for (const c of categories) totals.set(c.id, 0)
   totals.set(UNCATEGORIZED_ID, 0)
   for (const day of daysInLocalMonth(monthAnchor)) {
-    const agg = aggregateByAppCategories(day, events, categories)
+    const dayEvents = dayEventsMap.get(toYmdLocal(day))
+    if (!dayEvents || dayEvents.length === 0) continue
+    const agg = aggregateByAppCategories(day, dayEvents, categories)
     for (const [id, bucket] of Object.entries(agg.buckets)) {
       totals.set(id, (totals.get(id) ?? 0) + bucket.seconds)
     }
@@ -284,12 +316,14 @@ export function formatEfficientBandDisplay(startHour: number, endHour: number): 
 
 function buildPeakEfficientBand(
   monthAnchor: Date,
-  events: AwEvent[],
+  dayEventsMap: Map<string, AwEvent[]>,
   totalFocusSeconds: number,
 ): MonthlyPeakEfficientBand | null {
   const bandTotals = HOUR_BANDS.map(() => 0)
   for (const day of daysInLocalMonth(monthAnchor)) {
-    for (const ev of windowEventsForLocalDay(events, day)) {
+    const dayEvents = dayEventsMap.get(toYmdLocal(day))
+    if (!dayEvents || dayEvents.length === 0) continue
+    for (const ev of dayEvents) {
       HOUR_BANDS.forEach((band, i) => {
         bandTotals[i] += clipEventToDayBand(ev, day, band.start, band.end)
       })
@@ -319,15 +353,18 @@ function buildPeakEfficientBand(
   }
 }
 
-function buildHeatmap(monthAnchor: Date, events: AwEvent[]) {
+function buildHeatmap(monthAnchor: Date, dayEventsMap: Map<string, AwEvent[]>) {
   const cells: { day: number; band: number; seconds: number }[] = []
   let maxSeconds = 0
   for (const day of daysInLocalMonth(monthAnchor)) {
     const dayIndex = day.getDate() - 1
+    const dayEvents = dayEventsMap.get(toYmdLocal(day))
     HOUR_BANDS.forEach((band, bandIndex) => {
       let sec = 0
-      for (const ev of windowEventsForLocalDay(events, day)) {
-        sec += clipEventToDayBand(ev, day, band.start, band.end)
+      if (dayEvents) {
+        for (const ev of dayEvents) {
+          sec += clipEventToDayBand(ev, day, band.start, band.end)
+        }
       }
       sec = Math.round(sec)
       if (sec > maxSeconds) maxSeconds = sec
@@ -407,8 +444,11 @@ export function buildMonthlySummary(
   patterns: string[] = [],
 ): MonthlySummary {
   const monthKey = `${monthAnchor.getFullYear()}-${String(monthAnchor.getMonth() + 1).padStart(2, '0')}`
-  const daySeconds = new Map<string, number>()
-  let effectiveCount = 0
+
+  // 核心优化：一次性预分区，后续所有计算复用，避免数百次全量扫描
+  const dayEventsMap = partitionEventsByDay(events)
+  const prevDayEventsMap = partitionEventsByDay(prevEvents)
+
   const staticCtx = {
     patterns,
     live: null,
@@ -416,22 +456,17 @@ export function buildMonthlySummary(
     extrapolateLive: false,
   } satisfies OfficeElapsedContext
 
+  // 逐日办公时长 + 峰值日 + 有效工作日（一次遍历）
+  const daySeconds = new Map<string, number>()
+  let effectiveCount = 0
+  let peakDay: MonthlySummary['peakDay'] = null
+
   for (const day of daysInLocalMonth(monthAnchor)) {
     const ymd = toYmdLocal(day)
-    const sec = officeElapsedForDay(day, events, staticCtx)
+    const dayEvents = dayEventsMap.get(ymd) ?? []
+    const sec = officeElapsedForDay(day, dayEvents, staticCtx)
     daySeconds.set(ymd, sec)
     if (sec >= EFFECTIVE_WORKDAY_MIN_SEC) effectiveCount += 1
-  }
-
-  const totalFocusSeconds = totalSecondsWindowEvents(events)
-  const prevTotal = totalSecondsWindowEvents(prevEvents)
-  const elapsed = elapsedDaysInMonth(monthAnchor, now)
-  const dailyAvgSeconds = elapsed > 0 ? Math.round(totalFocusSeconds / elapsed) : 0
-
-  let peakDay: MonthlySummary['peakDay'] = null
-  for (const day of daysInLocalMonth(monthAnchor)) {
-    const ymd = toYmdLocal(day)
-    const sec = daySeconds.get(ymd) ?? 0
     if (!peakDay || sec > peakDay.seconds) {
       peakDay = {
         date: ymd,
@@ -442,10 +477,15 @@ export function buildMonthlySummary(
   }
   if (peakDay && peakDay.seconds <= 0) peakDay = null
 
-  const peakEfficientBand = buildPeakEfficientBand(monthAnchor, events, totalFocusSeconds)
+  const totalFocusSeconds = totalSecondsWindowEvents(events)
+  const prevTotal = totalSecondsWindowEvents(prevEvents)
+  const elapsed = elapsedDaysInMonth(monthAnchor, now)
+  const dailyAvgSeconds = elapsed > 0 ? Math.round(totalFocusSeconds / elapsed) : 0
 
-  const curCat = aggregateCategoriesForMonth(monthAnchor, events, categories)
-  const prevCat = aggregateCategoriesForMonth(addMonthsLocal(monthAnchor, -1), prevEvents, categories)
+  const peakEfficientBand = buildPeakEfficientBand(monthAnchor, dayEventsMap, totalFocusSeconds)
+
+  const curCat = aggregateCategoriesForMonth(monthAnchor, dayEventsMap, categories)
+  const prevCat = aggregateCategoriesForMonth(addMonthsLocal(monthAnchor, -1), prevDayEventsMap, categories)
   const catTotal = [...curCat.values()].reduce((a, b) => a + b, 0)
 
   const categoryRows: MonthlyCategoryRow[] = categories
@@ -504,11 +544,13 @@ export function buildMonthlySummary(
   const calendarCells = buildCalendarGrid(monthAnchor, daySeconds, now)
   const weekBlocksTotalSeconds = sumMonthWeekBlockSeconds(monthAnchor, calendarCells)
 
+  // 上月周块合计（复用 prevDayEventsMap）
   const prevMonthAnchor = addMonthsLocal(monthAnchor, -1)
   const prevDaySeconds = new Map<string, number>()
   for (const day of daysInLocalMonth(prevMonthAnchor)) {
     const ymd = toYmdLocal(day)
-    prevDaySeconds.set(ymd, officeElapsedForDay(day, prevEvents, staticCtx))
+    const prevDayEvents = prevDayEventsMap.get(ymd) ?? []
+    prevDaySeconds.set(ymd, officeElapsedForDay(day, prevDayEvents, staticCtx))
   }
   const prevWeekBlocksTotal = sumMonthWeekBlockSeconds(
     prevMonthAnchor,
@@ -544,7 +586,7 @@ export function buildMonthlySummary(
     categories: categoryRows,
     topApps,
     calendarCells,
-    heatmap: buildHeatmap(monthAnchor, events),
+    heatmap: buildHeatmap(monthAnchor, dayEventsMap),
     vsLastMonthCategories,
   }
 }
@@ -663,7 +705,6 @@ function sumMonthWeekBlockSecondsFromEvents(
   now: Date,
   live: LiveForegroundSample | null,
   extrapolateToday: boolean,
-  pausedMsToday = 0,
 ): number {
   const first = startOfMonthLocal(monthAnchor)
   const last = endOfMonthLocal(monthAnchor)
@@ -672,7 +713,6 @@ function sumMonthWeekBlockSecondsFromEvents(
     live,
     nowMs: now.getTime(),
     extrapolateLive: extrapolateToday,
-    pausedMsToday,
   }
   return sumOfficeElapsedForMonthWeekBlock(first, last, weekStart, events, ctx)
 }
@@ -686,7 +726,6 @@ export function computeMonthWeekBlocksTotalLive(
   now = new Date(),
   live: LiveForegroundSample | null = null,
   extrapolateToday = false,
-  pausedMsToday = 0,
 ): number {
   const blocks = pickMonthWeekBlocks(monthAnchor)
   const isCurrentMonth = compareLocalCalendarMonth(monthAnchor, now) === 'current'
@@ -706,7 +745,6 @@ export function computeMonthWeekBlocksTotalLive(
           now,
           live,
           true,
-          pausedMsToday,
         )
       )
     }
@@ -723,22 +761,21 @@ export function sumMonthDaysThroughReference(
   now = new Date(),
   live: LiveForegroundSample | null = null,
   extrapolateToday = false,
-  pausedMsToday = 0,
 ): number {
   return sumOfficeElapsedForMonthThrough(daysInLocalMonth(monthAnchor), events, {
     patterns,
     live,
     nowMs: now.getTime(),
     extrapolateLive: extrapolateToday,
-    pausedMsToday,
   })
 }
 
 /** 整月活跃时长（上月环比分母等） */
 export function sumMonthFullActiveSeconds(monthAnchor: Date, events: AwEvent[]): number {
+  const dayMap = partitionEventsByDay(events)
   let total = 0
   for (const day of daysInLocalMonth(monthAnchor)) {
-    total += totalActiveSecondsWindow(day, windowEventsForLocalDay(events, day))
+    total += totalActiveSecondsWindow(day, dayMap.get(toYmdLocal(day)) ?? [])
   }
   return total
 }
@@ -759,14 +796,12 @@ export function buildMonthlyLiveKpi(
     now?: Date
     live?: LiveForegroundSample | null
     extrapolateToday?: boolean
-    pausedMsToday?: number
   } = {},
 ): MonthlyLiveKpi {
   const patterns = options.patterns ?? []
   const now = options.now ?? new Date()
   const live = options.live ?? null
   const extrapolateToday = options.extrapolateToday ?? false
-  const pausedMsToday = options.pausedMsToday ?? 0
   const monthKind = compareLocalCalendarMonth(monthAnchor, now)
 
   const weekBlocksTotalSeconds =
@@ -780,7 +815,6 @@ export function buildMonthlyLiveKpi(
           now,
           live,
           extrapolateToday,
-          pausedMsToday,
         )
 
   const currentCompareSec =
@@ -795,7 +829,6 @@ export function buildMonthlyLiveKpi(
             now,
             live,
             extrapolateToday,
-            pausedMsToday,
           )
 
   const prevCompareSec = sumMonthFullActiveSeconds(

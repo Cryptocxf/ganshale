@@ -250,8 +250,13 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     }
   }, [])
 
+  const rowsPersistKeyRef = useRef('')
   useEffect(() => {
-    saveWorkRecords(day, sortWorkRecordsByTimeDesc(rows))
+    const sorted = sortWorkRecordsByTimeDesc(rows)
+    const key = `${toYmdLocal(day)}:${JSON.stringify(sorted)}`
+    if (rowsPersistKeyRef.current === key) return
+    rowsPersistKeyRef.current = key
+    saveWorkRecords(day, sorted)
   }, [day, rows])
 
   const sortedRows = useMemo(() => sortWorkRecordsByTimeDesc(rows), [rows])

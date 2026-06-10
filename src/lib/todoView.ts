@@ -69,7 +69,7 @@ export function classifyTodoGroup(item: TodoItem, nowMs: number): TodoGroupId {
     if (deadlineYmd === todayYmd) return 'in_progress'
   }
 
-  if (item.priority >= 4) return 'in_progress'
+  if (item.priority >= 8) return 'in_progress'
 
   return 'pending'
 }
@@ -103,7 +103,6 @@ export function groupTodosByStatus(
   }
 
   groups.in_progress.sort(sortOpen)
-  groups.pending.sort(sortOpen)
   groups.completed.sort(
     (a, b) =>
       Date.parse(b.completedAt ?? b.createdAt) - Date.parse(a.completedAt ?? a.createdAt),

@@ -1,7 +1,13 @@
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { History, Plus } from 'lucide-react'
 import { formatTodoHeaderDate } from '../../lib/todoView'
 
-export function TodoPageHeader({ onNew }: { onNew: () => void }) {
+export function TodoPageHeader({
+  onNew,
+  onHistory,
+}: {
+  onNew: () => void
+  onHistory: () => void
+}) {
   const dateLine = formatTodoHeaderDate()
 
   return (
@@ -13,10 +19,11 @@ export function TodoPageHeader({ onNew }: { onNew: () => void }) {
       <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
-          className="rounded-lg p-2 text-ganshale-muted transition hover:bg-ganshale-elevated hover:text-ganshale-text"
-          aria-label="更多"
+          onClick={onHistory}
+          className="inline-flex items-center gap-1 rounded-lg border border-ganshale-border bg-ganshale-surface px-3 py-1.5 text-xs font-semibold text-ganshale-text transition hover:bg-ganshale-elevated"
         >
-          <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
+          <History className="h-3.5 w-3.5" strokeWidth={2} />
+          查看历史
         </button>
         <button
           type="button"

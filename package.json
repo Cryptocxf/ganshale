@@ -5,11 +5,12 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
+    "predev": "node scripts/free-dev-port.mjs",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:127.0.0.1:5180 && electron .\"",
     "dev:web": "vite",
     "build": "tsc -b && vite build",
     "gen:dashboard": "node scripts/write-daily-dashboard.mjs",
-    "pack": "npm run build && electron-builder --win nsis",
+    "pack": "npm run build && node scripts/pack-win.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -63,7 +64,8 @@
         "nsis"
       ],
       "executableName": "Ganshale",
-      "icon": "public/ganshale-logo-app.png"
+      "icon": "public/ganshale-logo-app.png",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
