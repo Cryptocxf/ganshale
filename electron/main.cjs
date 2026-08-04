@@ -8,10 +8,47 @@ const {
   dialog,
   Tray,
   nativeImage,
+  powerMonitor,
+  safeStorage,
 } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const startupLog = require('./startupLog.cjs')
+
+const LLM_SECRET_FILE = 'llm-api-key.enc'
+
+function llmSecretPath() {
+  return path.join(app.getPath('userData'), LLM_SECRET_FILE)
+}
+
+function readLlmApiKey() {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return ''
+    const encrypted = fs.readFileSync(llmSecretPath())
+    return safeStorage.decryptString(encrypted)
+  } catch {
+    return ''
+  }
+}
+
+function writeLlmApiKey(value) {
+  try {
+    const key = String(value ?? '').trim()
+    const target = llmSecretPath()
+    if (!key) {
+      fs.rmSync(target, { force: true })
+      return { ok: true }
+    }
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { ok: false, error: 'system-encryption-unavailable' }
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, safeStorage.encryptString(key))
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
 
 startupLog.init()
 
@@ -63,21 +100,28 @@ function canWriteDirectory(dir) {
 }
 
 function applyUserDataPath() {
-  const preferred = defaultUserDataPath()
-  if (canWriteDirectory(preferred)) {
-    app.setPath('userData', preferred)
-    startupLog.write('userData', preferred)
+  const legacy = defaultUserDataPath()
+  const target = fallbackUserDataPath()
+  if (!canWriteDirectory(target)) {
+    startupLog.write('userData unavailable', target)
     return
   }
 
-  const fallback = fallbackUserDataPath()
-  if (canWriteDirectory(fallback)) {
-    app.setPath('userData', fallback)
-    startupLog.write('userData fallback', fallback, `preferred=${preferred}`)
-    return
+  if (app.isPackaged && path.resolve(legacy) !== path.resolve(target) && fs.existsSync(legacy)) {
+    try {
+      fs.cpSync(legacy, target, {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+      })
+      startupLog.write('userData migrated', legacy, target)
+    } catch (err) {
+      startupLog.write('userData migration failed', legacy, target, err)
+    }
   }
 
-  startupLog.write('userData unavailable', preferred, fallback)
+  app.setPath('userData', target)
+  startupLog.write('userData', target)
 }
 
 applyUserDataPath()
@@ -96,6 +140,8 @@ let appTray = null
 let isQuitting = false
 /** 主窗口是否已 `show()`（启动页在可见后再计时） */
 let mainWindowHasShown = false
+/** @type {BrowserWindow | null} */
+let closePromptWindow = null
 /** @type {BrowserWindow | null} */
 let reflectPromptWindow = null
 let lastReflectPromptClosedAt = 0
@@ -499,22 +545,59 @@ function ensureAppTray() {
   return appTray
 }
 
-/** @returns {'tray' | 'quit' | 'cancel'} */
+/** @returns {Promise<'tray' | 'quit' | 'cancel'>} */
 function promptCloseMainWindow(win) {
-  const choice = dialog.showMessageBoxSync(win, {
-    type: 'question',
-    buttons: ['最小化到托盘', '退出应用', '取消'],
-    defaultId: 0,
-    cancelId: 2,
-    noLink: true,
-    title: '干啥了',
-    message: '要关闭窗口吗？',
-    detail:
-      '选择「最小化到托盘」可继续在后台记录窗口使用情况；选择「退出应用」将完全退出。',
+  if (closePromptWindow && !closePromptWindow.isDestroyed()) {
+    closePromptWindow.focus()
+    return Promise.resolve('cancel')
+  }
+
+  return new Promise((resolve) => {
+    const width = 380
+    const height = 190
+    const parentBounds = win.getBounds()
+    const prompt = new BrowserWindow({
+      parent: win,
+      modal: true,
+      frame: false,
+      show: false,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      width,
+      height,
+      x: Math.round(parentBounds.x + (parentBounds.width - width) / 2),
+      y: Math.round(parentBounds.y + (parentBounds.height - height) / 2),
+      backgroundColor: '#ffffff',
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    })
+    closePromptWindow = prompt
+    let settled = false
+
+    const finish = (action) => {
+      if (settled) return
+      settled = true
+      closePromptWindow = null
+      resolve(action)
+      if (!prompt.isDestroyed()) prompt.destroy()
+    }
+
+    prompt.webContents.on('will-navigate', (event, url) => {
+      if (!url.startsWith('ganshale-close://')) return
+      event.preventDefault()
+      const action = url.slice('ganshale-close://'.length).replace(/\/$/, '')
+      finish(action === 'tray' || action === 'quit' ? action : 'cancel')
+    })
+    prompt.on('closed', () => finish('cancel'))
+    prompt.once('ready-to-show', () => {
+      if (!prompt.isDestroyed()) prompt.show()
+    })
+    void prompt.loadFile(path.join(__dirname, 'close-prompt.html')).catch(() => finish('cancel'))
   })
-  if (choice === 0) return 'tray'
-  if (choice === 1) return 'quit'
-  return 'cancel'
 }
 
 /** @type {((opts?: object) => Promise<object | undefined>) | null | undefined} undefined = not loaded yet */
@@ -524,7 +607,9 @@ async function getActiveWin() {
   if (activeWinCache !== undefined) return activeWinCache
   try {
     const m = await import('active-win')
-    const fn = m.default ?? m
+    // active-win <=8 exported the function as default; >=9 uses `activeWindow`.
+    // Accept both shapes so packaged tracking keeps working across upgrades.
+    const fn = m.activeWindow ?? m.default ?? m
     activeWinCache = typeof fn === 'function' ? fn : null
   } catch (e) {
     console.warn('[ganshale] active-win import failed:', e.message)
@@ -536,6 +621,8 @@ async function getActiveWin() {
 const POLL_MS = 1200
 
 let trackingTimer = null
+let trackingPollInFlight = false
+let trackingGeneration = 0
 /** @type {import('electron').WebContents | null} */
 let trackingWebContents = null
 /** @type {string | null} */
@@ -543,6 +630,7 @@ let trackingPrevForegroundKey = null
 let trackingSegmentStartTs = 0
 
 function stopWindowTracking() {
+  trackingGeneration += 1
   if (trackingTimer) {
     clearInterval(trackingTimer)
     trackingTimer = null
@@ -577,11 +665,13 @@ function trackingSendForeground(payload) {
 }
 
 async function trackingPoll() {
+  const generation = trackingGeneration
   if (!trackingWebContentsAlive()) {
     stopWindowTracking()
     return
   }
   const fn = await getActiveWin()
+  if (generation !== trackingGeneration) return
   if (!trackingWebContentsAlive()) {
     stopWindowTracking()
     return
@@ -589,6 +679,7 @@ async function trackingPoll() {
   if (!fn) return
   try {
     const raw = await fn()
+    if (generation !== trackingGeneration) return
     if (!trackingWebContentsAlive()) {
       stopWindowTracking()
       return
@@ -621,7 +712,25 @@ async function trackingPoll() {
 function startTrackingPollTimer() {
   if (trackingTimer) return
   if (!trackingWebContentsAlive()) return
-  trackingTimer = setInterval(() => void trackingPoll(), POLL_MS)
+  const run = () => {
+    if (trackingPollInFlight) return
+    trackingPollInFlight = true
+    void trackingPoll().finally(() => {
+      trackingPollInFlight = false
+    })
+  }
+  trackingTimer = setInterval(run, POLL_MS)
+  run()
+}
+
+function notifyTrackingPowerState(locked) {
+  const wc = trackingWebContents
+  if (!wc || wc.isDestroyed()) return
+  try {
+    wc.send(locked ? 'ganshale:screen-locked' : 'ganshale:screen-unlocked')
+  } catch (err) {
+    startupLog.write('power state send failed', err)
+  }
 }
 
 const { resolveForegroundIdentityKey } = require('./windowAppDisplay.cjs')
@@ -1027,6 +1136,14 @@ ipcMain.handle('ganshale:get-storage-path', async () => {
   }
 })
 
+ipcMain.on('ganshale:get-llm-api-key', (event) => {
+  event.returnValue = readLlmApiKey()
+})
+
+ipcMain.on('ganshale:set-llm-api-key', (event, apiKey) => {
+  event.returnValue = writeLlmApiKey(apiKey)
+})
+
 ipcMain.handle('ganshale:open-path-in-folder', async (_event, targetPath) => {
   try {
     const p = String(targetPath ?? '').trim()
@@ -1086,7 +1203,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了',
+    title: '干啥了 v1.0.1 · 更新于 2026-08-04',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),
@@ -1111,18 +1228,20 @@ function createWindow() {
     }
     e.preventDefault()
 
-    const action = promptCloseMainWindow(win)
-    if (action === 'tray') {
-      ensureAppTray()
-      if (process.platform === 'win32') win.setSkipTaskbar(true)
-      win.hide()
-      return
-    }
-    if (action === 'quit') {
-      isQuitting = true
-      if (trackingWebContents === contents) stopWindowTracking()
-      app.quit()
-    }
+    void promptCloseMainWindow(win).then((action) => {
+      if (win.isDestroyed()) return
+      if (action === 'tray') {
+        ensureAppTray()
+        if (process.platform === 'win32') win.setSkipTaskbar(true)
+        win.hide()
+        return
+      }
+      if (action === 'quit') {
+        isQuitting = true
+        if (trackingWebContents === contents) stopWindowTracking()
+        app.quit()
+      }
+    })
   })
 
   win.once('ready-to-show', () => {
@@ -1193,11 +1312,18 @@ if (gotSingleInstanceLock) {
 
   app.whenReady().then(() => {
     startupLog.write('app ready')
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('net.ganshale.desktop')
+    }
     if (process.platform !== 'darwin') {
       Menu.setApplicationMenu(null)
     }
     createWindow()
     ensureAppTray()
+    powerMonitor.on('lock-screen', () => notifyTrackingPowerState(true))
+    powerMonitor.on('unlock-screen', () => notifyTrackingPowerState(false))
+    powerMonitor.on('suspend', () => notifyTrackingPowerState(true))
+    powerMonitor.on('resume', () => notifyTrackingPowerState(false))
     app.on('activate', () => {
       if (mainBrowserWindow && !mainBrowserWindow.isDestroyed()) {
         showMainWindow()

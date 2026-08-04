@@ -26,7 +26,7 @@ const inputCls =
 
 const hintCls = 'text-[10px] leading-relaxed text-ganshale-subtle'
 
-/** 隐藏：3 秒内连点标题「模型配置」6 次自动填充 */
+/** 隐藏：3 秒内连点标题「模型配置」6 次自动填充。 */
 const HIDDEN_DEV_LLM_FILL = {
   baseUrl: 'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
   apiKey: '3886B9B1-FABA-4694-85CB-11FC271D1F29',
@@ -92,17 +92,15 @@ export function ModelConfigSettings() {
 
   const onTitleSecretClick = useCallback(() => {
     const now = Date.now()
-    const recent = titleClickTimesRef.current.filter((t) => now - t < HIDDEN_TITLE_WINDOW_MS)
+    const recent = titleClickTimesRef.current.filter(
+      (time) => now - time < HIDDEN_TITLE_WINDOW_MS,
+    )
     recent.push(now)
     titleClickTimesRef.current = recent
     if (recent.length < HIDDEN_TITLE_CLICKS) return
 
     titleClickTimesRef.current = []
-    setForm({
-      baseUrl: HIDDEN_DEV_LLM_FILL.baseUrl,
-      apiKey: HIDDEN_DEV_LLM_FILL.apiKey,
-      gatewayModelId: HIDDEN_DEV_LLM_FILL.gatewayModelId,
-    })
+    setForm({ ...HIDDEN_DEV_LLM_FILL })
     setProviderId(
       guessLlmProviderPresetId(
         HIDDEN_DEV_LLM_FILL.baseUrl,
@@ -111,9 +109,8 @@ export function ModelConfigSettings() {
     )
     setApiKeyHint(findPresetHint('custom'))
     setTestResult(null)
-    setNote(null)
+    setNote('已填入测试配置，请确认后保存')
   }, [])
-
   const dirty = useMemo(() => {
     const a = modelFieldsSnapshot(formToModelFields(form))
     const b = modelFieldsSnapshot({

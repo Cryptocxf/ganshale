@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>关闭干啥了</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        color: #18181b;
+        background: #ffffff;
+        font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+        user-select: none;
+      }
+      main {
+        width: 100%;
+        height: 100%;
+        padding: 24px 26px 20px;
+        border: 1px solid #d4d4d8;
+        background: #ffffff;
+        box-shadow: inset 0 3px 0 #18181b;
+      }
+      h1 { margin: 0; font-size: 17px; line-height: 1.5; }
+      p { margin: 7px 0 0; color: #71717a; font-size: 12px; }
+      .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 25px; }
+      button {
+        min-width: 76px;
+        height: 32px;
+        border: 1px solid #d4d4d8;
+        border-radius: 7px;
+        color: #27272a;
+        background: #ffffff;
+        font: 500 12px "Microsoft YaHei", "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+      button:hover { background: #f4f4f5; }
+      button:focus-visible { outline: 2px solid #71717a; outline-offset: 2px; }
+      .primary { border-color: #18181b; color: #ffffff; background: #18181b; }
+      .primary:hover { background: #27272a; }
+      .danger { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <main role="dialog" aria-modal="true" aria-labelledby="title">
+      <h1 id="title">关闭窗口后要怎么做？</h1>
+      <p>托盘继续计时；退出停止计时。</p>
+      <div class="actions">
+        <button type="button" onclick="location.href='ganshale-close://cancel'">取消</button>
+        <button class="danger" type="button" onclick="location.href='ganshale-close://quit'">退出应用</button>
+        <button class="primary" type="button" autofocus onclick="location.href='ganshale-close://tray'">最小化到托盘</button>
+      </div>
+    </main>
+    <script>
+      addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') location.href = 'ganshale-close://cancel'
+      })
+    </script>
+  </body>
+</html>

@@ -44,8 +44,9 @@ export function windowEventsForLocalDay(all: AwEvent[], day: Date): AwEvent[] {
   const t0 = startOfLocalDay(day).getTime()
   const t1 = endOfLocalDay(day).getTime()
   return all.filter((ev) => {
-    const t = parseIso(ev.timestamp)
-    return t >= t0 && t <= t1
+    const start = parseIso(ev.timestamp)
+    const end = start + Math.max(0, ev.duration) * 1000
+    return start <= t1 && end > t0
   })
 }
 

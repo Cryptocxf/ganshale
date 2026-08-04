@@ -92,12 +92,18 @@ export function partitionEventsByDay(events: readonly AwEvent[]): Map<string, Aw
   const map = new Map<string, AwEvent[]>()
   for (const ev of events) {
     if (shouldSkipWindowEventForStats(ev)) continue
-    const ts = parseIso(ev.timestamp)
-    if (Number.isNaN(ts)) continue
-    const ymd = toYmdLocal(new Date(ts))
-    const arr = map.get(ymd)
-    if (arr) arr.push(ev)
-    else map.set(ymd, [ev])
+    const start = parseIso(ev.timestamp)
+    if (Number.isNaN(start)) continue
+    const end = start + Math.max(0, ev.duration) * 1000
+    const day = startOfLocalDay(new Date(start))
+    const lastDay = startOfLocalDay(new Date(Math.max(start, end - 1)))
+    while (day <= lastDay) {
+      const ymd = toYmdLocal(day)
+      const arr = map.get(ymd)
+      if (arr) arr.push(ev)
+      else map.set(ymd, [ev])
+      day.setDate(day.getDate() + 1)
+    }
   }
   return map
 }

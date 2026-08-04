@@ -14,7 +14,7 @@ export function AppearanceSettings() {
         主题
       </h3>
       <p className="mt-1 text-[10px] text-ganshale-muted">
-        切换配色与界面样式；「默认」为 Times + 微软雅黑，其余为设计技能原版字体
+        切换配色与界面样式；“默认”为 Times + 微软雅黑，其余为设计技能原版字体。
       </p>
       <div className="mt-3 grid grid-cols-4 gap-x-1.5 gap-y-3">
         {SKIN_PRESETS.map((skin) => {
@@ -28,7 +28,7 @@ export function AppearanceSettings() {
                 'flex min-w-0 flex-col items-center gap-1 rounded-lg px-0.5 py-1 transition',
                 on ? 'bg-ganshale-accent/5 ring-1 ring-ganshale-accent/25' : 'hover:bg-ganshale-elevated',
               ].join(' ')}
-              aria-label={`${skin.label}，${skin.description}`}
+              aria-label={`${skin.label}：${skin.description}`}
               aria-pressed={on}
             >
               <SkinPreviewScene skin={skin.key} />

@@ -359,6 +359,21 @@ function loadRawConfig(): Partial<LlmUserConfig> {
   }
 }
 
+function loadDesktopApiKey(): string {
+  try {
+    return window.ganshaleDesktop?.getLlmApiKey?.().trim() ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function persistApiKeySecurely(apiKey: string): boolean {
+  const desktop = window.ganshaleDesktop
+  if (!desktop?.setLlmApiKey) return false
+  const result = desktop.setLlmApiKey(apiKey)
+  return result.ok
+}
+
 function normalizePartial(
   j: Partial<LlmUserConfig> & { prompt?: string },
 ): Partial<LlmUserConfig> {
@@ -408,7 +423,7 @@ export function loadLlmUserConfig(): LlmUserConfig {
   const promptFallback = migratePromptFromWorkRecord()
   const config: LlmUserConfig = {
     baseUrl: resolveStoredBaseUrl(j.baseUrl, fallback.baseUrl),
-    apiKey: resolveStoredApiKey(j.apiKey, fallback.apiKey),
+    apiKey: resolveStoredApiKey(loadDesktopApiKey() || j.apiKey, fallback.apiKey),
     gatewayModelId: resolveStoredGatewayModelId(j.gatewayModelId),
     modelMap: j.modelMap ?? fallback.modelMap,
     aiAutoSummaryPrompt: normalizeStoredAiAutoSummaryPrompt(
@@ -446,11 +461,15 @@ export function loadLlmUserConfig(): LlmUserConfig {
         const storedBase = typeof stored.baseUrl === 'string' ? stored.baseUrl.trim() : ''
         const shouldPersistLegacy =
           isLegacyShippedApiKey(storedKey) || isLegacyShippedBaseUrl(storedBase)
+        const shouldMigratePlaintextKey = Boolean(
+          storedKey && window.ganshaleDesktop?.setLlmApiKey,
+        )
         if (
           rawDaily !== config.dailyReportPrompt ||
           rawWeekly !== config.weeklyReportPrompt ||
           rawMonthly !== config.monthlyReportPrompt ||
-          shouldPersistLegacy
+          shouldPersistLegacy ||
+          shouldMigratePlaintextKey
         ) {
           saveLlmUserConfig(config)
         }
@@ -493,9 +512,10 @@ export function saveLlmUserConfig(config: LlmUserConfig): void {
   }
 
   const storedFields = normalizeLlmConfigForStorage(config)
+  const storedApiKey = persistApiKeySecurely(storedFields.apiKey) ? '' : storedFields.apiKey
   const trimmed: LlmUserConfig = {
     baseUrl: storedFields.baseUrl,
-    apiKey: storedFields.apiKey,
+    apiKey: storedApiKey,
     gatewayModelId,
     modelMap: {},
     aiAutoSummaryPrompt:

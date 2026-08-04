@@ -1,7 +1,11 @@
 {
   "name": "ganshale",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "author": {
+    "name": "Chen Xiaofeng"
+  },
+  "description": "干啥了桌面工作时间记录与报告工具",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -15,7 +19,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "active-win": "^8.2.1",
+    "active-win": "^9.0.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -46,6 +51,8 @@
   "build": {
     "appId": "net.ganshale.desktop",
     "productName": "干啥了",
+    "copyright": "Copyright © 2026 Chen Xiaofeng",
+    "artifactName": "${productName}-v${version}-2026-08-04-Setup.${ext}",
     "icon": "build/icon.ico",
     "directories": {
       "output": "release"
@@ -65,7 +72,7 @@
       ],
       "executableName": "Ganshale",
       "icon": "build/icon.ico",
-      "signExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,

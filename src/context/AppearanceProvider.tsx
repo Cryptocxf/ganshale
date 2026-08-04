@@ -76,6 +76,7 @@ function applyToDocument(config: AppearanceConfig): void {
   const root = document.documentElement
   root.dataset.skin = config.skin
   root.dataset.bg = config.bgPreset
+  delete root.dataset.layout
   root.style.fontSize = `${16 * config.fontScale}px`
 }
 

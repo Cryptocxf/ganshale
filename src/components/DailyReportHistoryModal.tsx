@@ -148,7 +148,7 @@ export function DailyReportHistoryModal({
       return
     }
     try {
-      exportDailyReportHistoryExcel(toYmdLocal(day), sortedEntries)
+      void exportDailyReportHistoryExcel(toYmdLocal(day), sortedEntries)
     } catch {
       onCopyToast('导出失败')
       window.setTimeout(() => onCopyToast(null), 2000)

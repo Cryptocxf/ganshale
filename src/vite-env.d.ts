@@ -50,6 +50,8 @@ interface GanshaleDesktopBridge {
   openPathInFolder: (targetPath: string) => Promise<{ ok: boolean; error?: string }>
   /** 当前 userData 目录（安装目录下 data） */
   getStoragePath: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  getLlmApiKey: () => string
+  setLlmApiKey: (apiKey: string) => { ok: boolean; error?: string }
   /** 写入 Obsidian Vault 中的 Markdown 报告 */
   writeObsidianReport?: (payload: {
     vaultPath: string

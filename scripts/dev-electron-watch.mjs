@@ -16,10 +16,15 @@ let intentionalExit = false
 let restartTimer = null
 
 function startElectron() {
+  const electronEnv = { ...process.env }
+  // Some IDE/agent terminals set this for Electron-based tooling. Passing it
+  // through makes electron.exe run as plain Node, so `require('electron').app`
+  // is undefined and the desktop app exits before tracking can start.
+  delete electronEnv.ELECTRON_RUN_AS_NODE
   child = spawn('npx', ['electron', '.'], {
     cwd: root,
     stdio: 'inherit',
-    env: process.env,
+    env: electronEnv,
     shell: true,
   })
   child.on('exit', (code) => {

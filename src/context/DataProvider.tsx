@@ -223,17 +223,19 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
         await loadRef.current()
 
         const flushCountableForeground = async (sample: LiveForegroundSample) => {
+          const observedAtMs = Date.parse(sample.capturedAt)
           await heartbeatWindow(BUCKET_WINDOW, {
             app: sample.app,
             title: sample.title,
             ...(sample.appPath ? { appPath: sample.appPath } : {}),
-          })
+          }, { observedAtMs })
           splitNextCountableHeartbeatRef.current = true
           lastIndexedRefreshRef.current = Date.now()
           await loadRef.current()
         }
 
         const writeCountableHeartbeat = (sample: LiveForegroundSample, forceNew: boolean) => {
+          const observedAtMs = Date.parse(sample.capturedAt)
           void heartbeatWindow(
             BUCKET_WINDOW,
             {
@@ -241,7 +243,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
               title: sample.title,
               ...(sample.appPath ? { appPath: sample.appPath } : {}),
             },
-            { forceNew },
+            { forceNew, observedAtMs },
           ).then(() => {
             const now = Date.now()
             if (now - lastIndexedRefreshRef.current >= 2000) {
@@ -291,9 +293,9 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
             const forceNew = splitNextCountableHeartbeatRef.current
             if (forceNew) splitNextCountableHeartbeatRef.current = false
-            if (identityChanged || forceNew) {
-              writeCountableHeartbeat(payload, forceNew)
-            }
+            // Persist every main-process observation. Renderer timers can be throttled while
+            // the packaged app is hidden in the tray, but sampled IPC timestamps stay reliable.
+            writeCountableHeartbeat(payload, identityChanged || forceNew)
           }) ?? (() => {})
 
         // 监听屏幕锁屏：锁屏时 flush 当前前台段并暂停心跳；解锁时恢复。
@@ -326,24 +328,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       }
     })()
 
-    const heartbeatTick = window.setInterval(() => {
-      if (cancelled) return
-      if (screenLockedRef.current) return
-      const sample = lastCountableForegroundRef.current
-      if (!sample) return
-      void heartbeatWindow(BUCKET_WINDOW, {
-        app: sample.app,
-        title: sample.title,
-        ...(sample.appPath ? { appPath: sample.appPath } : {}),
-      }).then(() => {
-        const now = Date.now()
-        if (now - lastIndexedRefreshRef.current >= 2000) {
-          lastIndexedRefreshRef.current = now
-          void loadRef.current()
-        }
-      })
-    }, 5000)
-
     const watchdog = window.setInterval(() => {
       if (cancelled) return
       if (screenLockedRef.current) return
@@ -373,7 +357,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true
-      clearInterval(heartbeatTick)
       clearInterval(watchdog)
       unsubscribe()
       unsubLock()

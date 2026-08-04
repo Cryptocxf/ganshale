@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
     ipcRenderer.invoke('ganshale:open-path-in-folder', targetPath),
 
   getStoragePath: () => ipcRenderer.invoke('ganshale:get-storage-path'),
+  getLlmApiKey: () => ipcRenderer.sendSync('ganshale:get-llm-api-key'),
+  setLlmApiKey: (apiKey) => ipcRenderer.sendSync('ganshale:set-llm-api-key', apiKey),
 
   /**
    * @param {{ vaultPath: string; relativePath: string; content: string }} payload
