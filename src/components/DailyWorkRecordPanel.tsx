@@ -227,11 +227,9 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     aiSummaryAbortRef.current = new AbortController()
 
     try {
-      const intervalMs = systemRecordIntervalMs(settings)
       if (windowEvents.length === 0) {
         if (manual) setAiSummaryError('暂无可总结的窗口记录，请先使用其他应用后再试')
-        // 采集/入库可能短暂滞后；不要把“无数据”当成一次成功总结，否则会漏掉整段。
-        if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + 60_000)
+        // 无数据不标记成功；下次检查仍使用用户设置的间隔。
         return
       }
       const content = await summarizeWindowEventsWithLlm(
@@ -241,21 +239,23 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       )
       setAiSummaryError(null)
       saveLastAiSummaryAt(currentDay, nowMs)
-      if (intervalMs != null) saveNextAiSummaryAt(currentDay, Date.now() + intervalMs)
       if (toYmdLocal(dayRef.current) === toYmdLocal(currentDay)) {
         setRows((prev) => appendAiSummaryWorkRecord(prev, content))
       } else {
         saveWorkRecords(currentDay, appendAiSummaryWorkRecord(loadWorkRecords(currentDay), content))
       }
-      setRecordSettingsRev((v) => v + 1)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
       const message = e instanceof Error ? e.message : String(e)
       setAiSummaryError(message)
-      const retryAt = Date.now() + 60_000
-      saveNextAiSummaryAt(currentDay, retryAt)
       console.warn('[ganshale] AI 自动总结失败', e)
     } finally {
+      const currentSettings = loadWorkRecordSettings()
+      const intervalMs = systemRecordIntervalMs(currentSettings)
+      if (intervalMs != null && isAiSummaryScheduleDay(currentDay)) {
+        saveNextAiSummaryAt(currentDay, Date.now() + intervalMs)
+      }
+      setRecordSettingsRev((v) => v + 1)
       aiSummaryBusyRef.current = false
       setAiSummaryBusy(false)
       aiSummaryAbortRef.current = null
@@ -285,8 +285,10 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     const intervalMs = systemRecordIntervalMs(settings)
     if (intervalMs != null) {
       let timeoutId: number | undefined
+      let disposed = false
 
       const schedule = () => {
+        if (disposed) return
         const current = loadWorkRecordSettings()
         if (!isAiAutoSummaryActive(current)) return
         if (!isAiSummaryScheduleDay(dayRef.current)) return
@@ -301,6 +303,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
 
       schedule()
       return () => {
+        disposed = true
         if (timeoutId != null) window.clearTimeout(timeoutId)
       }
     }
@@ -353,9 +356,10 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       const settings = loadWorkRecordSettings()
       if (!isAiSummaryScheduleDay(currentDay) || !isAiAutoSummaryActive(settings)) return
 
-      // 新模型保存后尽快验证自动总结，不沿用旧模型失败后留下的长倒计时。
+      // 保存模型后按用户设置重新计时，不使用固定的短周期。
       setAiSummaryError(null)
-      saveNextAiSummaryAt(currentDay, Date.now() + 1_000)
+      clearAiSummaryScheduleForDay(currentDay)
+      ensureAiSummaryAnchoredForSession(currentDay, settings)
       setRecordSettingsRev((v) => v + 1)
     }
     window.addEventListener(LLM_USER_CONFIG_CHANGED_EVENT, onModelConfigChange)
@@ -509,7 +513,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         </div>
         {isToday && aiSummaryError ? (
           <p className="mt-1 text-[10px] leading-tight text-red-600" role="alert">
-            AI 自动总结失败：{aiSummaryError}（将在 1 分钟后重试）
+            AI 自动总结失败：{aiSummaryError}（下次按设置中的自动总结时间执行，也可点击开始按钮重试）
           </p>
         ) : null}
       </div>

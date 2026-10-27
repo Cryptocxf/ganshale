@@ -155,17 +155,25 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
     if (monthKind !== 'current' || !dataReady || !clockLive) return
 
+    let cancelled = false
+    let loading = false
+
     const id = window.setInterval(() => {
+
+      if (loading) return
+      loading = true
 
       loadWindowEventsForMonth(monthAnchor, { force: true })
 
-        .then(setEvents)
+        .then((events) => { if (!cancelled) setEvents(events) })
 
         .catch(() => {})
 
+        .finally(() => { loading = false })
+
     }, 2500)
 
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
 
   }, [monthKind, monthAnchor, dataReady, clockLive])
 

@@ -10,6 +10,7 @@ import {
   findLatestWindowEvent,
   findLatestWindowEventForApp,
   liveForegroundSegmentSec,
+  liveSampleEndMs,
   sameForegroundApp,
 } from './windowForegroundMatch'
 import { identityFromEventData, identityFromLiveForeground } from './windowAppDisplay'
@@ -95,6 +96,8 @@ export function timelineFromWindowEventsLive(
 ): TimelineSeg[] {
   const segs = timelineFromWindowEvents(day, events)
   if (!extrapolate || !live || isLiveForegroundSkippedForStats(live)) return segs
+  nowMs = liveSampleEndMs(live, nowMs)
+  if (!Number.isFinite(nowMs)) return segs
 
   const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
   const day0 = startOfLocalDay(day)
@@ -249,8 +252,6 @@ export function totalActiveSecondsWindowLive(
   const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
 
   if (!live) {
-    const latest = findLatestWindowEvent(statsEvents)
-    if (latest) return extrapolateWindowEventToNow(day, base, latest, nowMs, null)
     return base
   }
 
@@ -284,15 +285,18 @@ export function currentForegroundSegmentLive(
   if (!extrapolate || !live || isLiveForegroundSkippedForStats(live)) {
     return { event: null, seconds: 0 }
   }
+  nowMs = liveSampleEndMs(live, nowMs)
+  if (!Number.isFinite(nowMs)) return { event: null, seconds: 0 }
 
   const statsEvents = events.filter((e) => !shouldSkipWindowEventForStats(e))
   const latest = findLatestWindowEvent(statsEvents)
   if (!latest || !sameForegroundApp(latest.data, live)) return { event: null, seconds: 0 }
 
-  const segStart = live.segmentStartedAt
-    ? parseIso(live.segmentStartedAt)
-    : parseIso(latest.timestamp)
-  return { event: latest, seconds: Math.max(0, Math.round((nowMs - segStart) / 1000)) }
+  const eventStart = parseIso(latest.timestamp)
+  const segmentStart = live.segmentStartedAt ? parseIso(live.segmentStartedAt) : eventStart
+  if (segmentStart > eventStart + latest.duration * 1000 + 1000) return { event: null, seconds: 0 }
+  // 返回该条事件的时长，不能把同应用前面其他标题的整段时长重复加到本行。
+  return { event: latest, seconds: Math.max(latest.duration, Math.max(0, Math.round((nowMs - eventStart) / 1000))) }
 }
 
 export type AppTotalRow = {

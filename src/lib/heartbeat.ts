@@ -43,11 +43,11 @@ async function heartbeatWindowInner(
     last &&
     sameLocalDay &&
     sameWindowPayload(last.data, data) &&
-    now >= lastEnd &&
+    now >= lastStart &&
     now - lastEnd <= pulsetime * 1000
   ) {
     const start = new Date(last.timestamp).getTime()
-    const newDur = Math.max(0, Math.round((now - start) / 1000))
+    const newDur = Math.max(last.duration, (now - start) / 1000)
     await store.putEvent({
       ...last,
       duration: newDur,

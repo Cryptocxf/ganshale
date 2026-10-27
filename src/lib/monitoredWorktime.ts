@@ -1,5 +1,5 @@
 import type { AwEvent } from './awTypes'
-import { totalActiveSecondsWindow, totalActiveSecondsWindowLive } from './aggregations'
+import { totalActiveSecondsWindowLive } from './aggregations'
 import type { LiveForegroundSample } from './liveForeground'
 import { foregroundMatchesMonitoredPatterns } from './monitoredAppsStore'
 import { shouldSkipWindowEventForStats } from './selfWindowFilter'
@@ -34,7 +34,7 @@ export function sumMonitoredWindowSecondsForDay(
 /**
  * 办公总时长（秒）。
  * - 采集中（extrapolate）：与「实时窗口记录」同源，累计全部前台窗口并 live 延伸到 nowMs。
- * - 已结束采集的历史日：有监控列表则仅统计列表内应用，否则统计全部前台窗口。
+ * - 历史日：同样累计全部有效前台窗口，仅停止实时外推，避免跨日后累计口径改变。
  */
 export function sumMonitoredWindowSecondsForDayLive(
   day: Date,
@@ -44,13 +44,7 @@ export function sumMonitoredWindowSecondsForDayLive(
   nowMs: number,
   extrapolate: boolean,
 ): number {
-  if (extrapolate) {
-    return totalActiveSecondsWindowLive(day, events, live, nowMs, true)
-  }
-
-  if (!patterns.length) {
-    return totalActiveSecondsWindow(day, events)
-  }
-
-  return sumMonitoredWindowSecondsForDay(day, events, patterns)
+  // 过去和今天保持同一统计口径；监控列表仅供筛选，不应在次日追溯改变办公累计。
+  void patterns
+  return totalActiveSecondsWindowLive(day, events, live, nowMs, extrapolate)
 }

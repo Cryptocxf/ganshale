@@ -2,6 +2,11 @@
 
 let chain: Promise<void> = Promise.resolve()
 
+/** 等待调用前已入队的采样写入，不改变采集健康状态。 */
+export async function drainHeartbeatQueue(): Promise<void> {
+  await chain
+}
+
 let lastSuccessAtMs = 0
 /** 主进程前台轮询仍正常（含资源管理器），与是否写入窗口事件解耦 */
 let lastPollAtMs = 0

@@ -3,6 +3,14 @@ import type { LiveForegroundSample } from './liveForeground'
 import { identityFromEventData, identityFromLiveForeground } from './windowAppDisplay'
 import { endOfLocalDay, parseIso, startOfLocalDay } from './timeutil'
 
+/** 轮询每1.2秒采样；短暂延迟允许最多5秒外推，失联后不可无限增加。 */
+export const LIVE_SAMPLE_GRACE_MS = 5_000
+
+export function liveSampleEndMs(live: LiveForegroundSample, nowMs: number): number {
+  const capturedAt = parseIso(live.capturedAt)
+  return Number.isFinite(capturedAt) ? Math.min(nowMs, capturedAt + LIVE_SAMPLE_GRACE_MS) : Number.NaN
+}
+
 /** 进程名比较（忽略 .exe 与大小写） */
 export function normalizeWindowAppKey(app: string): string {
   return String(app ?? '')
@@ -41,6 +49,9 @@ export function extrapolateWindowEventToNow(
   nowMs: number,
   live?: LiveForegroundSample | null,
 ): number {
+  if (!live) return baseSec
+  nowMs = liveSampleEndMs(live, nowMs)
+  if (!Number.isFinite(nowMs)) return baseSec
   const day0 = startOfLocalDay(day).getTime()
   const day1 = endOfLocalDay(day).getTime()
   const start = parseIso(ev.timestamp)
@@ -66,6 +77,8 @@ export function extrapolateWindowEventToNow(
 
 /** 自当前前台片段起点至 nowMs 的秒数（当日裁剪） */
 export function liveForegroundSegmentSec(day: Date, live: LiveForegroundSample, nowMs: number): number {
+  nowMs = liveSampleEndMs(live, nowMs)
+  if (!Number.isFinite(nowMs)) return 0
   const start = live.segmentStartedAt
     ? parseIso(live.segmentStartedAt)
     : live.capturedAt

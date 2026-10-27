@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
 
   getStoragePath: () => ipcRenderer.invoke('ganshale:get-storage-path'),
   getLlmApiKey: () => ipcRenderer.sendSync('ganshale:get-llm-api-key'),
+  getPrivateLlmProfile: () => ipcRenderer.sendSync('ganshale:get-private-llm-profile'),
   setLlmApiKey: (apiKey) => ipcRenderer.sendSync('ganshale:set-llm-api-key', apiKey),
 
   /**

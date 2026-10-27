@@ -92,12 +92,17 @@ export function WeeklyDashboard() {
 
   useEffect(() => {
     if (weekKind !== 'current' || !dataReady || !clockLive) return
+    let cancelled = false
+    let loading = false
     const id = window.setInterval(() => {
+      if (loading) return
+      loading = true
       loadWindowEventsForWeekRange(weekStart, 1)
-        .then(setCurrentWeekEvents)
+        .then((events) => { if (!cancelled) setCurrentWeekEvents(events) })
         .catch(() => {})
+        .finally(() => { loading = false })
     }, 2500)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [weekKind, weekStart, dataReady, clockLive])
 
   const extrapolateToday = weekKind === 'current' && !windowTrackingPaused

@@ -17,6 +17,25 @@ const startupLog = require('./startupLog.cjs')
 
 const LLM_SECRET_FILE = 'llm-api-key.enc'
 
+function readPrivateLlmProfile() {
+  try {
+    const target = path.join(app.getPath('userData'), 'llm-profile.enc')
+    // 开发机私有预设不进入构建文件；仅在系统加密可用时迁移至本机用户目录。
+    if (!app.isPackaged) {
+      const source = path.join(app.getAppPath(), '.private', 'llm-profile.json')
+      if (fs.existsSync(source) && safeStorage.isEncryptionAvailable()) {
+        const raw = fs.readFileSync(source, 'utf8')
+        JSON.parse(raw)
+        fs.writeFileSync(target, safeStorage.encryptString(raw))
+      }
+    }
+    if (!safeStorage.isEncryptionAvailable() || !fs.existsSync(target)) return null
+    return JSON.parse(safeStorage.decryptString(fs.readFileSync(target)))
+  } catch {
+    return null
+  }
+}
+
 function llmSecretPath() {
   return path.join(app.getPath('userData'), LLM_SECRET_FILE)
 }
@@ -622,8 +641,7 @@ async function getActiveWin() {
 }
 
 const POLL_MS = 1200
-/** active-win 偶尔会被 Windows API 永久挂起；超时后释放轮询锁。 */
-const ACTIVE_WIN_TIMEOUT_MS = 8000
+const foregroundSampler = require('./foregroundSampler.cjs').createForegroundSampler()
 
 let trackingTimer = null
 /** 正在执行轮询所属的 generation；null 表示没有有效轮询在执行。 */
@@ -634,8 +652,10 @@ let trackingWebContents = null
 /** @type {string | null} */
 let trackingPrevForegroundKey = null
 let trackingSegmentStartTs = 0
+let trackingPowerPaused = false
 
 function stopWindowTracking() {
+  foregroundSampler.stop()
   trackingGeneration += 1
   trackingPollInFlightGeneration = null
   if (trackingTimer) {
@@ -648,19 +668,6 @@ function stopWindowTracking() {
   reflectPrevForeground = null
   reflectSegmentStartTs = Date.now()
   reflectLastTickMinimized = false
-}
-
-function activeWindowWithTimeout(fn) {
-  let timeoutId
-  return Promise.race([
-    Promise.resolve().then(() => fn()),
-    new Promise((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new Error(`active-win timed out after ${ACTIVE_WIN_TIMEOUT_MS}ms`)),
-        ACTIVE_WIN_TIMEOUT_MS,
-      )
-    }),
-  ]).finally(() => clearTimeout(timeoutId))
 }
 
 function trackingWebContentsAlive() {
@@ -685,6 +692,7 @@ function trackingSendForeground(payload) {
 }
 
 async function trackingPoll() {
+  if (trackingPowerPaused) return
   const generation = trackingGeneration
   if (!trackingWebContentsAlive()) {
     stopWindowTracking()
@@ -698,7 +706,7 @@ async function trackingPoll() {
   }
   if (!fn) return
   try {
-    const raw = await activeWindowWithTimeout(fn)
+    const raw = await foregroundSampler.sample()
     if (generation !== trackingGeneration) return
     if (!trackingWebContentsAlive()) {
       stopWindowTracking()
@@ -725,6 +733,7 @@ async function trackingPoll() {
     if (!trackingSendForeground(mapped)) return
     handleReflectFocusTransition(mainBrowserWindow, mapped, now)
   } catch (err) {
+    if (generation !== trackingGeneration) return
     console.error('[ganshale] active-win poll:', err)
     startupLog.write('active-win poll failed', err)
   }
@@ -748,6 +757,10 @@ function startTrackingPollTimer() {
 }
 
 function notifyTrackingPowerState(locked) {
+  if (locked) foregroundSampler.stop()
+  trackingPowerPaused = locked
+  trackingPrevForegroundKey = null
+  trackingSegmentStartTs = 0
   const wc = trackingWebContents
   if (!wc || wc.isDestroyed()) return
   try {
@@ -1164,6 +1177,10 @@ ipcMain.on('ganshale:get-llm-api-key', (event) => {
   event.returnValue = readLlmApiKey()
 })
 
+ipcMain.on('ganshale:get-private-llm-profile', (event) => {
+  event.returnValue = readPrivateLlmProfile()
+})
+
 ipcMain.on('ganshale:set-llm-api-key', (event, apiKey) => {
   event.returnValue = writeLlmApiKey(apiKey)
 })
@@ -1227,7 +1244,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了 v1.1.1 · 更新于 2026-10-27',
+    title: '干啥了 v1.1.2 · 更新于 2026-10-27',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),

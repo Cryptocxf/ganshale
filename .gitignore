@@ -15,6 +15,7 @@ release
 
 # 环境变量与密钥（勿提交）
 .env
+.private/
 .env.*
 !.env.example
 

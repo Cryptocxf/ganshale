@@ -35,7 +35,7 @@ export function AiAutoSummaryActiveBadge({ day, busy, onStart }: { day: Date; bu
   const dayKind = compareLocalCalendarDay(day, new Date(nowMs))
   const isToday = dayKind === 'today'
   const badgeLabel =
-    dayKind === 'future' ? 'AI总结未开始' : 'AI总结'
+    dayKind === 'future' ? 'AI自动总结未开始' : 'AI自动总结'
 
   useEffect(() => {
     if (!isAiAutoSummaryActive(settings) || !isAiSummaryScheduleDay(day)) return
@@ -95,8 +95,8 @@ export function AiAutoSummaryActiveBadge({ day, busy, onStart }: { day: Date; bu
       ) : null}
       {isToday && onStart ? (
         <button type="button" onClick={onStart} disabled={busy}
-          aria-label={busy ? 'AI总结中' : '立即进行AI总结'}
-          title={busy ? 'AI总结中，请稍候' : '立即进行AI总结'}
+          aria-label={busy ? 'AI自动总结中' : '立即进行AI总结'}
+          title={busy ? 'AI自动总结中，请稍候' : '立即进行AI总结'}
           className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-emerald-200/70 disabled:cursor-wait">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" fill="currentColor" />}
         </button>

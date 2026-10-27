@@ -26,18 +26,6 @@ const inputCls =
 
 const hintCls = 'text-[10px] leading-relaxed text-ganshale-subtle'
 
-const MODEL_OPTIONS = [
-  { id: 'qwen3.5-plus', description: '综合能力均衡，适合工作总结、长内容整理和日报撰写。' },
-  { id: 'qwen3.5-flash', description: '侧重快速响应，适合高频、简短的窗口活动总结。' },
-  { id: 'deepseek-v4-pro', description: '侧重深度推理，适合复杂工作分析；总结时可能需要更长等待时间。' },
-] as const
-
-/** 隐藏：3 秒内连点标题「模型配置」6 次自动填充。 */
-const HIDDEN_DEV_LLM_FILL = {
-  baseUrl: 'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
-  apiKey: '3886B9B1-FABA-4694-85CB-11FC271D1F29',
-  gatewayModelId: 'deepseek-v4-pro',
-} as const
 const HIDDEN_TITLE_CLICKS = 6
 const HIDDEN_TITLE_WINDOW_MS = 3000
 
@@ -84,13 +72,11 @@ function resolveRuntimeFromForm(form: FormState) {
 
 export function ModelConfigSettings() {
   const [saved, setSaved] = useState<LlmUserConfig>(() => loadLlmUserConfig())
-  const [form, setForm] = useState<FormState>(() => configToForm(loadLlmUserConfig()))
-  const [providerId, setProviderId] = useState(() =>
-    guessLlmProviderPresetId(loadLlmUserConfig().baseUrl, loadLlmUserConfig().gatewayModelId),
-  )
-  const [apiKeyHint, setApiKeyHint] = useState(
-    () => findPresetHint(guessLlmProviderPresetId(loadLlmUserConfig().baseUrl, loadLlmUserConfig().gatewayModelId)),
-  )
+  const [form, setForm] = useState<FormState>({ baseUrl: '', apiKey: '', gatewayModelId: '' })
+  const [revealed, setRevealed] = useState(false)
+  const [modelOptions, setModelOptions] = useState<{ id: string; description: string }[]>([])
+  const [providerId, setProviderId] = useState('custom')
+  const [apiKeyHint, setApiKeyHint] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
@@ -106,18 +92,26 @@ export function ModelConfigSettings() {
     if (recent.length < HIDDEN_TITLE_CLICKS) return
 
     titleClickTimesRef.current = []
-    setForm({ ...HIDDEN_DEV_LLM_FILL })
+    const localProfile = window.ganshaleDesktop?.getPrivateLlmProfile?.()
+    const configured = loadLlmUserConfig()
+    const fields = configured.baseUrl && configured.apiKey && configured.gatewayModelId
+      ? configured
+      : localProfile ?? configured
+    setRevealed(true)
+    setModelOptions(localProfile?.models ?? [])
+    setForm(configToForm({ ...configured, ...fields }))
     setProviderId(
       guessLlmProviderPresetId(
-        HIDDEN_DEV_LLM_FILL.baseUrl,
-        HIDDEN_DEV_LLM_FILL.gatewayModelId,
+        fields.baseUrl,
+        fields.gatewayModelId,
       ),
     )
     setApiKeyHint(findPresetHint('custom'))
     setTestResult(null)
-    setNote('已填入测试配置，请确认后保存')
+    setNote(localProfile ? '已填入本机私有配置，请确认后保存' : '已显示本机保存的配置；无预设时请自行填写')
   }, [])
   const dirty = useMemo(() => {
+    if (!revealed) return false
     const a = modelFieldsSnapshot(formToModelFields(form))
     const b = modelFieldsSnapshot({
       baseUrl: saved.baseUrl,
@@ -129,7 +123,7 @@ export function ModelConfigSettings() {
       a.apiKey !== b.apiKey ||
       a.gatewayModelId !== b.gatewayModelId
     )
-  }, [form, saved])
+  }, [form, saved, revealed])
 
   const applySave = useCallback(() => {
     const next = { ...saved, ...formToModelFields(form) }
@@ -216,7 +210,7 @@ export function ModelConfigSettings() {
       </h3>
 
       <p className="mt-1.5 text-[11px] leading-snug text-ganshale-muted">
-        已预填默认网关与 API Key。选择模型并保存后，可点击「测试」确认连接。
+        使用你自己的网关配置。配置仅保存在本机，连续点击标题6次可显示本机已保存的配置。
       </p>
 
       <div className="mt-3 max-w-lg space-y-4 text-xs">
@@ -229,6 +223,7 @@ export function ModelConfigSettings() {
             value={providerId}
             className={inputCls}
             onChange={(e) => {
+              setRevealed(true)
               const preset = LLM_PROVIDER_PRESETS.find((p) => p.id === e.target.value)
               if (preset) applyProviderPreset(preset, providerId)
             }}
@@ -254,6 +249,7 @@ export function ModelConfigSettings() {
             className={inputCls}
             onChange={(e) => {
               const baseUrl = e.target.value
+              setRevealed(true)
               setForm((s) => ({ ...s, baseUrl }))
               setProviderId(guessLlmProviderPresetId(baseUrl, form.gatewayModelId))
             }}
@@ -277,7 +273,7 @@ export function ModelConfigSettings() {
             className={inputCls}
             autoComplete="off"
             spellCheck={false}
-            onChange={(e) => setForm((s) => ({ ...s, apiKey: e.target.value }))}
+            onChange={(e) => { setRevealed(true); setForm((s) => ({ ...s, apiKey: e.target.value })) }}
           />
           <p className={hintCls}>{apiKeyHint || '在对应供应商控制台创建 API Key 后粘贴到此处。'}</p>
         </div>
@@ -286,7 +282,7 @@ export function ModelConfigSettings() {
           <label htmlFor="llm-gateway-model" className={SETTINGS_FIELD_LABEL_BLOCK_CLASS}>
             模型 ID
           </label>
-          <select
+          {modelOptions.length ? <select
             id="llm-gateway-model"
             value={form.gatewayModelId}
             className={inputCls}
@@ -296,18 +292,18 @@ export function ModelConfigSettings() {
               setProviderId(guessLlmProviderPresetId(form.baseUrl, gatewayModelId))
             }}
           >
-            {!MODEL_OPTIONS.some((m) => m.id === form.gatewayModelId) ? (
+            {!modelOptions.some((m) => m.id === form.gatewayModelId) ? (
               <option value={form.gatewayModelId}>{form.gatewayModelId || '请选择模型'}</option>
             ) : null}
-            {MODEL_OPTIONS.map((model) => <option key={model.id} value={model.id}>{model.id}</option>)}
-          </select>
-          <div className="space-y-2 rounded-lg border border-ganshale-border bg-ganshale-page p-2.5">
-            {MODEL_OPTIONS.map((model) => (
+            {modelOptions.map((model) => <option key={model.id} value={model.id}>{model.id}</option>)}
+          </select> : <input id="llm-gateway-model" type="text" value={form.gatewayModelId} className={inputCls} placeholder="填写模型 ID" onChange={(e) => { setRevealed(true); setForm((s) => ({ ...s, gatewayModelId: e.target.value })) }} />}
+          {modelOptions.length ? <div className="space-y-2 rounded-lg border border-ganshale-border bg-ganshale-page p-2.5">
+            {modelOptions.map((model) => (
               <p key={model.id} className="text-[11px] leading-relaxed text-ganshale-muted">
                 <span className="font-mono font-semibold text-ganshale-text">{model.id}</span>：{model.description}
               </p>
             ))}
-          </div>
+          </div> : null}
           <p className={hintCls}>
             发给网关 <span className="font-mono">POST /chat/completions</span> 时的{' '}
             <span className="font-mono">model</span> 字段，须与供应商文档一致。
@@ -333,7 +329,7 @@ export function ModelConfigSettings() {
           </button>
           <button
             type="button"
-            disabled={testing}
+            disabled={testing || !revealed}
             onClick={() => void runTest()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-900 transition hover:bg-blue-100 disabled:opacity-50"
           >

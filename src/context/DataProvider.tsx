@@ -90,6 +90,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const screenLockedRef = useRef(false)
   /** 只允许最近一次读取写入 state，避免旧 IDB 快照晚到后覆盖新事件。 */
   const loadRequestSeqRef = useRef(0)
+  const loadInFlightRef = useRef<{ key: string; promise: Promise<void> } | null>(null)
 
   const windowRecordingHealthy = useMemo(() => {
     void recordingHealthTick
@@ -98,7 +99,10 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   }, [windowTrackingActive, recordingHealthTick])
 
   const load = useCallback(async () => {
+    const loadKey = `${toYmdLocal(day)}:${toYmdLocal(new Date())}`
+    if (loadInFlightRef.current?.key === loadKey) return loadInFlightRef.current.promise
     const requestSeq = ++loadRequestSeqRef.current
+    const promise = (async () => {
     const start = startOfLocalDay(day).toISOString()
     const end = endOfLocalDay(day).toISOString()
     const now = new Date()
@@ -124,6 +128,13 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     setAfkEvents(afk)
     setEventCount(n)
     setDaysWithTimingData(timingDays)
+    })()
+    loadInFlightRef.current = { key: loadKey, promise }
+    try {
+      await promise
+    } finally {
+      if (loadInFlightRef.current?.promise === promise) loadInFlightRef.current = null
+    }
   }, [day])
 
   const loadRef = useRef(load)
@@ -227,13 +238,13 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
         await loadRef.current()
 
         const flushCountableForeground = async (sample: LiveForegroundSample) => {
+          splitNextCountableHeartbeatRef.current = true
           const observedAtMs = Date.parse(sample.capturedAt)
           await heartbeatWindow(BUCKET_WINDOW, {
             app: sample.app,
             title: sample.title,
             ...(sample.appPath ? { appPath: sample.appPath } : {}),
           }, { observedAtMs })
-          splitNextCountableHeartbeatRef.current = true
           lastIndexedRefreshRef.current = Date.now()
           await loadRef.current()
         }
@@ -254,6 +265,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
               lastIndexedRefreshRef.current = now
               void loadRef.current()
             }
+          }).catch((error) => {
+            if (!cancelled) setError(`窗口记录写入失败：${error instanceof Error ? error.message : String(error)}`)
           })
         }
 
@@ -261,7 +274,12 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           d.onForegroundWindow?.((payload) => {
             if (cancelled) return
             markTrackingPollSuccess()
-            if (screenLockedRef.current) return
+            // 主进程锁屏期间不发送采样；收到新采样说明已恢复，修复漏收解锁通知后的永久暂停。
+            if (screenLockedRef.current && payload) {
+              screenLockedRef.current = false
+              setWindowTrackingPaused(false)
+              splitNextCountableHeartbeatRef.current = true
+            }
 
             if (!payload) {
               const prev = lastCountableForegroundRef.current

@@ -20,10 +20,7 @@ export type LlmInvokeConfig = {
 export { LLM_NOT_CONFIGURED_HINT }
 
 export function getDefaultApiKey(): string {
-  return (
-    (import.meta.env.VITE_LLM_API_KEY && String(import.meta.env.VITE_LLM_API_KEY).trim()) ||
-    ''
-  )
+  return ''
 }
 
 function defaultLlmBaseUrl(): string {
