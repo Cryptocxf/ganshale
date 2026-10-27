@@ -36,7 +36,6 @@ import {
 } from '../lib/dailyReportAutoSchedule'
 import {
   buildDailyReportGenerationUserContent,
-  buildDailyReportWindowBlock,
   normalizeDailyReportTitleDate,
 } from '../lib/dailyReportGeneration'
 import { appendDailyReportHistory } from '../lib/dailyReportHistoryStore'
@@ -44,9 +43,6 @@ import { syncReportToObsidian } from '../lib/obsidianReportExport'
 import { LOCAL_MIDNIGHT_EVENT } from '../lib/localMidnight'
 import { buildWorkRecordBlock, loadWorkRecords } from '../lib/workRecordStore'
 import { loadDailyReportGenerationPrompt } from '../lib/llmUserConfig'
-import { getAllEventsForBucket } from '../lib/idbStore'
-import { BUCKET_WINDOW } from '../lib/seed'
-import { drainHeartbeatQueue } from '../lib/heartbeatQueue'
 import { useGanshaleData } from './useGanshaleData'
 import { DailyReportHistoryModal } from '../components/DailyReportHistoryModal'
 import { DailyReportResultModal } from '../components/DailyReportResultModal'
@@ -289,9 +285,6 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
 
     try {
     assertLlmConfigured()
-    await drainHeartbeatQueue()
-    const allWindowEvents = await getAllEventsForBucket(BUCKET_WINDOW)
-    const windowBlock = buildDailyReportWindowBlock(day, allWindowEvents)
 
     const prompt = loadDailyReportGenerationPrompt()
     const workBlock = buildWorkRecordBlock(loadWorkRecords(day))
@@ -302,14 +295,13 @@ export function DailyReportProvider({ children }: { children: ReactNode }) {
       prompt,
       workBlock,
       gatewayModel,
-      windowBlock,
     )
 
     const uiModelId = gatewayModelToUiModelId(gatewayModel)
     const userMsg: ChatLine = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: '请结合所选日期的工作记录与全部实时窗口记录，生成一份日报。',
+      content: '请结合所选日期的工作记录列表，生成一份完整日报。',
       apiContent: userContent,
       createdAt: new Date().toISOString(),
     }

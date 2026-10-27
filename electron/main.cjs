@@ -1244,7 +1244,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了 v1.1.2 · 更新于 2026-10-27',
+    title: '干啥了 v1.1.3 · 更新于 2026-10-27',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),
