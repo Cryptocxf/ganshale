@@ -138,6 +138,9 @@ let mainBrowserWindow = null
 let appTray = null
 /** 用户确认退出或 before-quit 时为 true，允许窗口真正关闭 */
 let isQuitting = false
+if (gotSingleInstanceLock) {
+  require('./updater.cjs').registerUpdater({ app, ipcMain, log: startupLog, beforeInstall: () => { isQuitting = true } })
+}
 /** 主窗口是否已 `show()`（启动页在可见后再计时） */
 let mainWindowHasShown = false
 /** @type {BrowserWindow | null} */
@@ -619,9 +622,12 @@ async function getActiveWin() {
 }
 
 const POLL_MS = 1200
+/** active-win 偶尔会被 Windows API 永久挂起；超时后释放轮询锁。 */
+const ACTIVE_WIN_TIMEOUT_MS = 8000
 
 let trackingTimer = null
-let trackingPollInFlight = false
+/** 正在执行轮询所属的 generation；null 表示没有有效轮询在执行。 */
+let trackingPollInFlightGeneration = null
 let trackingGeneration = 0
 /** @type {import('electron').WebContents | null} */
 let trackingWebContents = null
@@ -631,6 +637,7 @@ let trackingSegmentStartTs = 0
 
 function stopWindowTracking() {
   trackingGeneration += 1
+  trackingPollInFlightGeneration = null
   if (trackingTimer) {
     clearInterval(trackingTimer)
     trackingTimer = null
@@ -641,6 +648,19 @@ function stopWindowTracking() {
   reflectPrevForeground = null
   reflectSegmentStartTs = Date.now()
   reflectLastTickMinimized = false
+}
+
+function activeWindowWithTimeout(fn) {
+  let timeoutId
+  return Promise.race([
+    Promise.resolve().then(() => fn()),
+    new Promise((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new Error(`active-win timed out after ${ACTIVE_WIN_TIMEOUT_MS}ms`)),
+        ACTIVE_WIN_TIMEOUT_MS,
+      )
+    }),
+  ]).finally(() => clearTimeout(timeoutId))
 }
 
 function trackingWebContentsAlive() {
@@ -678,7 +698,7 @@ async function trackingPoll() {
   }
   if (!fn) return
   try {
-    const raw = await fn()
+    const raw = await activeWindowWithTimeout(fn)
     if (generation !== trackingGeneration) return
     if (!trackingWebContentsAlive()) {
       stopWindowTracking()
@@ -706,6 +726,7 @@ async function trackingPoll() {
     handleReflectFocusTransition(mainBrowserWindow, mapped, now)
   } catch (err) {
     console.error('[ganshale] active-win poll:', err)
+    startupLog.write('active-win poll failed', err)
   }
 }
 
@@ -713,10 +734,13 @@ function startTrackingPollTimer() {
   if (trackingTimer) return
   if (!trackingWebContentsAlive()) return
   const run = () => {
-    if (trackingPollInFlight) return
-    trackingPollInFlight = true
+    const generation = trackingGeneration
+    if (trackingPollInFlightGeneration === generation) return
+    trackingPollInFlightGeneration = generation
     void trackingPoll().finally(() => {
-      trackingPollInFlight = false
+      if (trackingPollInFlightGeneration === generation) {
+        trackingPollInFlightGeneration = null
+      }
     })
   }
   trackingTimer = setInterval(run, POLL_MS)
@@ -1203,7 +1227,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了 v1.0.1 · 更新于 2026-08-04',
+    title: '干啥了 v1.1.1 · 更新于 2026-10-27',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),

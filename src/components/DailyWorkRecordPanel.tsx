@@ -1,5 +1,5 @@
 import type { AwEvent } from '../lib/awTypes'
-import { ClipboardList, Save, Trash2, X } from 'lucide-react'
+import { ClipboardList, Copy, Loader2, Save, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   aiSummaryWindowBounds,
@@ -14,6 +14,7 @@ import {
 import { LOCAL_MIDNIGHT_EVENT, type LocalMidnightDetail } from '../lib/localMidnight'
 import { compareLocalCalendarDay, toYmdLocal } from '../lib/timeutil'
 import { summarizeWindowEventsWithLlm } from '../lib/aiWorkRecordSummary'
+import { LLM_USER_CONFIG_CHANGED_EVENT } from '../lib/llmUserConfig'
 import {
   appendAiSummaryWorkRecord,
   createEmptyWorkRecordRow,
@@ -72,12 +73,12 @@ function WorkRecordTableRow({
   row,
   isSystem,
   showBadge,
-  onUpdate,
   onSave,
   onDelete,
   savedRowId,
   deleteManualDisabled,
   rowPy,
+  onOpen,
 }: {
   row: WorkRecordRow
   isSystem: boolean
@@ -88,6 +89,7 @@ function WorkRecordTableRow({
   savedRowId: string | null
   deleteManualDisabled: boolean
   rowPy?: string
+  onOpen: (row: WorkRecordRow) => void
 }) {
   const py = rowPy ?? ''
   return (
@@ -98,22 +100,11 @@ function WorkRecordTableRow({
       <td className={`${td} ${py}`}>
         <div className="flex min-w-0 items-center gap-1.5">
           {showBadge ? <WorkRecordSourceBadge source={row.source} saved={row.saved} /> : null}
-          <input
-            type="text"
-            value={row.content}
-            onChange={(e) => onUpdate(row.id, { content: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isSystem && row.content.trim()) {
-                e.preventDefault()
-                onSave(row.id)
-              }
-            }}
-            placeholder={isSystem ? '' : '填写工作内容…'}
-            className={inputCls}
-            title={row.content}
-            readOnly={isSystem}
-            disabled={isSystem}
-          />
+          <button type="button" onClick={() => onOpen(row)}
+            className={`${inputCls} min-w-0 truncate text-left cursor-pointer`}
+            title="点击查看、编辑或复制完整内容">
+            {row.content || '填写工作内容…'}
+          </button>
         </div>
       </td>
       <td className={`${tdTime} ${py}`}>{formatWorkRecordTime(row.recordedAt)}</td>
@@ -159,6 +150,11 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   )
   const [recordSettingsRev, setRecordSettingsRev] = useState(0)
   const [savedRowId, setSavedRowId] = useState<string | null>(null)
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null)
+  const [aiSummaryBusy, setAiSummaryBusy] = useState(false)
+  const [editingRow, setEditingRow] = useState<WorkRecordRow | null>(null)
+  const [editingText, setEditingText] = useState('')
+  const [copyNote, setCopyNote] = useState('')
   const eventsRef = useRef(events)
   const dayRef = useRef(day)
   const dismissedSystemIdsRef = useRef(loadDismissedSystemRecordIds(day))
@@ -203,7 +199,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     return () => window.removeEventListener(LOCAL_MIDNIGHT_EVENT, onMidnight)
   }, [])
 
-  const runAiSummary = useCallback(async () => {
+  const runAiSummary = useCallback(async (manual = false) => {
     if (aiSummaryBusyRef.current) return
     const settings = loadWorkRecordSettings()
     if (!isAiAutoSummaryActive(settings)) return
@@ -215,22 +211,27 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       nowMs,
       settings.systemRecordPeriod,
     )
-    const windowEvents = filterWindowEventsInRange(
+    let windowEvents = filterWindowEventsInRange(
       eventsRef.current,
       currentDay,
       startMs,
       endMs,
     )
+    if (manual && windowEvents.length === 0) {
+      windowEvents = filterWindowEventsInRange(eventsRef.current, currentDay, 0, nowMs)
+    }
 
     aiSummaryBusyRef.current = true
+    setAiSummaryBusy(true)
     aiSummaryAbortRef.current?.abort()
     aiSummaryAbortRef.current = new AbortController()
 
     try {
       const intervalMs = systemRecordIntervalMs(settings)
       if (windowEvents.length === 0) {
-        saveLastAiSummaryAt(currentDay, nowMs)
-        if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + intervalMs)
+        if (manual) setAiSummaryError('暂无可总结的窗口记录，请先使用其他应用后再试')
+        // 采集/入库可能短暂滞后；不要把“无数据”当成一次成功总结，否则会漏掉整段。
+        if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + 60_000)
         return
       }
       const content = await summarizeWindowEventsWithLlm(
@@ -238,14 +239,25 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         settings.systemRecordPeriod,
         aiSummaryAbortRef.current.signal,
       )
+      setAiSummaryError(null)
       saveLastAiSummaryAt(currentDay, nowMs)
-      if (intervalMs != null) saveNextAiSummaryAt(currentDay, nowMs + intervalMs)
-      setRows((prev) => appendAiSummaryWorkRecord(prev, content))
+      if (intervalMs != null) saveNextAiSummaryAt(currentDay, Date.now() + intervalMs)
+      if (toYmdLocal(dayRef.current) === toYmdLocal(currentDay)) {
+        setRows((prev) => appendAiSummaryWorkRecord(prev, content))
+      } else {
+        saveWorkRecords(currentDay, appendAiSummaryWorkRecord(loadWorkRecords(currentDay), content))
+      }
+      setRecordSettingsRev((v) => v + 1)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
+      const message = e instanceof Error ? e.message : String(e)
+      setAiSummaryError(message)
+      const retryAt = Date.now() + 60_000
+      saveNextAiSummaryAt(currentDay, retryAt)
       console.warn('[ganshale] AI 自动总结失败', e)
     } finally {
       aiSummaryBusyRef.current = false
+      setAiSummaryBusy(false)
       aiSummaryAbortRef.current = null
     }
   }, [])
@@ -334,6 +346,21 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       window.removeEventListener('storage', onSettingsChange)
     }
   }, [recordSettings])
+
+  useEffect(() => {
+    const onModelConfigChange = () => {
+      const currentDay = dayRef.current
+      const settings = loadWorkRecordSettings()
+      if (!isAiSummaryScheduleDay(currentDay) || !isAiAutoSummaryActive(settings)) return
+
+      // 新模型保存后尽快验证自动总结，不沿用旧模型失败后留下的长倒计时。
+      setAiSummaryError(null)
+      saveNextAiSummaryAt(currentDay, Date.now() + 1_000)
+      setRecordSettingsRev((v) => v + 1)
+    }
+    window.addEventListener(LLM_USER_CONFIG_CHANGED_EVENT, onModelConfigChange)
+    return () => window.removeEventListener(LLM_USER_CONFIG_CHANGED_EVENT, onModelConfigChange)
+  }, [])
 
   const updateRow = useCallback((id: string, patch: Partial<Pick<WorkRecordRow, 'content'>>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -426,6 +453,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
 
   const workRecordTableBody = (sourceRows: WorkRecordRow[], rowPy?: string) => (
     <tbody className="gs-dashboard-modal__table-body divide-y divide-ganshale-border">
+      {aiSummaryBusy ? <tr><td colSpan={3} className="px-3 py-3 text-xs text-ganshale-muted"><span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />正在总结窗口记录，请稍候…</span></td></tr> : null}
       {sourceRows.map((row) => {
         const isSystem = row.source === 'system'
         const showBadge = (row.source === 'manual' && row.saved) || isSystem
@@ -441,6 +469,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
             savedRowId={savedRowId}
             deleteManualDisabled={deleteManualDisabled}
             rowPy={rowPy}
+            onOpen={(selected) => { setEditingRow(selected); setEditingText(selected.content); setCopyNote('') }}
           />
         )
       })}
@@ -457,7 +486,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
           <DashboardSectionTitle
             icon={ClipboardList}
             description={DASHBOARD_SECTION_DESCRIPTIONS.dailyWorkRecord}
-            suffix={<AiAutoSummaryStatusSuffix day={day} settings={recordSettings} />}
+            suffix={<AiAutoSummaryStatusSuffix day={day} settings={recordSettings} busy={aiSummaryBusy} onStart={() => void runAiSummary(true)} />}
           >
             今日工作记录
           </DashboardSectionTitle>
@@ -478,6 +507,11 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
             />
           </div>
         </div>
+        {isToday && aiSummaryError ? (
+          <p className="mt-1 text-[10px] leading-tight text-red-600" role="alert">
+            AI 自动总结失败：{aiSummaryError}（将在 1 分钟后重试）
+          </p>
+        ) : null}
       </div>
 
       <div className={[DASHBOARD_TOP_CARD_BODY_CLASS, 'mt-1.5'].join(' ')}>
@@ -509,6 +543,26 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         </div>
       </div>
 
+      {editingRow ? (
+        <DashboardModalRoot open onClose={() => setEditingRow(null)} labelledBy="work-record-edit-title" zIndex={100} dialogClassName="w-full max-w-xl">
+          <div className="flex items-center justify-between border-b border-ganshale-border p-3">
+            <h3 id="work-record-edit-title" className="text-sm font-semibold">工作记录内容</h3>
+            <button type="button" onClick={() => setEditingRow(null)} aria-label="关闭"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="space-y-3 p-4">
+            <textarea autoFocus aria-label="完整工作记录" value={editingText} onChange={(e) => setEditingText(e.target.value)} className="gs-field-input min-h-48 w-full resize-y rounded-lg p-3 text-sm leading-relaxed" />
+            <div className="flex items-center justify-end gap-2">
+              <span role="status" className="text-xs text-ganshale-muted">{copyNote}</span>
+              <button type="button" className="gs-toolbar-btn text-xs" onClick={() => { void navigator.clipboard.writeText(editingText).then(() => setCopyNote('已复制'), () => setCopyNote('复制失败，请选中文字复制')) }}><Copy className="h-3.5 w-3.5" />复制</button>
+              <button type="button" className="gs-toolbar-btn text-xs" onClick={() => setEditingRow(null)}>取消</button>
+              <button type="button" disabled={!editingText.trim()} className="gs-toolbar-btn gs-toolbar-btn--accent text-xs" onClick={() => {
+                setRows((previous) => previous.map((row) => row.id === editingRow.id ? { ...row, content: editingText.trim(), saved: true, source: row.source === 'system' ? 'system' : 'manual' } : row))
+                setEditingRow(null)
+              }}><Save className="h-3.5 w-3.5" />保存</button>
+            </div>
+          </div>
+        </DashboardModalRoot>
+      ) : null}
       {detailModalOpen ? (
         <DashboardModalRoot
           open

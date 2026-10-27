@@ -22,6 +22,10 @@ interface InstalledAppRow {
 }
 
 interface GanshaleDesktopBridge {
+  getUpdateState: () => Promise<{ status: string; message: string; version: string; percent: number; packaged?: boolean }>
+  checkUpdate: GanshaleDesktopBridge['getUpdateState']
+  downloadUpdate: GanshaleDesktopBridge['getUpdateState']
+  installUpdate: () => Promise<{ ok: boolean }>
   platform: string
   windowTrackingSupported: () => Promise<{ supported: boolean; platform: string }>
   startWindowTracking: () => Promise<{

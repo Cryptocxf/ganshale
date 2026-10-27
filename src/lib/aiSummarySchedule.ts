@@ -118,7 +118,7 @@ export function ensureAiSummaryAnchoredForSession(
       const o = JSON.parse(raw) as { sessionStart?: number; ymd?: string }
       if (o.sessionStart === sessionStart && o.ymd === ymd) {
         const next = loadNextAiSummaryAt(day)
-        if (next != null && next > nowMs) return
+        if (next != null) return
       }
     }
   } catch {
@@ -209,7 +209,7 @@ export function getNextAiSummaryAtMs(
   if (!isAiSummaryScheduleDay(day, new Date(nowMs))) return null
 
   const nextStored = loadNextAiSummaryAt(day)
-  if (nextStored != null && nextStored > nowMs) return nextStored
+  if (nextStored != null) return nextStored
 
   const last = loadLastAiSummaryAt(day)
   if (last != null) {

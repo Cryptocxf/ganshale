@@ -1,7 +1,7 @@
 {
   "name": "ganshale",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.1.1",
   "author": {
     "name": "Chen Xiaofeng"
   },
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "active-win": "^9.0.0",
+    "electron-updater": "^6.8.11",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.14.0",
     "react": "^19.2.6",
@@ -52,7 +53,7 @@
     "appId": "net.ganshale.desktop",
     "productName": "干啥了",
     "copyright": "Copyright © 2026 Chen Xiaofeng",
-    "artifactName": "${productName}-v${version}-2026-08-04-Setup.${ext}",
+    "artifactName": "${productName}-v${version}-2026-10-27-Setup.${ext}",
     "icon": "build/icon.ico",
     "directories": {
       "output": "release"
@@ -66,6 +67,7 @@
       "package.json"
     ],
     "npmRebuild": false,
+    "publish": [{ "provider": "github", "owner": "Cryptocxf", "repo": "ganshale", "releaseType": "release" }],
     "win": {
       "target": [
         "nsis"
@@ -75,6 +77,7 @@
       "signAndEditExecutable": true
     },
     "nsis": {
+      "deleteAppDataOnUninstall": false,
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,

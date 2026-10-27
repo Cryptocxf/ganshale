@@ -1,21 +1,28 @@
 import { useEffect, useRef } from 'react'
 import { APP_DATA_CHANGED_EVENT } from '../lib/dataManagement'
 
-/** 切换前台后 raw 可能短暂变小；此时间内保持峰值避免倒退。 */
-const PEAK_HOLD_MS = 2500
-
 /**
- * 今日办公总时长展示：切换应用时 raw 可能短暂变小，短期内取峰值避免「倒退」。
- * 超过 {@link PEAK_HOLD_MS} 仍低于峰值则跟随后端数据（避免 IDB 刷新后总时长永久卡住）。
+ * 今日办公总时长展示：同一自然日、同一会话内严格单调递增。
+ * IndexedDB 并发读取可能短暂返回旧快照，但累计时间不应因此倒退。
+ * 明确的数据变更会触发 APP_DATA_CHANGED_EVENT，此时允许从数据源重算。
  */
-export function useMonotonicOfficeSec(rawSec: number, enabled: boolean): number {
+export function useMonotonicOfficeSec(
+  rawSec: number,
+  enabled: boolean,
+  resetKey?: string,
+): number {
   const peakRef = useRef(0)
-  const lastPeakAtMsRef = useRef(0)
+  const resetKeyRef = useRef(resetKey)
+
+  // 日期切换（尤其跨午夜）必须在本次 render 内同步清峰值，避免新一天短暂显示昨日累计。
+  if (resetKeyRef.current !== resetKey) {
+    resetKeyRef.current = resetKey
+    peakRef.current = 0
+  }
 
   useEffect(() => {
     if (!enabled) {
       peakRef.current = 0
-      lastPeakAtMsRef.current = 0
     }
   }, [enabled])
 
@@ -23,7 +30,6 @@ export function useMonotonicOfficeSec(rawSec: number, enabled: boolean): number 
     if (!enabled) return
     const reset = () => {
       peakRef.current = 0
-      lastPeakAtMsRef.current = 0
     }
     window.addEventListener(APP_DATA_CHANGED_EVENT, reset)
     return () => window.removeEventListener(APP_DATA_CHANGED_EVENT, reset)
@@ -32,14 +38,8 @@ export function useMonotonicOfficeSec(rawSec: number, enabled: boolean): number 
   if (!enabled) return rawSec
 
   const raw = Math.max(0, Math.floor(rawSec))
-  const now = Date.now()
-
   if (raw >= peakRef.current) {
     peakRef.current = raw
-    lastPeakAtMsRef.current = now
-  } else if (now - lastPeakAtMsRef.current >= PEAK_HOLD_MS) {
-    peakRef.current = raw
-    lastPeakAtMsRef.current = now
   }
 
   return peakRef.current

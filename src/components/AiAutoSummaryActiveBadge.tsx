@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  clearNextAiSummaryAt,
   ensureAiSummaryAnchoredForSession,
   formatAiSummaryCountdown,
   getNextAiSummaryAtMs,
@@ -15,6 +14,7 @@ import {
   type WorkRecordSettings,
 } from '../lib/workRecordSettings'
 import { StatusPulseDot } from './StatusPulseDot'
+import { Loader2, Play } from 'lucide-react'
 
 /** 今日工作记录标题后：未开启提示 */
 export function AiAutoSummaryInactiveBadge() {
@@ -29,17 +29,16 @@ export function AiAutoSummaryInactiveBadge() {
 }
 
 /** 今日工作记录标题后：AI 自动总结进行中 + 下次总结倒计时 */
-export function AiAutoSummaryActiveBadge({ day }: { day: Date }) {
+export function AiAutoSummaryActiveBadge({ day, busy, onStart }: { day: Date; busy?: boolean; onStart?: () => void }) {
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [settings, setSettings] = useState(() => loadWorkRecordSettings())
   const dayKind = compareLocalCalendarDay(day, new Date(nowMs))
   const isToday = dayKind === 'today'
   const badgeLabel =
-    dayKind === 'future' ? 'AI自动总结未开始' : 'AI自动总结中'
+    dayKind === 'future' ? 'AI总结未开始' : 'AI总结'
 
   useEffect(() => {
     if (!isAiAutoSummaryActive(settings) || !isAiSummaryScheduleDay(day)) return
-    clearNextAiSummaryAt(day)
     ensureAiSummaryAnchoredForSession(day, settings, Date.now())
   }, [day, settings.aiAutoSummaryEnabled, settings.systemRecordPeriod])
 
@@ -94,6 +93,14 @@ export function AiAutoSummaryActiveBadge({ day }: { day: Date }) {
           {countdown}
         </span>
       ) : null}
+      {isToday && onStart ? (
+        <button type="button" onClick={onStart} disabled={busy}
+          aria-label={busy ? 'AI总结中' : '立即进行AI总结'}
+          title={busy ? 'AI总结中，请稍候' : '立即进行AI总结'}
+          className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-emerald-200/70 disabled:cursor-wait">
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" fill="currentColor" />}
+        </button>
+      ) : null}
     </span>
   )
 }
@@ -102,12 +109,16 @@ export function AiAutoSummaryActiveBadge({ day }: { day: Date }) {
 export function AiAutoSummaryStatusSuffix({
   day,
   settings,
+  busy,
+  onStart,
 }: {
   day: Date
   settings: WorkRecordSettings
+  busy?: boolean
+  onStart?: () => void
 }) {
   if (!isAiAutoSummaryActive(settings)) {
     return <AiAutoSummaryInactiveBadge />
   }
-  return <AiAutoSummaryActiveBadge day={day} />
+  return <AiAutoSummaryActiveBadge day={day} busy={busy} onStart={onStart} />
 }

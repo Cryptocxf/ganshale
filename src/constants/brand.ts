@@ -5,8 +5,8 @@ export const PRODUCT_TAGLINE = '一款拯救你于日报、周报、月报水火
 export const APP_DISPLAY_NAME = '干啥了'
 
 /** 当前发布版本与最近更新时间（用于顶栏和窗口标题）。 */
-export const APP_VERSION_LABEL = 'v1.0.1'
-export const APP_LAST_UPDATED = '2026-08-04'
+export const APP_VERSION_LABEL = 'v1.1.1'
+export const APP_LAST_UPDATED = '2026-10-27'
 
 /** 窗口标题栏 / 浏览器标签 */
 export const APP_WINDOW_TITLE = `${APP_DISPLAY_NAME} ${APP_VERSION_LABEL} · 更新于 ${APP_LAST_UPDATED}`

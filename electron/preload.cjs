@@ -6,6 +6,10 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('ganshaleDesktop', {
   platform: process.platform,
+  getUpdateState: () => ipcRenderer.invoke('ganshale:update-state'),
+  checkUpdate: () => ipcRenderer.invoke('ganshale:check-update'),
+  downloadUpdate: () => ipcRenderer.invoke('ganshale:download-update'),
+  installUpdate: () => ipcRenderer.invoke('ganshale:install-update'),
 
   /** @returns {Promise<{ supported: boolean; platform: string }>} */
   windowTrackingSupported: () => ipcRenderer.invoke('ganshale:window-tracking-supported'),

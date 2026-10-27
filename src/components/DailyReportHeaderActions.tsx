@@ -38,7 +38,8 @@ export function DailyReportHeaderActions() {
   const isFuture = dayKind === 'future'
   const isPast = dayKind === 'past'
   const viewDisabled = isFuture
-  const generateDisabled = dayKind !== 'today'
+  const generateDisabled = isFuture
+  const generateHint = isPast ? '为所选日期生成' : autoLabel
 
   return (
     <div
@@ -78,14 +79,14 @@ export function DailyReportHeaderActions() {
           )}
           生成日报
         </span>
-        {autoLabel ? (
+        {generateHint ? (
           <span
             className={[
               'whitespace-nowrap text-[9px] font-normal leading-tight',
               generateDisabled ? 'text-ganshale-subtle' : 'text-white/75',
             ].join(' ')}
           >
-            {autoLabel}
+            {generateHint}
           </span>
         ) : null}
       </button>

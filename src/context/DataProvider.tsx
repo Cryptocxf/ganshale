@@ -88,6 +88,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const lastRecoveryAtRef = useRef(0)
   const lastForegroundIdentityKeyRef = useRef<string | null>(null)
   const screenLockedRef = useRef(false)
+  /** 只允许最近一次读取写入 state，避免旧 IDB 快照晚到后覆盖新事件。 */
+  const loadRequestSeqRef = useRef(0)
 
   const windowRecordingHealthy = useMemo(() => {
     void recordingHealthTick
@@ -96,6 +98,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   }, [windowTrackingActive, recordingHealthTick])
 
   const load = useCallback(async () => {
+    const requestSeq = ++loadRequestSeqRef.current
     const start = startOfLocalDay(day).toISOString()
     const end = endOfLocalDay(day).toISOString()
     const now = new Date()
@@ -113,6 +116,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       store.countEvents(),
       store.getDistinctWindowEventLocalDays(BUCKET_WINDOW),
     ])
+    if (requestSeq !== loadRequestSeqRef.current) return
     setBuckets(b)
     setWindowEvents(w)
     setWindowEventsToday(dayIsToday ? w : wTodayIfNeeded)

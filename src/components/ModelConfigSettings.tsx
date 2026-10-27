@@ -26,11 +26,17 @@ const inputCls =
 
 const hintCls = 'text-[10px] leading-relaxed text-ganshale-subtle'
 
+const MODEL_OPTIONS = [
+  { id: 'qwen3.5-plus', description: '综合能力均衡，适合工作总结、长内容整理和日报撰写。' },
+  { id: 'qwen3.5-flash', description: '侧重快速响应，适合高频、简短的窗口活动总结。' },
+  { id: 'deepseek-v4-pro', description: '侧重深度推理，适合复杂工作分析；总结时可能需要更长等待时间。' },
+] as const
+
 /** 隐藏：3 秒内连点标题「模型配置」6 次自动填充。 */
 const HIDDEN_DEV_LLM_FILL = {
   baseUrl: 'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1',
   apiKey: '3886B9B1-FABA-4694-85CB-11FC271D1F29',
-  gatewayModelId: 'qwen3-max',
+  gatewayModelId: 'deepseek-v4-pro',
 } as const
 const HIDDEN_TITLE_CLICKS = 6
 const HIDDEN_TITLE_WINDOW_MS = 3000
@@ -210,7 +216,7 @@ export function ModelConfigSettings() {
       </h3>
 
       <p className="mt-1.5 text-[11px] leading-snug text-ganshale-muted">
-        支持任意 OpenAI 兼容网关。首次使用请选择供应商并填写 API Key，保存后建议先点「测试」。
+        已预填默认网关与 API Key。选择模型并保存后，可点击「测试」确认连接。
       </p>
 
       <div className="mt-3 max-w-lg space-y-4 text-xs">
@@ -280,18 +286,28 @@ export function ModelConfigSettings() {
           <label htmlFor="llm-gateway-model" className={SETTINGS_FIELD_LABEL_BLOCK_CLASS}>
             模型 ID
           </label>
-          <input
+          <select
             id="llm-gateway-model"
-            type="text"
             value={form.gatewayModelId}
-            placeholder="gpt-4o-mini"
             className={inputCls}
             onChange={(e) => {
               const gatewayModelId = e.target.value
               setForm((s) => ({ ...s, gatewayModelId }))
               setProviderId(guessLlmProviderPresetId(form.baseUrl, gatewayModelId))
             }}
-          />
+          >
+            {!MODEL_OPTIONS.some((m) => m.id === form.gatewayModelId) ? (
+              <option value={form.gatewayModelId}>{form.gatewayModelId || '请选择模型'}</option>
+            ) : null}
+            {MODEL_OPTIONS.map((model) => <option key={model.id} value={model.id}>{model.id}</option>)}
+          </select>
+          <div className="space-y-2 rounded-lg border border-ganshale-border bg-ganshale-page p-2.5">
+            {MODEL_OPTIONS.map((model) => (
+              <p key={model.id} className="text-[11px] leading-relaxed text-ganshale-muted">
+                <span className="font-mono font-semibold text-ganshale-text">{model.id}</span>：{model.description}
+              </p>
+            ))}
+          </div>
           <p className={hintCls}>
             发给网关 <span className="font-mono">POST /chat/completions</span> 时的{' '}
             <span className="font-mono">model</span> 字段，须与供应商文档一致。

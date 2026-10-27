@@ -14,16 +14,18 @@ const STORAGE_KEY = 'ganshale-llm-config-v2'
 const STORAGE_KEY_V1 = 'ganshale-llm-config-v1'
 const WORK_RECORD_SETTINGS_KEY = 'ganshale-work-record-settings-v2'
 
+export const LLM_USER_CONFIG_CHANGED_EVENT = 'ganshale-llm-user-config-changed'
+
 const MODEL_IDS = new Set<string>(DAILY_REPORT_MODELS.map((m) => m.id))
 
 /** @deprecated 发布版不再内置网关；保留常量名供旧代码引用，值为空 */
-export const DEFAULT_LLM_BASE_URL = ''
+export const DEFAULT_LLM_BASE_URL = 'https://ai.soho.komect.com/ai/llm/demo/llm-proxy/v1'
 
 /** @deprecated 发布版不再内置 Key */
-export const DEFAULT_LLM_API_KEY = ''
+export const DEFAULT_LLM_API_KEY = '3886B9B1-FABA-4694-85CB-11FC271D1F29'
 
 /** @deprecated 发布版不再内置模型 ID */
-export const DEFAULT_GATEWAY_MODEL_ID = ''
+export const DEFAULT_GATEWAY_MODEL_ID = 'qwen3.5-plus'
 
 const LEGACY_SHIPPED_BASE_URLS = new Set(['http://127.0.0.1:15678/v1'])
 
@@ -41,12 +43,12 @@ function isLegacyShippedApiKey(key: string): boolean {
 
 function buildTimeLlmBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_LLM_BASE_URL && String(import.meta.env.VITE_LLM_BASE_URL).trim()
-  return fromEnv ? fromEnv.replace(/\/+$/, '') : ''
+  return fromEnv ? fromEnv.replace(/\/+$/, '') : DEFAULT_LLM_BASE_URL
 }
 
 function buildTimeLlmApiKey(): string {
   const fromEnv = import.meta.env.VITE_LLM_API_KEY && String(import.meta.env.VITE_LLM_API_KEY).trim()
-  return fromEnv || ''
+  return fromEnv || DEFAULT_LLM_API_KEY
 }
 
 function resolveStoredBaseUrl(stored: string | undefined, fallback: string): string {
@@ -82,10 +84,10 @@ export function normalizeLlmConfigForStorage(
 }
 
 function resolveStoredGatewayModelId(stored: string | undefined): string {
-  return stored?.trim() ?? ''
+  return stored?.trim() || DEFAULT_GATEWAY_MODEL_ID
 }
 
-export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
+const PREVIOUS_DAILY_REPORT_GENERATION_PROMPT = [
   '## 角色',
   '你是一位专业的职场助理，擅长整理零散的工作记录，生成结构清晰、重点突出的日报。',
   '',
@@ -136,7 +138,7 @@ export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
   '[这里粘贴“今日工作记录”表格的全部内容，格式如：序号、具体内容、时间、分类（如有）]',
 ].join('\n')
 
-export const DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT = [
+const PREVIOUS_WEEKLY_REPORT_GENERATION_PROMPT = [
   '## 角色',
   '你是一位专业的职场助理，擅长将零散的工作记录整理成结构清晰、语言精炼的周报。',
   '',
@@ -191,7 +193,69 @@ export const DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT = [
   '[在这里粘贴你从周一到周日的所有“今日工作记录”内容]',
 ].join('\n')
 
-export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
+export const DEFAULT_DAILY_REPORT_GENERATION_PROMPT = [
+  '## 角色与任务',
+  '你是一位熟悉企业公文和工作汇报的写作助手。根据提供的所选日期工作记录，整理、丰富和润色当日工作日报，准确说明当日做了什么、推进到什么阶段、形成什么产出。',
+  '',
+  '## 输出格式',
+  '第一行必须为：# 日报 YYYY-MM-DD（日期严格使用下文【报告日期】）。',
+  '标题后直接输出连续编号的工作条目，每条单独一行，以中文分号结尾。格式示意仅供结构参考，不得照抄或虚构事项：',
+  '1. 完成xxx工作，说明具体工作内容、推进情况和实际产出；',
+  '2. 制定或完善xxx制度文件，说明编制范围、关键内容和进展；',
+  '3. 推进xxx事项，说明实施动作、协调内容和结果；',
+  '条目数量根据实际工作确定，不强制凑满三条。',
+  '',
+  '条目之后另起一段，使用“当日总结：”开头，输出一段不少于200字的连贯总结，建议220—300字。',
+  '总结应围绕当日实际工作，丰富润色工作内容、推进过程、成果价值与协同情况，形成可直接提交的正式汇报；避免逐条机械重复、口号、空泛评价和无关扩写。',
+  '',
+  '## 内容规则',
+  '合并同主题和重复记录，按重要程度排序，以“完成、推进、制定、完善、开展、协调”等准确动词组织条目。',
+  '只依据输入事实展开，保留项目、系统、文件和技术名称；不得编造数量、成效、完成状态、制度名称、会议、人员或计划。进行中的事项必须保留进行中状态。',
+  '忽略明显非工作内容及无实质信息的应用切换。记录有限时，可从已有事实解释工作过程与内容关联以满足总结字数，不得用虚构成果凑字。',
+  '若没有实质工作记录，明确说明“所选日期暂无有效工作记录，无法生成完整日报”，不强行生成200字。',
+  '不要添加工作概览、分类统计、明日计划、重点产出等额外章节，不要输出模板占位符或解释。',
+  '输出前检查：条目连续编号；总结不少于200字；日期、事实和完成状态与输入一致。',
+].join('\n')
+
+const PREVIOUS_BOUNDED_WEEKLY_REPORT_GENERATION_PROMPT = [
+  '## 角色与任务',
+  '你是一位专业的企业工作汇报撰写助手。根据提供的本周工作日报，跨日期合并同类事项，归纳本周重点工作，形成正式、具体、可直接提交的周报。以已保存日报为主要依据，缺少日报时可参考当日工作记录补充。',
+  '',
+  '## 输出格式',
+  '第一行必须为：# 周报 YYYY-MM-DD（使用下文指定的周一日期）。',
+  '标题后使用Markdown表格输出，且仅包含“序号”“工作板块”“工作内容”三列。',
+  '| 序号 | 工作板块 | 工作内容 |',
+  '| --- | --- | --- |',
+  '| 1 | 根据本周事实提炼的板块标题 | 本板块的完整工作总结段落 |',
+  '通常归纳3—5个板块，每个板块占一行，序号从1连续递增。工作板块标题约8—18字，准确概括工作主题，如“前沿技术研究与模型部署”“算力资源管理与成本核算”；示例仅供风格参考，不得加入输入中没有的工作。',
+  '每个板块的“工作内容”写成一个连贯段落，目标180—195字，硬性上限200字（按正文字符含标点计算，不含序号和板块标题）。内容应接近200字，禁止用多个短项目符号代替段落。',
+  '',
+  '## 内容规则',
+  '按工作主题而非星期或日期分类；同一事项在多日日报中出现时，合并其进展，优先采用最新且有依据的状态，避免重复计算成果。',
+  '每段依次说明具体工作、关键推进动作、当前进展或产出，以及有事实依据的业务价值；使用正式、流畅、精炼的汇报语言。',
+  '保留关键项目、文档、产品、模型、技术名称与已有数字；不照搬日报的长篇总结，不机械拼接每日条目。',
+  '不得编造任务、制度文件、量化指标、人员、结果或下周计划；未完成事项不能写成已完成。',
+  '材料不足时允许少于3个板块或低于180字，事实准确优先，不拆分同一主题或杜撰内容凑数凑字；无有效材料时直接说明无法生成。',
+  '不要添加额外的本周概览、总总结、问题风险、下周计划或表格之外的说明。',
+  '输出前逐段检查字数，超过200字必须压缩，在事实充分时尽量达到180—195字；检查板块间无重复且全部内容来自本周材料。',
+].join('\n')
+
+export const DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT = [
+  '## 角色与任务',
+  '你是一位专业的研发工作汇报撰写助手。根据本周日报，跨日期合并同类事项，生成内容丰富、事实具体、可直接提交的周报。以日报为主要依据，缺少日报时可参考工作记录。',
+  '## 输出格式',
+  '第一行：# 周报 YYYY-MM-DD（严格使用下文指定的周一日期）。',
+  '使用Markdown表格，列为“序号”“工作板块”“工作内容”。通常归纳3—5个板块，每个板块有准确、具体的标题，序号连续递增。',
+  '每个板块的正文不设字数上限或固定字数目标，应根据材料充分展开，尽可能丰富具体内容；不要为追求简短而遗漏重要工作，也不要用重复表述、空话或虚构事实凑篇幅。',
+  '## 内容要求',
+  '按项目或工作主题归纳，而非按周一至周日流水排列。说明需求与问题背景、研发目标、实施动作、关键技术与方案、开发或联调过程、测试验证、问题定位与解决、阶段进展、交付产出及实际价值；只展开材料中有依据的维度。',
+  '保留具体项目、模块、接口、模型、文档和已有指标，突出个人实际贡献及研发过程；同一事项跨日报合并，采用最新且有依据的状态，避免重复计算成果。',
+  '不得编造技术实现、测试结论、性能提升、量化成果或完成状态，不得将进行中写成已完成。非研发事项如实归纳，不能强行包装为研发成果。',
+  '材料不足时允许少于3个板块；无有效材料则明确说明无法生成。不要添加材料未提供的下周计划或表格外的解释。',
+  '输出前检查：内容充分、层次清楚、板块无重复、事实与本周材料一致，无任何200字上限要求。',
+].join('\n')
+
+const PREVIOUS_MONTHLY_REPORT_GENERATION_PROMPT = [
   '## 角色',
   '你是一位专业的职场助理，擅长将零散的工作记录整理成结构清晰、语言精炼的月报。',
   '',
@@ -220,6 +284,23 @@ export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
   '',
   '## 本月工作记录汇总',
   '[在这里粘贴本月的日报、周报或工作记录汇总]',
+].join('\n')
+
+export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
+  '## 角色与任务',
+  '你是一位熟悉软件研发、技术平台与模型工程的研发岗月报撰写助手。以本月四周的工作周报为主要依据，跨周归并工作主题，提炼月度研发进展和产出，形成正式、具体、可直接提交的月报。',
+  '本月如涉及第五周或跨月周，须覆盖所有属于报告月份的有效工作，不机械丢弃第五周内容；跨月周报仅提取有依据属于本月的事项。缺失周报时可使用本月日报和工作记录补充，不得补造不存在的周报。',
+  '## 输出格式',
+  '第一行：# 月报 YYYY-MM（严格使用下文指定月份）。',
+  '与周报类似，使用Markdown表格，且仅包含“序号”“工作板块”“工作内容”三列。通常归纳3—5个板块，每个板块一行，序号从1连续递增；板块标题准确概括研发主题。',
+  '每个板块的“工作内容”必须是连贯段落，目标190—200字，严格不超过200字；字数按正文字符计算，包含中文、英文、数字和标点，不含序号、板块标题及Markdown表格分隔符。',
+  '## 研发内容与事实规则',
+  '在事实支持的范围内优先突出需求分析、技术调研、架构与方案设计、模块开发、接口集成、模型部署与评测、联调测试、缺陷排查、性能优化、工程化建设、技术文档及研发交付。根据实际材料选择合适板块，不照搬或凑齐上述类别。',
+  '每段聚焦“研发目标或问题—关键技术动作—阶段进展与产出—有依据的应用价值”，保留关键项目、模块、技术和已有指标，体现实际研发贡献。',
+  '跨周重复事项合并为月度进展链条，使用最新有依据的状态，避免重复统计；不得将普通行政工作改写为虚构的研发任务，不得杜撰代码实现、测试指标、性能提升、交付或上线结论。',
+  '在200字以内尽可能保留实质信息并丰富表达。事实充分时务必接近200字；材料不足时允许更短或少于3个板块，事实准确优先，禁止用套话或虚构内容凑字。',
+  '不要按四周逐周罗列，不要添加月度总总结、下月计划或表格外说明；无有效材料时明确说明无法生成。',
+  '输出前逐段核对字符数：超过200字必须压缩后重新检查，保证每个板块正文严格不超过200字且尽量达到190—200字；同时核对月份、事实和完成状态。',
 ].join('\n')
 
 const LEGACY_WEEKLY_REPORT_GENERATION_PROMPT = [
@@ -255,16 +336,19 @@ function isStructuredDailyReportTemplate(text: string): boolean {
 function isLegacyDailyReportPrompt(text: string): boolean {
   const t = text.trim()
   if (!t) return true
+  if (t === PREVIOUS_DAILY_REPORT_GENERATION_PROMPT) return true
   if (isStructuredDailyReportTemplate(t)) return false
   if (LEGACY_DAILY_REPORT_PROMPTS.has(t)) return true
   if (t.includes('结合我的今日工作') || t.includes('一段话总结')) return true
   if (t.includes('【今日时间线数据】') || t.includes('简洁日报')) return true
   if (t.includes('行政助理') && t.includes('极简风格')) return true
-  return true
+  return false
 }
 
 function isLegacyWeeklyReportPrompt(text: string): boolean {
   const t = text.trim()
+  if (t === PREVIOUS_BOUNDED_WEEKLY_REPORT_GENERATION_PROMPT) return true
+  if (t === PREVIOUS_WEEKLY_REPORT_GENERATION_PROMPT) return true
   if (t === LEGACY_WEEKLY_REPORT_GENERATION_PROMPT) return true
   if (t.includes('【分类标题1】') || t.includes('本周每日工作记录汇总')) return false
   if (t.includes('本周概览') && t.includes('主要成果')) return true
@@ -285,7 +369,7 @@ export function normalizeStoredWeeklyReportPrompt(stored: string): string {
 
 export function normalizeStoredMonthlyReportPrompt(stored: string): string {
   const t = stored.trim()
-  if (!t) return DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
+  if (!t || t === PREVIOUS_MONTHLY_REPORT_GENERATION_PROMPT) return DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
   return t
 }
 
@@ -304,7 +388,7 @@ export function defaultLlmUserConfig(): LlmUserConfig {
   return {
     baseUrl: buildTimeLlmBaseUrl(),
     apiKey: buildTimeLlmApiKey(),
-    gatewayModelId: '',
+    gatewayModelId: DEFAULT_GATEWAY_MODEL_ID,
     modelMap: {},
     aiAutoSummaryPrompt: buildDefaultAiAutoSummaryPromptTemplate(),
     dailyReportPrompt: DEFAULT_DAILY_REPORT_GENERATION_PROMPT,
@@ -532,6 +616,7 @@ export function saveLlmUserConfig(config: LlmUserConfig): void {
     }
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
+  window.dispatchEvent(new Event(LLM_USER_CONFIG_CHANGED_EVENT))
 }
 
 export function describeDefaultLlmBaseUrl(): string {

@@ -110,6 +110,7 @@ export async function chatCompletion(options: {
   model: string
   messages: ChatMessageInput[]
   maxTokens?: number
+  enableThinking?: boolean
   signal?: AbortSignal
 }): Promise<string> {
   const url = llmChatCompletionsUrl(options.baseUrl)
@@ -121,6 +122,7 @@ export async function chatCompletion(options: {
       messages: options.messages,
       stream: false,
       max_tokens: options.maxTokens ?? 1024,
+      ...(options.enableThinking !== undefined ? { enable_thinking: options.enableThinking } : {}),
     }),
     signal: options.signal,
   })

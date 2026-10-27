@@ -22,6 +22,7 @@ import {
   formatOfficeDurationDayFooterZh,
   isSameLocalCalendarDay,
   parseIso,
+  toYmdLocal,
 } from '../lib/timeutil'
 import { CollectionStatusBadge } from './CollectionStatusBadge'
 import { AppCategoryDistribution } from './AppCategoryDistribution'
@@ -160,6 +161,7 @@ export function DailyDashboard() {
   const displayElapsedSec = useMonotonicOfficeSec(
     sessionElapsedSec,
     isSelectedToday && clockLive,
+    toYmdLocal(day),
   )
 
   useEffect(() => {

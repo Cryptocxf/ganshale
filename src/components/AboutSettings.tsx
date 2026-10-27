@@ -1,4 +1,6 @@
 import { Info } from 'lucide-react'
+import { UpdateSettings } from './UpdateSettings'
+import { APP_LAST_UPDATED } from '../constants/brand'
 import {
   APP_DISPLAY_NAME,
   APP_FEATURES,
@@ -19,7 +21,8 @@ export function AboutSettings() {
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-ganshale-border bg-ganshale-surface p-4 shadow-sm">
-        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <GanshaleLogoMark variant="app" size={72} className="rounded-xl" />
           <div className="min-w-0 flex-1 space-y-1">
             <h3 className="font-display text-base font-bold text-ganshale-text">
@@ -29,17 +32,25 @@ export function AboutSettings() {
               </span>
             </h3>
             <p className="text-xs leading-relaxed text-ganshale-muted">{APP_TAGLINE}</p>
-            <dl className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">
-              <div className="flex justify-between gap-3 sm:block">
+            <dl className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              <div className="space-y-1">
                 <dt className="text-ganshale-subtle">版本</dt>
-                <dd className="font-mono text-ganshale-text">{APP_VERSION}</dd>
+                <dd className="font-mono text-ganshale-text">v{APP_VERSION}</dd>
               </div>
-              <div className="flex justify-between gap-3 sm:block">
+              <div className="space-y-1">
+                <dt className="text-ganshale-subtle">版本日期</dt>
+                <dd className="font-mono text-ganshale-text">{APP_LAST_UPDATED}</dd>
+              </div>
+              <div className="space-y-1">
                 <dt className="text-ganshale-subtle">运行环境</dt>
                 <dd className="text-ganshale-text">{runtimeLabel}</dd>
               </div>
             </dl>
           </div>
+        </div>
+        <div className="min-w-0 border-t border-ganshale-border pt-4 lg:w-[26rem] lg:shrink-0 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+          <UpdateSettings embedded />
+        </div>
         </div>
       </section>
 
