@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { LiveForegroundSample } from './lib/liveForeground'
+import type { AwEvent } from './lib/awTypes'
 
 interface ImportMetaEnv {
   readonly VITE_LLM_BASE_URL?: string
@@ -34,6 +35,10 @@ interface GanshaleDesktopBridge {
     intervalMs?: number
   }>
   stopWindowTracking: () => Promise<{ ok: boolean }>
+  getRecordedWindowEvents?: () => Promise<{ events: AwEvent[]; state: { paused: boolean; samples: number; lastSampleAt: number; lastSessionAt: number; pending: number } }>
+  acknowledgeRecordedWindowEvents?: (events: AwEvent[]) => Promise<{ ok: boolean }>
+  resetRecordingSegment?: () => Promise<{ ok: boolean }>
+  onRecordedWindowEvents?: (callback: (events: AwEvent[]) => void) => () => void
   /** 按关键词搜索本机应用（注册表 App Paths、PATH、运行中进程等） */
   searchLocalApps: (query: string) => Promise<{
     ok: boolean

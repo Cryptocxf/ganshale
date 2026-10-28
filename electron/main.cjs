@@ -642,6 +642,11 @@ async function getActiveWin() {
 
 const POLL_MS = 1200
 const foregroundSampler = require('./foregroundSampler.cjs').createForegroundSampler()
+const windowRecorder = require('./windowRecorder.cjs').createWindowRecorder({ directory: app.getPath('userData') })
+const trackingPauseReasons = new Set()
+let trackingLastDiagnosticAt = 0
+let trackingLastPowerCheckAt = 0
+let trackingEmptyPolls = 0
 
 let trackingTimer = null
 /** 正在执行轮询所属的 generation；null 表示没有有效轮询在执行。 */
@@ -655,6 +660,7 @@ let trackingSegmentStartTs = 0
 let trackingPowerPaused = false
 
 function stopWindowTracking() {
+  try { windowRecorder.pause() } catch (error) { startupLog.write('recording final save failed', error) }
   foregroundSampler.stop()
   trackingGeneration += 1
   trackingPollInFlightGeneration = null
@@ -678,7 +684,6 @@ function trackingWebContentsAlive() {
 /** 安全发送前台窗口事件；页面重载/HMR 导致 frame 销毁时返回 false 并停止轮询。 */
 function trackingSendForeground(payload) {
   if (!trackingWebContentsAlive()) {
-    stopWindowTracking()
     return false
   }
   try {
@@ -686,7 +691,6 @@ function trackingSendForeground(payload) {
     return true
   } catch (err) {
     console.warn('[ganshale] foreground send failed:', err instanceof Error ? err.message : err)
-    stopWindowTracking()
     return false
   }
 }
@@ -694,31 +698,28 @@ function trackingSendForeground(payload) {
 async function trackingPoll() {
   if (trackingPowerPaused) return
   const generation = trackingGeneration
-  if (!trackingWebContentsAlive()) {
-    stopWindowTracking()
-    return
-  }
   const fn = await getActiveWin()
   if (generation !== trackingGeneration) return
-  if (!trackingWebContentsAlive()) {
-    stopWindowTracking()
-    return
-  }
   if (!fn) return
   try {
     const raw = await foregroundSampler.sample()
     if (generation !== trackingGeneration) return
-    if (!trackingWebContentsAlive()) {
-      stopWindowTracking()
-      return
-    }
     if (!raw) {
+      trackingEmptyPolls++
+      if (trackingEmptyPolls >= 5) {
+        foregroundSampler.stop()
+        trackingEmptyPolls = 0
+        startupLog.write('foreground repeatedly empty; sampler restarted')
+      }
+      windowRecorder.observe(null)
       trackingPrevForegroundKey = null
       trackingSendForeground(null)
       return
     }
     const mapped = mapForeground(raw)
+    trackingEmptyPolls = 0
     if (!mapped) {
+      windowRecorder.observe(null)
       trackingPrevForegroundKey = null
       trackingSendForeground(null)
       return
@@ -730,10 +731,12 @@ async function trackingPoll() {
       trackingSegmentStartTs = now
     }
     mapped.segmentStartedAt = new Date(trackingSegmentStartTs).toISOString()
-    if (!trackingSendForeground(mapped)) return
+    sendRecordedWindowEvents(windowRecorder.observe(mapped, now))
+    trackingSendForeground(mapped)
     handleReflectFocusTransition(mainBrowserWindow, mapped, now)
   } catch (err) {
     if (generation !== trackingGeneration) return
+    foregroundSampler.stop()
     console.error('[ganshale] active-win poll:', err)
     startupLog.write('active-win poll failed', err)
   }
@@ -741,8 +744,25 @@ async function trackingPoll() {
 
 function startTrackingPollTimer() {
   if (trackingTimer) return
-  if (!trackingWebContentsAlive()) return
+  if (isQuitting) return
+  if (trackingPowerPaused) windowRecorder.pause()
+  else windowRecorder.resume()
   const run = () => {
+    if (Date.now() - trackingLastPowerCheckAt >= 5000) {
+      trackingLastPowerCheckAt = Date.now()
+      try {
+        const systemState = powerMonitor.getSystemIdleState(60)
+        if (systemState === 'locked') notifyTrackingPowerState(true, 'lock')
+        else if (systemState === 'active' || systemState === 'idle') notifyTrackingPowerState(false, 'lock')
+      } catch (error) { startupLog.write('power state check failed', error) }
+    }
+    if (!trackingPowerPaused) {
+      try { sendRecordedWindowEvents(windowRecorder.tick()) } catch (error) { startupLog.write('recording save failed', error) }
+    }
+    if (Date.now() - trackingLastDiagnosticAt >= 60_000) {
+      trackingLastDiagnosticAt = Date.now()
+      startupLog.write('recording health', JSON.stringify({ ...windowRecorder.state(), minimized: mainBrowserWindow?.isMinimized(), visible: mainBrowserWindow?.isVisible() }))
+    }
     const generation = trackingGeneration
     if (trackingPollInFlightGeneration === generation) return
     trackingPollInFlightGeneration = generation
@@ -756,15 +776,28 @@ function startTrackingPollTimer() {
   run()
 }
 
-function notifyTrackingPowerState(locked) {
-  if (locked) foregroundSampler.stop()
-  trackingPowerPaused = locked
+function sendRecordedWindowEvents(events) {
+  if (!events.length || !trackingWebContentsAlive()) return
+  try { trackingWebContents.send('ganshale:recorded-window-events', events) } catch { /* 磁盘待确认日志会在恢复后重放 */ }
+}
+
+function notifyTrackingPowerState(locked, reason = 'lock') {
+  if (locked) trackingPauseReasons.add(reason)
+  else trackingPauseReasons.delete(reason)
+  const paused = trackingPauseReasons.size > 0
+  if (paused === trackingPowerPaused) return
+  if (paused) {
+    foregroundSampler.stop()
+    try { sendRecordedWindowEvents(windowRecorder.pause()) } catch (error) { startupLog.write('recording pause save failed', error) }
+  } else windowRecorder.resume()
+  trackingPowerPaused = paused
+  startupLog.write('recording power state', JSON.stringify({ paused, reasons: [...trackingPauseReasons] }))
   trackingPrevForegroundKey = null
   trackingSegmentStartTs = 0
   const wc = trackingWebContents
   if (!wc || wc.isDestroyed()) return
   try {
-    wc.send(locked ? 'ganshale:screen-locked' : 'ganshale:screen-unlocked')
+    wc.send(paused ? 'ganshale:screen-locked' : 'ganshale:screen-unlocked')
   } catch (err) {
     startupLog.write('power state send failed', err)
   }
@@ -877,7 +910,6 @@ ipcMain.handle('ganshale:start-window-tracking', async (event) => {
   if (!activeWin) {
     return { ok: false, error: 'active-win 未安装或加载失败，请执行 npm install' }
   }
-  stopWindowTracking()
   const win = BrowserWindow.fromWebContents(event.sender)
   if (!win) return { ok: false, error: 'no-browser-window' }
   mainBrowserWindow = win
@@ -888,9 +920,17 @@ ipcMain.handle('ganshale:start-window-tracking', async (event) => {
 })
 
 ipcMain.handle('ganshale:stop-window-tracking', () => {
-  stopWindowTracking()
+  // 界面重载/卸载不停止主进程采集；真正退出由 before-quit 负责。
   return { ok: true }
 })
+
+ipcMain.handle('ganshale:get-recorded-window-events', () => ({ events: windowRecorder.batch(), state: windowRecorder.state() }))
+ipcMain.handle('ganshale:ack-recorded-window-events', (_event, events) => {
+  if (!Array.isArray(events)) return { ok: false }
+  windowRecorder.acknowledge(events)
+  return { ok: true }
+})
+ipcMain.handle('ganshale:reset-recording-segment', () => { windowRecorder.reset(); return { ok: true } })
 
 /**
  * macOS / Linux：按关键词搜索应用路径（.app / PATH 下可执行文件）。
@@ -1244,7 +1284,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了 v1.1.4 · 更新于 2026-10-28',
+    title: '干啥了 v1.1.5 · 更新于 2026-10-28',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),
@@ -1260,6 +1300,8 @@ function createWindow() {
 
   mainBrowserWindow = win
   const contents = win.webContents
+  trackingWebContents = contents
+  startTrackingPollTimer()
 
   win.on('close', (e) => {
     closeReflectPromptWindow()
@@ -1294,16 +1336,15 @@ function createWindow() {
     }
   })
 
-  contents.on('did-start-navigation', () => {
-    if (trackingWebContents === contents) stopWindowTracking()
-  })
+  contents.on('did-start-navigation', () => { startupLog.write('interface navigation; recording continues') })
 
   contents.on('destroyed', () => {
-    if (trackingWebContents === contents) stopWindowTracking()
+    if (trackingWebContents === contents) trackingWebContents = null
   })
 
-  contents.on('render-process-gone', () => {
-    if (trackingWebContents === contents) stopWindowTracking()
+  contents.on('render-process-gone', (_event, details) => {
+    startupLog.write('interface process gone; recording continues', details.reason)
+    if (!isQuitting && !contents.isDestroyed()) setTimeout(() => { if (!contents.isDestroyed()) contents.reload() }, 1000)
   })
 
   contents.on('did-fail-load', (_e, code, desc, url) => {
@@ -1361,10 +1402,10 @@ if (gotSingleInstanceLock) {
     }
     createWindow()
     ensureAppTray()
-    powerMonitor.on('lock-screen', () => notifyTrackingPowerState(true))
-    powerMonitor.on('unlock-screen', () => notifyTrackingPowerState(false))
-    powerMonitor.on('suspend', () => notifyTrackingPowerState(true))
-    powerMonitor.on('resume', () => notifyTrackingPowerState(false))
+    powerMonitor.on('lock-screen', () => notifyTrackingPowerState(true, 'lock'))
+    powerMonitor.on('unlock-screen', () => notifyTrackingPowerState(false, 'lock'))
+    powerMonitor.on('suspend', () => notifyTrackingPowerState(true, 'sleep'))
+    powerMonitor.on('resume', () => notifyTrackingPowerState(false, 'sleep'))
     app.on('activate', () => {
       if (mainBrowserWindow && !mainBrowserWindow.isDestroyed()) {
         showMainWindow()

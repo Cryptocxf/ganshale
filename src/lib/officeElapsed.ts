@@ -3,6 +3,8 @@ import type { LiveForegroundSample } from './liveForeground'
 import { sumMonitoredWindowSecondsForDayLive } from './monitoredWorktime'
 import { compareLocalCalendarDay, daysInLocalWeek, isSameLocalCalendarDay } from './timeutil'
 import { windowEventsForLocalDay } from './weeklyWorktime'
+import { shouldSkipWindowEventForStats } from './selfWindowFilter'
+import { startOfLocalDay } from './timeutil'
 
 /** 每日 / 每周 / 每月共用的办公时长计算上下文 */
 export type OfficeElapsedContext = {
@@ -20,9 +22,36 @@ export function officeElapsedForDay(
   ctx: OfficeElapsedContext,
 ): number {
   const extrapolate = Boolean(ctx.extrapolateLive && isSameLocalCalendarDay(day, new Date(ctx.nowMs)))
+  const selected = windowEventsForLocalDay(events, day)
+  if (selected.some((event) => event.data.kind === 'work-session')) {
+    const newestSessionId = selected.filter((event) => event.data.kind === 'work-session').sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))[0]?.id
+    const start = startOfLocalDay(day).getTime()
+    const nextDay = new Date(start)
+    nextDay.setDate(nextDay.getDate() + 1)
+    const end = Math.min(nextDay.getTime(), ctx.nowMs)
+    // 合并会话与旧版窗口区间：既不重复累计，也保留升级前已有的真实记录。
+    const intervals = selected.flatMap((event) => {
+      const session = event.data.kind === 'work-session'
+      if (!session && shouldSkipWindowEventForStats(event)) return []
+      const from = Math.max(start, Date.parse(event.timestamp))
+      let to = Date.parse(event.timestamp) + Math.max(0, event.duration) * 1000
+      const observedAt = Number(event.data.observedAt)
+      if (session && event.id === newestSessionId && extrapolate && !event.data.closed && Number.isFinite(observedAt)) to = Math.max(to, Math.min(ctx.nowMs, observedAt + 5000))
+      to = Math.min(to, end)
+      return Number.isFinite(from) && to > from ? [[from, to]] : []
+    }).sort((a, b) => a[0] - b[0])
+    let milliseconds = 0
+    let from = 0
+    let to = 0
+    for (const interval of intervals) {
+      if (interval[0] > to) { milliseconds += to - from; [from, to] = interval }
+      else to = Math.max(to, interval[1])
+    }
+    return Math.round((milliseconds + to - from) / 1000)
+  }
   return sumMonitoredWindowSecondsForDayLive(
     day,
-    windowEventsForLocalDay(events, day),
+    selected,
     ctx.patterns,
     ctx.live ?? null,
     ctx.nowMs,

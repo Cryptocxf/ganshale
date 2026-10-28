@@ -88,10 +88,10 @@ export function compareLocalCalendarMonth(
  * 一次性预分区：将事件按本地日期分桶，避免后续上百次 `windowEventsForLocalDay` 全量扫描。
  * 返回 `Map<YYYY-MM-DD, AwEvent[]>`。
  */
-export function partitionEventsByDay(events: readonly AwEvent[]): Map<string, AwEvent[]> {
+export function partitionEventsByDay(events: readonly AwEvent[], includeSessions = false): Map<string, AwEvent[]> {
   const map = new Map<string, AwEvent[]>()
   for (const ev of events) {
-    if (shouldSkipWindowEventForStats(ev)) continue
+    if (shouldSkipWindowEventForStats(ev) && !(includeSessions && ev.data.kind === 'work-session')) continue
     const start = parseIso(ev.timestamp)
     if (Number.isNaN(start)) continue
     const end = start + Math.max(0, ev.duration) * 1000
@@ -454,6 +454,8 @@ export function buildMonthlySummary(
   // 核心优化：一次性预分区，后续所有计算复用，避免数百次全量扫描
   const dayEventsMap = partitionEventsByDay(events)
   const prevDayEventsMap = partitionEventsByDay(prevEvents)
+  const officeDayEventsMap = partitionEventsByDay(events, true)
+  const previousOfficeDayEventsMap = partitionEventsByDay(prevEvents, true)
 
   const staticCtx = {
     patterns,
@@ -469,7 +471,7 @@ export function buildMonthlySummary(
 
   for (const day of daysInLocalMonth(monthAnchor)) {
     const ymd = toYmdLocal(day)
-    const dayEvents = dayEventsMap.get(ymd) ?? []
+    const dayEvents = officeDayEventsMap.get(ymd) ?? []
     const sec = officeElapsedForDay(day, dayEvents, staticCtx)
     daySeconds.set(ymd, sec)
     if (sec >= EFFECTIVE_WORKDAY_MIN_SEC) effectiveCount += 1
@@ -555,7 +557,7 @@ export function buildMonthlySummary(
   const prevDaySeconds = new Map<string, number>()
   for (const day of daysInLocalMonth(prevMonthAnchor)) {
     const ymd = toYmdLocal(day)
-    const prevDayEvents = prevDayEventsMap.get(ymd) ?? []
+    const prevDayEvents = previousOfficeDayEventsMap.get(ymd) ?? []
     prevDaySeconds.set(ymd, officeElapsedForDay(day, prevDayEvents, staticCtx))
   }
   const prevWeekBlocksTotal = sumMonthWeekBlockSeconds(

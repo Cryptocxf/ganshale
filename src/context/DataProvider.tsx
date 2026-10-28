@@ -37,6 +37,7 @@ import {
   markHeartbeatSuccess,
   markTrackingPollSuccess,
   resetHeartbeatHealth,
+  enqueueHeartbeat,
 } from '../lib/heartbeatQueue'
 import { identityFromLiveForeground } from '../lib/windowAppDisplay'
 import {
@@ -212,6 +213,9 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
     let unsubscribe: () => void = () => {}
     let unsubLock: () => void = () => {}
+    let unsubRecorded: () => void = () => {}
+    let replayTimer: ReturnType<typeof setInterval> | undefined
+    let replaying = false
     let cancelled = false
 
     void (async () => {
@@ -230,12 +234,44 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
             const index = rows.findIndex((row) => row.id === event.id)
             if (index < 0) return [...rows, event]
             const next = [...rows]
-            next[index] = event
+            const previous = rows[index]
+            next[index] = previous.duration > event.duration || (previous.duration === event.duration && previous.data.closed && !event.data.closed) ? previous : event
             return next
           }
           if (ymd === toYmdLocal(dayRef.current)) setWindowEvents(upsert)
           if (ymd === toYmdLocal(new Date())) setWindowEventsToday(upsert)
           setDaysWithTimingData((days) => days.has(ymd) ? days : new Set([...days, ymd]))
+        }
+
+        const persistRecordedEvents = async (events: AwEvent[]) => {
+          await enqueueHeartbeat(() => store.putRecordedWindowEvents(events))
+          if (cancelled) return
+          for (const event of events) applyPersistedEvent(event)
+          await d.acknowledgeRecordedWindowEvents?.(events)
+        }
+        const replayRecordedEvents = async () => {
+          if (replaying || cancelled || !d.getRecordedWindowEvents) return
+          replaying = true
+          try {
+            let more = true
+            while (more && !cancelled) {
+              const batch = await d.getRecordedWindowEvents()
+              screenLockedRef.current = batch.state.paused
+              setWindowTrackingPaused(batch.state.paused)
+              if (batch.state.lastSessionAt) markTrackingPollSuccess(batch.state.lastSessionAt)
+              if (batch.events.length) await persistRecordedEvents(batch.events)
+              more = batch.events.length >= 500
+            }
+          } catch (error) {
+            if (!cancelled) setError(`后台记录同步失败：${error instanceof Error ? error.message : String(error)}`)
+          } finally { replaying = false }
+        }
+        if (d.onRecordedWindowEvents) {
+          unsubRecorded = d.onRecordedWindowEvents((events) => {
+            void persistRecordedEvents(events).catch((error) => { if (!cancelled) setError(`窗口记录写入失败：${String(error)}`) })
+          })
+          replayTimer = setInterval(() => void replayRecordedEvents(), 5000)
+          void replayRecordedEvents()
         }
 
         const flushCountableForeground = async (sample: LiveForegroundSample) => {
@@ -292,6 +328,13 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
               lastForegroundIdentityKeyRef.current = null
               setLiveForeground(null)
               if (prev) void flushCountableForeground(prev)
+              return
+            }
+
+            if (d.getRecordedWindowEvents) {
+              // 新版由主进程独立落盘，此处仅更新前台显示，不再重复生成另一份窗口事件。
+              lastCountableForegroundRef.current = null
+              setLiveForeground(payload)
               return
             }
 
@@ -400,6 +443,8 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
       clearInterval(watchdog)
       unsubscribe()
       unsubLock()
+      unsubRecorded()
+      if (replayTimer) clearInterval(replayTimer)
       lastCountableForegroundRef.current = null
       lastForegroundIdentityKeyRef.current = null
       splitNextCountableHeartbeatRef.current = false
@@ -427,6 +472,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onDataChanged = () => {
+      void window.ganshaleDesktop?.resetRecordingSegment?.()
       invalidateMonthlyWindowEventsCache()
       clearWorkdayClockOutPersist()
       splitNextCountableHeartbeatRef.current = true

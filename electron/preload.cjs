@@ -19,6 +19,14 @@ contextBridge.exposeInMainWorld('ganshaleDesktop', {
 
   /** @returns {Promise<{ ok: boolean }>} */
   stopWindowTracking: () => ipcRenderer.invoke('ganshale:stop-window-tracking'),
+  getRecordedWindowEvents: () => ipcRenderer.invoke('ganshale:get-recorded-window-events'),
+  acknowledgeRecordedWindowEvents: (events) => ipcRenderer.invoke('ganshale:ack-recorded-window-events', events),
+  resetRecordingSegment: () => ipcRenderer.invoke('ganshale:reset-recording-segment'),
+  onRecordedWindowEvents: (callback) => {
+    const listener = (_event, events) => callback(events)
+    ipcRenderer.on('ganshale:recorded-window-events', listener)
+    return () => ipcRenderer.removeListener('ganshale:recorded-window-events', listener)
+  },
 
 
   /** @returns {Promise<{ ok: boolean; items?: { displayName: string; patternHint: string; exePath?: string; iconPath?: string }[]; error?: string }>} */

@@ -30,6 +30,7 @@ const { officeElapsedForDay, sumOfficeElapsedForWeek, sumOfficeElapsedForMonthTh
 const { useMonotonicOfficeSec } = require('../src/hooks/useMonotonicOfficeSec.ts')
 const { heartbeatWindow } = require('../src/lib/heartbeat.ts')
 const { startOfWeekMondayLocal } = require('../src/lib/timeutil.ts')
+const { buildMonthlySummary } = require('../src/lib/monthlyWorktime.ts')
 const day = new Date(2026, 9, 27)
 const at = (hour, minute = 0, second = 0) => new Date(2026, 9, 27, hour, minute, second).getTime()
 const event = (id, start, duration, app = 'Code.exe') => ({ id, bucket_id: 'window', timestamp: new Date(start).toISOString(), duration, data: { app, title: app } })
@@ -50,6 +51,15 @@ async function main() {
   assert.equal(sumOfficeElapsedForWeek(startOfWeekMondayLocal(day), tracked, context), 63, 'week matches daily calculation')
   assert.equal(sumOfficeElapsedForMonthThrough([day], tracked, context), 63, 'month matches daily calculation')
   assert.equal(officeElapsedForDay(day, tracked, { ...context, extrapolateLive: false }), 62, 'historical and live totals use the same application scope')
+  const session = { ...event('session', at(16), 120), data: { kind: 'work-session', app: '工作会话', observedAt: at(16, 2), closed: true } }
+  const recorded = [...tracked, session]
+  const sessionCtx = { ...context, nowMs: at(17), extrapolateLive: false }
+  assert.equal(officeElapsedForDay(day, recorded, sessionCtx), 180, 'work session includes background running without double-counting overlapping app time')
+  assert.equal(sumOfficeElapsedForWeek(startOfWeekMondayLocal(day), recorded, sessionCtx), 180)
+  assert.equal(sumOfficeElapsedForMonthThrough([day], recorded, sessionCtx), 180)
+  const monthly = buildMonthlySummary(day, recorded, [], [], new Date(at(17)), [])
+  assert.equal(monthly.calendarCells.find(cell => cell.date === '2026-10-27').seconds, 180, 'monthly calendar includes unlocked work sessions')
+  assert.equal(monthly.weekBlocksTotalSeconds, 180, 'monthly week blocks match office total')
   const timeline = timelineFromWindowEventsLive(day, tracked, live, at(17), true)
   assert.ok(timeline.at(-1).endMin <= 16 * 60 + 5 / 60, 'timeline stops extrapolating stale sample')
   assert.equal(currentForegroundSegmentLive(tracked, live, at(17), true).seconds, 5)

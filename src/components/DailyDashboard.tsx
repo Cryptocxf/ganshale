@@ -9,7 +9,7 @@ import {
   timelineFromWindowEventsLive,
 } from '../lib/aggregations'
 import { persistLiveTodayFrozenSec } from '../lib/clientSessionClock'
-import { excludeGanshaleSelfWindowEvents } from '../lib/selfWindowFilter'
+import { excludeGanshaleSelfWindowEvents, shouldSkipWindowEventForStats } from '../lib/selfWindowFilter'
 import {
   MONITORED_APPS_CHANGED_EVENT,
   foregroundMatchesMonitoredPatterns,
@@ -176,7 +176,7 @@ export function DailyDashboard() {
   }, [ready, isSelectedToday, clockLive, windowTrackingPaused, refresh])
 
   const allRows = useMemo(
-    () => [...windowEventsNet].sort((a, b) => parseIso(b.timestamp) - parseIso(a.timestamp)),
+    () => windowEventsNet.filter((event) => !shouldSkipWindowEventForStats(event)).sort((a, b) => parseIso(b.timestamp) - parseIso(a.timestamp)),
     [windowEventsNet],
   )
 

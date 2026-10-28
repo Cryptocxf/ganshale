@@ -151,6 +151,24 @@ export async function putEvent(ev: AwEvent): Promise<void> {
   await txDone(tx)
 }
 
+/** 主进程日志重放：同一事件按ID覆盖，旧批次不能缩短已入库的新时长。 */
+export async function putRecordedWindowEvents(events: AwEvent[]): Promise<void> {
+  if (!events.length) return
+  const db = await openDb()
+  const tx = db.transaction('events', 'readwrite')
+  const done = txDone(tx)
+  const objectStore = tx.objectStore('events')
+  for (const event of events) {
+    const request = objectStore.get(event.id)
+    request.onsuccess = () => {
+      const previous = request.result as AwEvent | undefined
+      const keepPrevious = previous && (previous.duration > event.duration || (previous.duration === event.duration && previous.data.closed && !event.data.closed))
+      objectStore.put(keepPrevious ? previous : event)
+    }
+  }
+  await done
+}
+
 export async function deleteEvent(id: string): Promise<void> {
   const db = await openDb()
   const tx = db.transaction('events', 'readwrite')
