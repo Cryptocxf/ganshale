@@ -28,7 +28,7 @@ async function heartbeatWindowInner(
   bucketId: string,
   data: { app: string; title: string; appPath?: string },
   options: HeartbeatWindowOptions = {},
-): Promise<void> {
+): Promise<AwEvent> {
   const pulsetime = options.pulsetime ?? 20
   const requestedAt = options.observedAtMs ?? Date.now()
   const now = Number.isFinite(requestedAt) ? Math.floor(requestedAt) : Date.now()
@@ -48,19 +48,22 @@ async function heartbeatWindowInner(
   ) {
     const start = new Date(last.timestamp).getTime()
     const newDur = Math.max(last.duration, (now - start) / 1000)
-    await store.putEvent({
+    const event = {
       ...last,
       duration: newDur,
-    })
-    return
+    }
+    await store.putEvent(event)
+    return event
   }
-  await store.putEvent({
+  const event: AwEvent = {
     id: crypto.randomUUID(),
     bucket_id: bucketId,
     timestamp: new Date(now).toISOString(),
     duration: 0,
     data: { ...data },
-  })
+  }
+  await store.putEvent(event)
+  return event
 }
 
 /** 串行写库；成功后会更新 `getHeartbeatHealth().lastSuccessAtMs` */
@@ -68,6 +71,6 @@ export function heartbeatWindow(
   bucketId: string,
   data: { app: string; title: string; appPath?: string },
   options: HeartbeatWindowOptions = {},
-): Promise<void> {
+): Promise<AwEvent> {
   return enqueueHeartbeat(() => heartbeatWindowInner(bucketId, data, options))
 }

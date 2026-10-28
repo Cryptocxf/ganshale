@@ -223,30 +223,34 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           setWindowTrackingActive(false)
           return
         }
-        const started = await d.startWindowTracking?.()
-        if (cancelled) return
-        if (!started?.ok) {
-          setError(started?.error ?? '无法启动前台窗口采集')
-          setWindowTrackingActive(false)
-          return
+        const applyPersistedEvent = (event: AwEvent) => {
+          if (cancelled) return
+          const ymd = toYmdLocal(new Date(event.timestamp))
+          const upsert = (rows: AwEvent[]) => {
+            const index = rows.findIndex((row) => row.id === event.id)
+            if (index < 0) return [...rows, event]
+            const next = [...rows]
+            next[index] = event
+            return next
+          }
+          if (ymd === toYmdLocal(dayRef.current)) setWindowEvents(upsert)
+          if (ymd === toYmdLocal(new Date())) setWindowEventsToday(upsert)
+          setDaysWithTimingData((days) => days.has(ymd) ? days : new Set([...days, ymd]))
         }
-        setWindowTrackingActive(true)
-        setWindowTrackingPaused(false)
-        markHeartbeatSuccess()
-        markTrackingPollSuccess()
-        lastIndexedRefreshRef.current = Date.now()
-        await loadRef.current()
 
         const flushCountableForeground = async (sample: LiveForegroundSample) => {
           splitNextCountableHeartbeatRef.current = true
           const observedAtMs = Date.parse(sample.capturedAt)
-          await heartbeatWindow(BUCKET_WINDOW, {
+          try {
+          const event = await heartbeatWindow(BUCKET_WINDOW, {
             app: sample.app,
             title: sample.title,
             ...(sample.appPath ? { appPath: sample.appPath } : {}),
           }, { observedAtMs })
-          lastIndexedRefreshRef.current = Date.now()
-          await loadRef.current()
+          applyPersistedEvent(event)
+          } catch (error) {
+            if (!cancelled) setError(`窗口记录写入失败：${error instanceof Error ? error.message : String(error)}`)
+          }
         }
 
         const writeCountableHeartbeat = (sample: LiveForegroundSample, forceNew: boolean) => {
@@ -259,9 +263,10 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
               ...(sample.appPath ? { appPath: sample.appPath } : {}),
             },
             { forceNew, observedAtMs },
-          ).then(() => {
+          ).then((event) => {
+            applyPersistedEvent(event)
             const now = Date.now()
-            if (now - lastIndexedRefreshRef.current >= 2000) {
+            if (now - lastIndexedRefreshRef.current >= 10_000) {
               lastIndexedRefreshRef.current = now
               void loadRef.current()
             }
@@ -342,6 +347,19 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
             lastRecoveryAtRef.current = Date.now()
           }
         }) ?? (() => {})
+        // 先订阅再启动采样，不能在两者之间等待一次数据库刷新而漏掉前台事件。
+        const started = await d.startWindowTracking?.()
+        if (cancelled) return
+        if (!started?.ok) {
+          setError(started?.error ?? '无法启动前台窗口采集')
+          setWindowTrackingActive(false)
+          return
+        }
+        setWindowTrackingActive(true)
+        setWindowTrackingPaused(false)
+        markHeartbeatSuccess()
+        markTrackingPollSuccess()
+        lastIndexedRefreshRef.current = Date.now()
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))

@@ -54,18 +54,19 @@ export function isHeartbeatStale(nowMs: number, staleMs: number): boolean {
   return nowMs - lastActivity > staleMs
 }
 
-export function enqueueHeartbeat(task: () => Promise<void>): Promise<void> {
+export function enqueueHeartbeat<T>(task: () => Promise<T>): Promise<T> {
   const run = chain.then(async () => {
     try {
-      await task()
+      const result = await task()
       markHeartbeatSuccess()
+      return result
     } catch (e) {
       lastErrorAtMs = Date.now()
       lastErrorMessage = e instanceof Error ? e.message : String(e)
       throw e
     }
   })
-  chain = run.catch(() => {
+  chain = run.then(() => {}, () => {
     /* 错误已记录，链继续 */
   })
   return run

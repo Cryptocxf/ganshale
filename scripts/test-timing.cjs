@@ -60,7 +60,8 @@ async function main() {
   assert.equal(officeElapsedForDay(day, [overnight], { patterns: [], nowMs: at(16), extrapolateLive: false }), 10, 'midnight clips time to selected day')
 
   const data = { app: 'Code.exe', title: 'editing' }
-  await heartbeatWindow('window', data, { observedAtMs: at(9) })
+  const persisted = await heartbeatWindow('window', data, { observedAtMs: at(9) })
+  assert.equal(persisted.id, savedEvents[0].id, 'persisted sample is returned for immediate UI update')
   await heartbeatWindow('window', data, { observedAtMs: at(9) + 1200 })
   await heartbeatWindow('window', data, { observedAtMs: at(9) + 1200 })
   await heartbeatWindow('window', data, { observedAtMs: at(9) + 2400 })

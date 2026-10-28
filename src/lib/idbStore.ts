@@ -66,25 +66,14 @@ export async function getEventsInRange(
   endIso: string,
 ): Promise<AwEvent[]> {
   const db = await openDb()
-  const t0 = new Date(startIso).getTime()
-  const t1 = new Date(endIso).getTime()
   return new Promise((resolve, reject) => {
     const tx = db.transaction('events', 'readonly')
     const idx = tx.objectStore('events').index('by_bucket_time')
-    const out: AwEvent[] = []
     const range = IDBKeyRange.bound([bucketId, startIso], [bucketId, endIso])
-    const req = idx.openCursor(range)
+    const req = idx.getAll(range)
     req.onerror = () => reject(req.error)
     req.onsuccess = () => {
-      const cur = req.result
-      if (!cur) {
-        resolve(out)
-        return
-      }
-      const ev = cur.value as AwEvent
-      const ts = new Date(ev.timestamp).getTime()
-      if (ts >= t0 && ts <= t1) out.push(ev)
-      cur.continue()
+      resolve(req.result as AwEvent[])
     }
   })
 }
@@ -119,15 +108,24 @@ export async function getAllEventsForBucket(
 export async function getDistinctWindowEventLocalDays(
   bucketId: string,
 ): Promise<Set<string>> {
-  const events = await getAllEventsForBucket(bucketId)
-  const days = new Set<string>()
-  for (const ev of events) {
-    if (!ev.timestamp) continue
-    const t = new Date(ev.timestamp).getTime()
-    if (Number.isNaN(t)) continue
-    days.add(toYmdLocal(new Date(t)))
-  }
-  return days
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const days = new Set<string>()
+    const tx = db.transaction('events', 'readonly')
+    const index = tx.objectStore('events').index('by_bucket_time')
+    const request = index.openKeyCursor(IDBKeyRange.bound([bucketId, ''], [bucketId, '\uffff']))
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      const cursor = request.result
+      if (!cursor) { resolve(days); return }
+      const date = new Date(String((cursor.key as IDBValidKey[])[1]))
+      if (Number.isNaN(date.getTime())) { cursor.continue(); return }
+      days.add(toYmdLocal(date))
+      // 按天跳过索引，既不读取事件正文，也不逐条扫描当天的所有窗口。
+      date.setHours(24, 0, 0, 0)
+      cursor.continue([bucketId, date.toISOString()])
+    }
+  })
 }
 
 /** 取 bucket 内时间最新的一条（走复合索引，避免全表扫描） */
