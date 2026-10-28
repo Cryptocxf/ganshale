@@ -296,7 +296,7 @@ const PREVIOUS_MONTHLY_REPORT_GENERATION_PROMPT = [
   '[在这里粘贴本月的日报、周报或工作记录汇总]',
 ].join('\n')
 
-export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
+const PREVIOUS_RD_MONTHLY_REPORT_GENERATION_PROMPT = [
   '## 角色与任务',
   '你是一位熟悉软件研发、技术平台与模型工程的研发岗月报撰写助手。以本月四周的工作周报为主要依据，跨周归并工作主题，提炼月度研发进展和产出，形成正式、具体、可直接提交的月报。',
   '本月如涉及第五周或跨月周，须覆盖所有属于报告月份的有效工作，不机械丢弃第五周内容；跨月周报仅提取有依据属于本月的事项。缺失周报时可使用本月日报和工作记录补充，不得补造不存在的周报。',
@@ -312,6 +312,18 @@ export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = [
   '不要按四周逐周罗列，不要添加月度总总结、下月计划或表格外说明；无有效材料时明确说明无法生成。',
   '输出前逐段核对字符数：超过200字必须压缩后重新检查，保证每个板块正文严格不超过200字且尽量达到190—200字；同时核对月份、事实和完成状态。',
 ].join('\n')
+
+// 与周报共用写作规则，仅调整素材、报告周期及每部分字数限制，避免两套要求漂移。
+export const DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT = DEFAULT_WEEKLY_REPORT_GENERATION_PROMPT
+  .replace('根据本周日报，跨日期合并同类事项', '根据本月各周周报，跨周合并同类事项')
+  .replace('以日报为主要依据，缺少日报时可参考工作记录。', '以本月各周周报为主要依据，缺少周报时可参考本月日报和工作记录。本月涉及第五周时也应覆盖，跨月周报仅提取有依据属于本月的工作。')
+  .replaceAll('周报。', '月报。')
+  .replace('第一行：# 周报 YYYY-MM-DD（严格使用下文指定的周一日期）。', '第一行：# 月报 YYYY-MM（严格使用下文指定月份）。')
+  .replace('每个板块的正文不设字数上限或固定字数目标，应根据材料充分展开，尽可能丰富具体内容；不要为追求简短而遗漏重要工作，也不要用重复表述、空话或虚构事实凑篇幅。', '每个板块的正文写成连贯段落，严格不超过200字，材料充分时尽量接近200字（目标190—200字）。字数按正文字符计算，包含中文、英文、数字及标点，不含序号、板块标题和Markdown表格分隔符。在限制内尽可能丰富具体内容，优先保留重要工作，不用重复表述、空话或虚构事实凑字。')
+  .replace('按周一至周日流水排列', '按第一周至第五周流水排列')
+  .replace('同一事项跨日报合并', '同一事项跨周报合并')
+  .replace('下周计划', '下月计划')
+  .replace('事实与本周材料一致，无任何200字上限要求。', '事实与本月材料一致；逐段核对正文字符数，超过200字必须压缩后重新检查，材料充分时尽量达到190—200字，材料不足时如实缩短，不凑字。')
 
 const LEGACY_WEEKLY_REPORT_GENERATION_PROMPT = [
   '## 角色',
@@ -381,7 +393,7 @@ export function normalizeStoredWeeklyReportPrompt(stored: string): string {
 
 export function normalizeStoredMonthlyReportPrompt(stored: string): string {
   const t = stored.trim()
-  if (!t || t === PREVIOUS_MONTHLY_REPORT_GENERATION_PROMPT) return DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
+  if (!t || t === PREVIOUS_MONTHLY_REPORT_GENERATION_PROMPT || t === PREVIOUS_RD_MONTHLY_REPORT_GENERATION_PROMPT) return DEFAULT_MONTHLY_REPORT_GENERATION_PROMPT
   return t
 }
 

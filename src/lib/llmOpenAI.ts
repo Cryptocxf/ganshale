@@ -19,6 +19,14 @@ export type ChatMessageInput = {
   content: string
 }
 
+/** 所有工作总结/报告请求均使用非思考模式；兼容网关及 DeepSeek 原生开关。 */
+function nonThinkingParameters(model: string) {
+  return {
+    enable_thinking: false,
+    ...(/deepseek/i.test(model) ? { thinking: { type: 'disabled' } } : {}),
+  }
+}
+
 /**
  * OpenAI 兼容：`POST {baseUrl}/chat/completions`，`stream: true` 时解析 SSE。
  */
@@ -38,6 +46,7 @@ export async function streamChatCompletion(options: {
       model: options.model,
       messages: options.messages,
       stream: true,
+      ...nonThinkingParameters(options.model),
     }),
     signal: options.signal,
   })
@@ -110,7 +119,6 @@ export async function chatCompletion(options: {
   model: string
   messages: ChatMessageInput[]
   maxTokens?: number
-  enableThinking?: boolean
   signal?: AbortSignal
 }): Promise<string> {
   const url = llmChatCompletionsUrl(options.baseUrl)
@@ -122,7 +130,7 @@ export async function chatCompletion(options: {
       messages: options.messages,
       stream: false,
       max_tokens: options.maxTokens ?? 1024,
-      ...(options.enableThinking !== undefined ? { enable_thinking: options.enableThinking } : {}),
+      ...nonThinkingParameters(options.model),
     }),
     signal: options.signal,
   })

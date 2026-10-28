@@ -16,6 +16,12 @@ if (!process.versions.electron) {
 }
 const electron = require('electron')
 const { app, BrowserWindow, powerMonitor, ipcMain } = electron
+let trayQuitAction
+const originalBuildMenu = electron.Menu.buildFromTemplate.bind(electron.Menu)
+electron.Menu.buildFromTemplate = (template) => {
+  trayQuitAction = template.find(item => item.label === '退出应用')?.click || trayQuitAction
+  return originalBuildMenu(template)
+}
 let blockAcknowledgements = false
 let simulatedLock = false
 powerMonitor.getSystemIdleState = () => simulatedLock ? 'locked' : 'active'
@@ -73,6 +79,7 @@ app.whenReady().then(async () => {
   blockAcknowledgements = false
   win.webContents.debugger.detach()
   win.restore()
+  win.show()
   await wait(6000)
   const restored = await win.webContents.executeJavaScript(`(async () => {
     const db = await new Promise((resolve, reject) => { const r = indexedDB.open('ganshale_aw'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
@@ -82,6 +89,18 @@ app.whenReady().then(async () => {
   })()`)
   assert.ok(restored.sessions >= 2 && restored.windows > 0, 'restoring UI replays main-process records into actual IndexedDB')
   assert.ok(restored.state.pending < 5, 'persisted events are acknowledged')
+  blockAcknowledgements = true
+  win.close()
+  await wait(500)
+  assert.equal(win.isDestroyed(), false, 'X must not destroy the client')
+  assert.equal(win.isVisible(), false, 'X hides directly to tray')
+  assert.equal(BrowserWindow.getAllWindows().length, 1, 'X must not open a confirmation dialog')
+  const sessionAtClose = readJournal().find(event => event.data.kind === 'work-session' && !event.data.closed)
+  await wait(3000)
+  const sessionAfterClose = readJournal().find(event => event.id === sessionAtClose.id)
+  assert.ok(sessionAfterClose.duration > sessionAtClose.duration, 'close-to-tray must continue recording')
+  assert.equal(typeof trayQuitAction, 'function', 'tray keeps explicit quit action')
+  console.log('PASS: X hides without confirmation and continues recording; explicit app quit exits')
   console.log('PASS: full application minimized/frozen renderer, native foreground samples, lock/sleep exclusion, resume and IndexedDB replay', JSON.stringify(restored))
-  app.quit()
+  trayQuitAction()
 }).catch(error => { console.error(error.stack || error.message); app.exit(1) })

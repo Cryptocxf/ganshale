@@ -39,7 +39,6 @@ export async function summarizeWindowEventsWithLlm(
       baseUrl,
       apiKey,
       model,
-      ...(model.toLowerCase().startsWith('qwen') ? { enableThinking: false } : {}),
       messages: [
         {
           role: 'system',

@@ -155,7 +155,7 @@ if (!gotSingleInstanceLock) {
 let mainBrowserWindow = null
 /** @type {Tray | null} */
 let appTray = null
-/** 用户确认退出或 before-quit 时为 true，允许窗口真正关闭 */
+/** 托盘退出、更新安装或 before-quit 时允许窗口真正关闭。 */
 let isQuitting = false
 if (gotSingleInstanceLock) {
   require('./updater.cjs').registerUpdater({ app, ipcMain, log: startupLog, beforeInstall: () => { isQuitting = true } })
@@ -163,7 +163,6 @@ if (gotSingleInstanceLock) {
 /** 主窗口是否已 `show()`（启动页在可见后再计时） */
 let mainWindowHasShown = false
 /** @type {BrowserWindow | null} */
-let closePromptWindow = null
 /** @type {BrowserWindow | null} */
 let reflectPromptWindow = null
 let lastReflectPromptClosedAt = 0
@@ -565,61 +564,6 @@ function ensureAppTray() {
   appTray.setContextMenu(menu)
   appTray.on('double-click', () => showMainWindow())
   return appTray
-}
-
-/** @returns {Promise<'tray' | 'quit' | 'cancel'>} */
-function promptCloseMainWindow(win) {
-  if (closePromptWindow && !closePromptWindow.isDestroyed()) {
-    closePromptWindow.focus()
-    return Promise.resolve('cancel')
-  }
-
-  return new Promise((resolve) => {
-    const width = 380
-    const height = 190
-    const parentBounds = win.getBounds()
-    const prompt = new BrowserWindow({
-      parent: win,
-      modal: true,
-      frame: false,
-      show: false,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      width,
-      height,
-      x: Math.round(parentBounds.x + (parentBounds.width - width) / 2),
-      y: Math.round(parentBounds.y + (parentBounds.height - height) / 2),
-      backgroundColor: '#ffffff',
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-      },
-    })
-    closePromptWindow = prompt
-    let settled = false
-
-    const finish = (action) => {
-      if (settled) return
-      settled = true
-      closePromptWindow = null
-      resolve(action)
-      if (!prompt.isDestroyed()) prompt.destroy()
-    }
-
-    prompt.webContents.on('will-navigate', (event, url) => {
-      if (!url.startsWith('ganshale-close://')) return
-      event.preventDefault()
-      const action = url.slice('ganshale-close://'.length).replace(/\/$/, '')
-      finish(action === 'tray' || action === 'quit' ? action : 'cancel')
-    })
-    prompt.on('closed', () => finish('cancel'))
-    prompt.once('ready-to-show', () => {
-      if (!prompt.isDestroyed()) prompt.show()
-    })
-    void prompt.loadFile(path.join(__dirname, 'close-prompt.html')).catch(() => finish('cancel'))
-  })
 }
 
 /** @type {((opts?: object) => Promise<object | undefined>) | null | undefined} undefined = not loaded yet */
@@ -1284,7 +1228,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 760,
     show: false,
-    title: '干啥了 v1.1.5 · 更新于 2026-10-28',
+    title: '干啥了',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),
@@ -1311,20 +1255,9 @@ function createWindow() {
     }
     e.preventDefault()
 
-    void promptCloseMainWindow(win).then((action) => {
-      if (win.isDestroyed()) return
-      if (action === 'tray') {
-        ensureAppTray()
-        if (process.platform === 'win32') win.setSkipTaskbar(true)
-        win.hide()
-        return
-      }
-      if (action === 'quit') {
-        isQuitting = true
-        if (trackingWebContents === contents) stopWindowTracking()
-        app.quit()
-      }
-    })
+    ensureAppTray()
+    if (process.platform === 'win32') win.setSkipTaskbar(true)
+    win.hide()
   })
 
   win.once('ready-to-show', () => {
