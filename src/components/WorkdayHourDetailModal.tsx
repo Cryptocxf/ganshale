@@ -48,25 +48,25 @@ export function WorkdayHourDetailModal({ hour, timeline, onClose }: WorkdayHourD
       dialogClassName={DASHBOARD_DETAIL_MODAL_SIZE_CLASS}
     >
         <div
-          className={`flex shrink-0 items-start justify-between gap-3 px-2 py-1.5 sm:px-3 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
+          className={`relative flex shrink-0 flex-col items-start gap-3 px-4 py-4 pr-14 sm:px-5 sm:pr-14 ${GS_MODAL_HEADER_DIVIDER_CLASS}`}
         >
           <DashboardSectionTitle id="workday-hour-detail-title" icon={Clock3}>
-            {formatHourRange(hour)}
+            <span className="whitespace-nowrap tabular-nums">{formatHourRange(hour)}</span>
           </DashboardSectionTitle>
-          <div className="flex shrink-0 items-start gap-2">
+          <div className="w-full min-w-0">
             {legend.length > 0 ? (
-              <div className="flex max-w-[min(100%,20rem)] flex-wrap items-center justify-end gap-x-2 gap-y-0.5 pt-0.5">
+              <div className="grid w-full grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
                 {legend.map(({ label, color }) => (
                   <span
                     key={label}
-                    className="inline-flex items-center gap-1 text-[10px] text-ganshale-muted"
+                    className="inline-flex min-w-0 items-center gap-1.5 text-xs text-ganshale-muted"
                   >
                     <span
                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{ backgroundColor: color }}
                       aria-hidden
                     />
-                    {label}
+                    <span className="break-all">{label}</span>
                   </span>
                 ))}
               </div>
@@ -74,7 +74,7 @@ export function WorkdayHourDetailModal({ hour, timeline, onClose }: WorkdayHourD
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1.5 text-ganshale-muted transition hover:bg-ganshale-page hover:text-ganshale-text"
+              className="absolute right-3 top-3 rounded-full p-2 text-ganshale-muted transition hover:bg-ganshale-page hover:text-ganshale-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               aria-label="关闭"
             >
               <X className="h-4 w-4" strokeWidth={1.8} />

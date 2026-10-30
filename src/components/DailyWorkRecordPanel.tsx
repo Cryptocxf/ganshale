@@ -339,6 +339,8 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         } else if (!wasActive || recordSettings.systemRecordPeriod !== next.systemRecordPeriod) {
           clearAiSummaryScheduleForDay(dayRef.current)
           ensureAiSummaryAnchoredForSession(dayRef.current, next)
+          const newInterval = systemRecordIntervalMs(next)
+          if (newInterval != null) saveNextAiSummaryAt(dayRef.current, Date.now() + newInterval)
         }
       }
     }
@@ -356,9 +358,8 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       const settings = loadWorkRecordSettings()
       if (!isAiSummaryScheduleDay(currentDay) || !isAiAutoSummaryActive(settings)) return
 
-      // 保存模型后按用户设置重新计时，不使用固定的短周期。
+      // 模型配置更新只重排任务，不重置上次总结时间和倒计时。
       setAiSummaryError(null)
-      clearAiSummaryScheduleForDay(currentDay)
       ensureAiSummaryAnchoredForSession(currentDay, settings)
       setRecordSettingsRev((v) => v + 1)
     }

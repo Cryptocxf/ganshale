@@ -9,6 +9,9 @@ import { isAiAutoSummaryActive, systemRecordIntervalMs } from './workRecordSetti
 const LAST_FIRE_PREFIX = 'ganshale-ai-summary-last-fire:'
 const NEXT_AT_PREFIX = 'ganshale-ai-summary-next-at:'
 const SESSION_ANCHOR_KEY = 'ganshale-ai-summary-session-anchor'
+// 不使用会随页面/主题重新激活而变化的工作计时起点。
+const CLIENT_OPENED_AT_MS = typeof performance !== 'undefined'
+  ? Math.floor(performance.timeOrigin) : getClientSessionStartMs()
 
 function lastFireKey(day: Date): string {
   return `${LAST_FIRE_PREFIX}${toYmdLocal(day)}`
@@ -93,7 +96,7 @@ function clearSessionAnchor(): void {
   }
 }
 
-/** 本次打开应用后，为「今天」锚定下次总结时间 = 当前时刻 + 间隔（仅间隔模式） */
+/** 首次按客户端打开时间锚定；页面重挂载不改变计划，间隔变化才重设。 */
 export function ensureAiSummaryAnchoredForSession(
   day: Date,
   settings: WorkRecordSettings,
@@ -110,25 +113,29 @@ export function ensureAiSummaryAnchoredForSession(
   if (intervalMs == null) return
 
   const ymd = toYmdLocal(day)
-  const sessionStart = getClientSessionStartMs()
+  const sessionStart = CLIENT_OPENED_AT_MS
+  let periodChanged = false
 
   try {
     const raw = sessionStorage.getItem(SESSION_ANCHOR_KEY)
     if (raw) {
-      const o = JSON.parse(raw) as { sessionStart?: number; ymd?: string }
+      const o = JSON.parse(raw) as { sessionStart?: number; ymd?: string; period?: string }
       if (o.sessionStart === sessionStart && o.ymd === ymd) {
+        periodChanged = o.period !== undefined && o.period !== period
         const next = loadNextAiSummaryAt(day)
-        if (next != null) return
+        if (next != null && !periodChanged) return
       }
     }
   } catch {
     /* ignore */
   }
 
-  saveNextAiSummaryAt(day, nowMs + intervalMs)
+  const last = loadLastAiSummaryAt(day)
+  const base = periodChanged ? nowMs : Math.max(startOfLocalDay(day).getTime(), last ?? sessionStart)
+  saveNextAiSummaryAt(day, base + intervalMs)
   sessionStorage.setItem(
     SESSION_ANCHOR_KEY,
-    JSON.stringify({ sessionStart, ymd }),
+    JSON.stringify({ sessionStart, ymd, period }),
   )
 }
 
@@ -213,15 +220,12 @@ export function getNextAiSummaryAtMs(
 
   const last = loadLastAiSummaryAt(day)
   if (last != null) {
-    let next = last + intervalMs
-    while (next <= nowMs) {
-      next += intervalMs
-    }
+    const next = last + intervalMs
     saveNextAiSummaryAt(day, next)
     return next
   }
 
-  const next = nowMs + intervalMs
+  const next = Math.max(startOfLocalDay(day).getTime(), CLIENT_OPENED_AT_MS) + intervalMs
   saveNextAiSummaryAt(day, next)
   return next
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { DailyDashboard } from './components/DailyDashboard'
 import { MonthlyDashboard } from './components/MonthlyDashboard'
 import { DataRecordsView } from './components/data/DataRecordsView'
@@ -29,6 +29,16 @@ const pageTitle: Record<NavKey, string> = {
 
 const OVERVIEW_NAV: NavKey[] = ['daily', 'weekly', 'monthly']
 
+// 导航仅切换容器可见性，不因父组件更新重渲染已挂载的整张看板。
+const DailyPane = memo(DailyDashboard)
+const WeeklyPane = memo(WeeklyDashboard)
+const MonthlyPane = memo(MonthlyDashboard)
+
+function DataErrorBanner() {
+  const { error } = useGanshaleData()
+  return error ? <div className="mb-2 shrink-0 rounded-xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm text-rose-950 shadow-sm" role="alert">{error}</div> : null
+}
+
 function overviewPaneClass(active: NavKey, key: NavKey): string {
   return active === key ? 'flex min-h-0 flex-1 flex-col' : 'hidden'
 }
@@ -46,17 +56,17 @@ function ActivePage({
     <>
       {mountedOverviews.has('daily') ? (
         <div className={overviewPaneClass(active, 'daily')} aria-hidden={active !== 'daily'}>
-          <DailyDashboard />
+          <DailyPane />
         </div>
       ) : null}
       {mountedOverviews.has('weekly') ? (
         <div className={overviewPaneClass(active, 'weekly')} aria-hidden={active !== 'weekly'}>
-          <WeeklyDashboard />
+          <WeeklyPane />
         </div>
       ) : null}
       {mountedOverviews.has('monthly') ? (
         <div className={overviewPaneClass(active, 'monthly')} aria-hidden={active !== 'monthly'}>
-          <MonthlyDashboard onNavigate={onNavigate} />
+          <MonthlyPane onNavigate={onNavigate} />
         </div>
       ) : null}
       {active === 'todos' ? <TodoDashboard /> : null}
@@ -76,7 +86,6 @@ function App() {
   const [mountedOverviews, setMountedOverviews] = useState<ReadonlySet<NavKey>>(
     () => new Set(['daily']),
   )
-  const { error } = useGanshaleData()
   useTodoReminderScheduler(isDesktopClient())
 
   const setActive = useCallback((key: NavKey) => {
@@ -102,24 +111,7 @@ function App() {
   return (
     <AppChrome active={active} onNavigate={setActive} pageTitle={pageTitle[active]}>
       <>
-        {error ? (
-          <div
-            className={[
-              'rounded-xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm text-rose-950 shadow-sm',
-              active === 'daily' ||
-              active === 'settings' ||
-              active === 'weekly' ||
-              active === 'monthly' ||
-              active === 'todos' ||
-              active === 'data'
-                ? 'mb-2 shrink-0'
-                : 'mb-6',
-            ].join(' ')}
-            role="alert"
-          >
-            {error}
-          </div>
-        ) : null}
+        <DataErrorBanner />
         <ActivePage active={active} onNavigate={setActive} mountedOverviews={mountedOverviews} />
         <WindowDwellPrompt />
       </>

@@ -65,16 +65,16 @@ export function isWindowsExplorerWindowEvent(ev: AwEvent): boolean {
  * 不参与窗口时长、时间轴、分类聚合与列表展示的事件（仅资源管理器）。
  */
 export function shouldSkipWindowEventForStats(ev: AwEvent): boolean {
-  return ev.data.kind === 'work-session' || isWindowsExplorerWindowEvent(ev)
+  return ev.data.kind === 'work-session' || isWindowsExplorerWindowEvent(ev) || isGanshaleSelfWindowEvent(ev)
 }
 
 /** 过滤 Windows 资源管理器（explorer），用于列表与下游统计 */
 export function excludeGanshaleSelfWindowEvents(events: AwEvent[]): AwEvent[] {
   // 保留工作会话供办公总时长使用；具体应用列表/图表通过 shouldSkipWindowEventForStats 隐藏会话。
-  return events.filter((ev) => !isWindowsExplorerWindowEvent(ev))
+  return events.filter((ev) => !isWindowsExplorerWindowEvent(ev) && !isGanshaleSelfWindowEvent(ev))
 }
 
 /** 实时前台采样是否不参与延伸统计（资源管理器） */
 export function isLiveForegroundSkippedForStats(live: LiveForegroundSample): boolean {
-  return isWindowsExplorerApp(live.app ?? '')
+  return isWindowsExplorerApp(live.app ?? '') || isGanshaleSelfWindowRecord(live.app ?? '', live.title ?? '', live.appPath)
 }

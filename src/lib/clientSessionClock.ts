@@ -18,7 +18,8 @@ let sessionStartOverrideMs: number | null = null
 
 /** Call when the app UI becomes active (e.g. splash dismissed) so the timer excludes splash time. */
 export function markClientWorkSessionStart(ms = Date.now()) {
-  sessionStartOverrideMs = ms
+  // 主题重渲染或重复激活不能改变本次客户端会话起点。
+  sessionStartOverrideMs ??= ms
 }
 
 export function getClientSessionStartMs(): number {

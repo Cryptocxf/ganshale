@@ -54,6 +54,15 @@ function createWindowRecorder({ directory, now = Date.now, writeFile = null } = 
   function observe(sample, at = now()) {
     if (paused) return []
     samples++
+    const app = String(sample?.app || '').toLowerCase().replace(/\.exe$/, '')
+    const self = app === 'ganshale' || (app === 'electron' && /ganshale|干啥了/i.test(`${sample?.title || ''} ${sample?.appPath || ''}`))
+    if (self) {
+      const events = windowEvent ? [extend(windowEvent, Math.min(at, lastWindowAt + MAX_GAP_MS), true)] : []
+      windowEvent = null
+      lastWindowAt = 0
+      if (events.length) persist()
+      return events
+    }
     if (!sample) { windowEvent = null; lastWindowAt = 0; return [] }
     const data = { app: sample.app, title: sample.title || '', ...(sample.appPath ? { appPath: sample.appPath } : {}) }
     const changed = !windowEvent || windowEvent.data.app !== data.app || windowEvent.data.title !== data.title || windowEvent.data.appPath !== data.appPath

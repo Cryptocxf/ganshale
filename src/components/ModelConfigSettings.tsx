@@ -72,10 +72,12 @@ function resolveRuntimeFromForm(form: FormState) {
 
 export function ModelConfigSettings() {
   const [saved, setSaved] = useState<LlmUserConfig>(() => loadLlmUserConfig())
-  const [form, setForm] = useState<FormState>({ baseUrl: '', apiKey: '', gatewayModelId: '' })
-  const [revealed, setRevealed] = useState(false)
-  const [modelOptions, setModelOptions] = useState<{ id: string; description: string }[]>([])
-  const [providerId, setProviderId] = useState('custom')
+  const [form, setForm] = useState<FormState>(() => configToForm(saved))
+  const [revealed, setRevealed] = useState(() => Boolean(saved.baseUrl || saved.apiKey || saved.gatewayModelId))
+  const [modelOptions, setModelOptions] = useState<{ id: string; description: string }[]>(() =>
+    saved.baseUrl || saved.apiKey || saved.gatewayModelId
+      ? window.ganshaleDesktop?.getPrivateLlmProfile?.()?.models ?? [] : [])
+  const [providerId, setProviderId] = useState(() => guessLlmProviderPresetId(saved.baseUrl, saved.gatewayModelId))
   const [apiKeyHint, setApiKeyHint] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
@@ -100,6 +102,10 @@ export function ModelConfigSettings() {
     setRevealed(true)
     setModelOptions(localProfile?.models ?? [])
     setForm(configToForm({ ...configured, ...fields }))
+    if (fields.baseUrl && fields.apiKey && fields.gatewayModelId) {
+      saveLlmUserConfig({ ...configured, ...fields })
+      setSaved(loadLlmUserConfig())
+    }
     setProviderId(
       guessLlmProviderPresetId(
         fields.baseUrl,
@@ -108,7 +114,9 @@ export function ModelConfigSettings() {
     )
     setApiKeyHint(findPresetHint('custom'))
     setTestResult(null)
-    setNote(localProfile ? '已填入本机私有配置，请确认后保存' : '已显示本机保存的配置；无预设时请自行填写')
+    setNote(fields.baseUrl && fields.apiKey && fields.gatewayModelId
+      ? '已保存本机配置，下次打开会自动显示'
+      : '已显示配置，请填写后保存')
   }, [])
   const dirty = useMemo(() => {
     if (!revealed) return false
