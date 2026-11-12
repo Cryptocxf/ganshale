@@ -4,6 +4,7 @@ import {
   loadReportScheduleSettings,
 } from './reportScheduleSettings'
 import { startOfMonthLocal, toYmdLocal } from './timeutil'
+import { lastChinaWorkdayOfMonth } from './chinaWorkday'
 
 const AUTO_MONTHLY_FIRED_PREFIX = 'ganshale-monthly-report-auto:'
 
@@ -30,7 +31,9 @@ export function shouldFireAutoMonthlyReport(
   if (!settings.monthlyReportAutoEnabled) {
     return { fire: false, nextKey: lastFiredKey }
   }
-  const { monthlyReportDayOfMonth, monthlyReportHour, monthlyReportMinute } = settings
+  const { monthlyReportDayOfMonth } = settings
+  const monthlyReportHour = settings.monthlyReportLastWorkdayAtTen ? 10 : settings.monthlyReportHour
+  const monthlyReportMinute = settings.monthlyReportLastWorkdayAtTen ? 0 : settings.monthlyReportMinute
 
   const monthStart = startOfMonthLocal(monthAnchor)
   const currentMonthStart = startOfMonthLocal(now)
@@ -38,7 +41,7 @@ export function shouldFireAutoMonthlyReport(
     return { fire: false, nextKey: lastFiredKey }
   }
 
-  const targetDay = effectiveMonthDay(monthlyReportDayOfMonth, monthStart)
+  const targetDay = settings.monthlyReportLastWorkdayAtTen ? lastChinaWorkdayOfMonth(monthStart) : effectiveMonthDay(monthlyReportDayOfMonth, monthStart)
   if (now.getDate() !== targetDay) {
     return { fire: false, nextKey: lastFiredKey }
   }

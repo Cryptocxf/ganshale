@@ -159,9 +159,7 @@ export function aiSummaryWindowBounds(
   })
   const last = loadLastAiSummaryAt(day)
   let startMs = last ?? (intervalMs != null ? endMs - intervalMs : dayStart)
-  if (intervalMs != null && endMs - startMs > intervalMs * 1.5) {
-    startMs = endMs - intervalMs
-  }
+  // 延迟恢复时仍覆盖上次成功总结以来的全部记录，不能截掉中间几小时。
   if (startMs < dayStart) startMs = dayStart
   if (startMs >= endMs) startMs = Math.max(dayStart, endMs - (intervalMs ?? 30 * 60_000))
   return { startMs, endMs }

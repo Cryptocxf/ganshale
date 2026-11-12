@@ -8,15 +8,27 @@ let dbPromise: Promise<IDBDatabase> | null = null
 
 /** 清空或切换存储分区后丢弃缓存连接，下次读取会重新 open。 */
 export function resetDbConnection(): void {
+  const previous = dbPromise
   dbPromise = null
+  void previous?.then(db => db.close(), () => {})
 }
 
 function openDb(): Promise<IDBDatabase> {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION)
-      req.onerror = () => reject(req.error)
-      req.onsuccess = () => resolve(req.result)
+      const timer = setTimeout(() => {
+        dbPromise = null
+        reject(new Error('数据库连接超时，将自动重试'))
+      }, 15000)
+      req.onerror = () => { clearTimeout(timer); dbPromise = null; reject(req.error) }
+      req.onsuccess = () => {
+        clearTimeout(timer)
+        const db = req.result
+        db.onversionchange = () => { db.close(); dbPromise = null }
+        db.onclose = () => { dbPromise = null }
+        resolve(db)
+      }
       req.onupgradeneeded = () => {
         const db = req.result
         if (!db.objectStoreNames.contains('buckets')) {
@@ -37,9 +49,14 @@ function openDb(): Promise<IDBDatabase> {
 
 function txDone(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-    tx.onabort = () => reject(tx.error)
+    const timer = setTimeout(() => {
+      try { tx.abort() } catch { /* 已完成的事务不能 abort */ }
+      resetDbConnection()
+      reject(new Error('数据库事务超时，待同步记录保留并自动重试'))
+    }, 15000)
+    tx.oncomplete = () => { clearTimeout(timer); resolve() }
+    tx.onerror = () => { clearTimeout(timer); reject(tx.error) }
+    tx.onabort = () => { clearTimeout(timer); reject(tx.error) }
   })
 }
 

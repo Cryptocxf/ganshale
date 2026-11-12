@@ -243,11 +243,26 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
           setDaysWithTimingData((days) => days.has(ymd) ? days : new Set([...days, ymd]))
         }
 
-        const persistRecordedEvents = async (events: AwEvent[]) => {
-          await enqueueHeartbeat(() => store.putRecordedWindowEvents(events))
-          if (cancelled) return
-          for (const event of events) applyPersistedEvent(event)
-          await d.acknowledgeRecordedWindowEvents?.(events)
+        const pendingWrites = new Map<string, AwEvent>()
+        let writing: Promise<void> | null = null
+        const persistRecordedEvents = (events: AwEvent[]): Promise<void> => {
+          for (const event of events) {
+            const previous = pendingWrites.get(event.id)
+            if (!previous || event.duration > previous.duration || (event.duration === previous.duration && event.data.closed)) pendingWrites.set(event.id, event)
+          }
+          if (!writing) {
+            writing = (async () => {
+              while (pendingWrites.size && !cancelled) {
+                const batch = [...pendingWrites.values()]
+                pendingWrites.clear()
+                await enqueueHeartbeat(() => store.putRecordedWindowEvents(batch))
+                if (cancelled) return
+                for (const event of batch) applyPersistedEvent(event)
+                await d.acknowledgeRecordedWindowEvents?.(batch)
+              }
+            })().finally(() => { writing = null })
+          }
+          return writing
         }
         const replayRecordedEvents = async () => {
           if (replaying || cancelled || !d.getRecordedWindowEvents) return

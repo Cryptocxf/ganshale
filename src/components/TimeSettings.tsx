@@ -252,6 +252,13 @@ export function TimeSettings() {
             persistSchedule({ ...schedule, monthlyReportAutoEnabled })
           }
         >
+          <label className="mb-3 flex items-center gap-2 text-xs text-ganshale-text">
+            <input type="checkbox" checked={Boolean(schedule.monthlyReportLastWorkdayAtTen)}
+              disabled={!schedule.monthlyReportAutoEnabled}
+              onChange={(event) => persistSchedule({ ...schedule, monthlyReportLastWorkdayAtTen: event.target.checked })} />
+            本月最后一个法定工作日上午十点
+          </label>
+          {schedule.monthlyReportLastWorkdayAtTen ? <p className="mb-3 text-[10px] text-ganshale-subtle">优先使用此规则，替代下方自定义日期与时间。当前已内置中国大陆2026年节假日及调休；其他年份需更新日历后才会触发。客户端需运行且模型已配置。</p> : null}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <SelectField
               id="monthly-report-day"

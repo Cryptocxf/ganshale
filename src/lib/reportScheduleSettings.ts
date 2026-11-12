@@ -13,6 +13,7 @@ export type ReportScheduleSettings = {
   weeklyReportMinute: number
   /** 是否开启自动生成月报 */
   monthlyReportAutoEnabled: boolean
+  monthlyReportLastWorkdayAtTen?: boolean
   /** 自动生成月报：每月几号（1–31，超出当月天数时取当月最后一天） */
   monthlyReportDayOfMonth: number
   monthlyReportHour: number
@@ -82,6 +83,7 @@ export function defaultReportScheduleSettings(now = new Date()): ReportScheduleS
     weeklyReportHour: 17,
     weeklyReportMinute: 0,
     monthlyReportAutoEnabled: true,
+    monthlyReportLastWorkdayAtTen: false,
     monthlyReportDayOfMonth: lastDayOfLocalMonth(now),
     monthlyReportHour: 17,
     monthlyReportMinute: 0,
@@ -103,6 +105,7 @@ function normalize(raw: Partial<ReportScheduleSettings>): ReportScheduleSettings
     weeklyReportHour: clampHour(raw.weeklyReportHour ?? d.weeklyReportHour),
     weeklyReportMinute: 0,
     monthlyReportAutoEnabled: normalizeBool(raw.monthlyReportAutoEnabled, d.monthlyReportAutoEnabled),
+    monthlyReportLastWorkdayAtTen: normalizeBool(raw.monthlyReportLastWorkdayAtTen, false),
     monthlyReportDayOfMonth: clampDayOfMonth(
       raw.monthlyReportDayOfMonth ??
         (raw as { monthlyReportWeekday?: number }).monthlyReportWeekday ??
@@ -163,5 +166,6 @@ export function formatWeeklyAutoTriggerLabel(settings = loadReportScheduleSettin
 
 export function formatMonthlyAutoTriggerLabel(settings = loadReportScheduleSettings()): string | null {
   if (!settings.monthlyReportAutoEnabled) return null
+  if (settings.monthlyReportLastWorkdayAtTen) return '本月最后一个法定工作日 10:00 自动触发'
   return `每月 ${monthDayLabel(settings.monthlyReportDayOfMonth)} ${formatHourLabel(settings.monthlyReportHour)} 自动触发`
 }

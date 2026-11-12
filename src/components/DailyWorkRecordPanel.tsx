@@ -217,6 +217,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       startMs,
       endMs,
     )
+    const timeoutId = window.setTimeout(() => aiSummaryAbortRef.current?.abort(), 65_000)
     if (manual && windowEvents.length === 0) {
       windowEvents = filterWindowEventsInRange(eventsRef.current, currentDay, 0, nowMs)
     }
@@ -250,6 +251,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
       setAiSummaryError(message)
       console.warn('[ganshale] AI 自动总结失败', e)
     } finally {
+      window.clearTimeout(timeoutId)
       const currentSettings = loadWorkRecordSettings()
       const intervalMs = systemRecordIntervalMs(currentSettings)
       if (intervalMs != null && isAiSummaryScheduleDay(currentDay)) {
@@ -263,6 +265,23 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   }, [])
 
   const rowsPersistKeyRef = useRef('')
+  useEffect(() => {
+    const recover = () => {
+      const currentDay = dayRef.current
+      const settings = loadWorkRecordSettings()
+      if (!isAiSummaryScheduleDay(currentDay) || !isAiAutoSummaryActive(settings)) return
+      const due = getNextAiSummaryAtMs(currentDay, settings)
+      if (due != null && due <= Date.now()) void runAiSummary()
+    }
+    const timer = window.setInterval(recover, 15_000)
+    window.addEventListener('focus', recover)
+    document.addEventListener('visibilitychange', recover)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', recover)
+      document.removeEventListener('visibilitychange', recover)
+    }
+  }, [runAiSummary])
   useEffect(() => {
     const sorted = sortWorkRecordsByTimeDesc(rows)
     const key = `${toYmdLocal(day)}:${JSON.stringify(sorted)}`

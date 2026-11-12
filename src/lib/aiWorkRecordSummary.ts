@@ -48,7 +48,7 @@ export async function summarizeWindowEventsWithLlm(
       ],
       // 推理模型会同时消耗 reasoning token；留足余量，避免正文尚未生成就结束。
       maxTokens: 1024,
-      signal,
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
     })
     return raw.replace(/\s+/g, ' ').trim()
   } catch (e) {
