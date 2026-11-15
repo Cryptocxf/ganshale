@@ -1,4 +1,7 @@
-/* 工时积木：与客户端共用主题，展台保留温暖材质。 */
+/* 工时汇总：与客户端共用主题，展台保留温暖材质。 */
+.brick-page .brick-main>.brick-header{border-bottom:1px solid #a783555e}
+.brick-page .brick-main>.brick-header .brick-heading-copy{border-left:3px solid #97651d;padding-left:20px}
+.brick-header .brick-heading-copy p:after{content:'EVERY DAY LEAVES A TRACE';display:block;margin-top:6px;font-size:9px;letter-spacing:.18em;font-weight:600;color:#97651d}
 .brick-main>.brick-header .brick-toolbar .brick-period-switch{background:transparent;border:0;box-shadow:none;padding:0;gap:8px}
 .brick-main>.brick-header .brick-toolbar button,.brick-main>.brick-header .brick-toolbar .brick-primary{background:transparent;border:0;box-shadow:none;color:#74624d;font-size:11px;font-weight:400;min-height:0;padding:3px 4px;border-radius:0;filter:none}
 .brick-main>.brick-header .brick-toolbar .brick-period-switch button[aria-pressed=true]{background:transparent;color:#493522;font-weight:700}
@@ -27,6 +30,7 @@
 .brick-copy-menu button:hover,.brick-copy-menu button:focus-visible{background:var(--color-ganshale-elevated)}
 .brick-page{--brick-ink:var(--color-ganshale-text);--brick-muted:var(--color-ganshale-muted);--brick-line:var(--color-ganshale-border);--brick-accent:color-mix(in srgb,var(--color-ganshale-mint,#0d9488) 70%,var(--color-ganshale-text));display:flex;flex-direction:column;flex:1;min-height:0;height:100%;gap:8px;color:var(--brick-ink);font-family:var(--font-sans);position:relative;overflow:auto;background:transparent}
 .brick-page h1,.brick-page h2,.brick-page h3{font-family:inherit;letter-spacing:0;font-weight:600}
+.brick-page>.brick-copy-note[role=status]{position:fixed;left:50%;top:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);z-index:1000;margin:0;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;pointer-events:none}
 .brick-page button{font:inherit;cursor:pointer;color:inherit}.brick-page button:disabled{cursor:wait;opacity:.5}
 .brick-page button:focus-visible,.brick-page canvas:focus-visible{outline:2px solid var(--brick-accent);outline-offset:3px}
 .brick-header,.brick-art,.brick-story,.brick-catalog{border:1px solid var(--brick-line);border-radius:8px;background:var(--gs-card-bg,var(--color-ganshale-surface))}

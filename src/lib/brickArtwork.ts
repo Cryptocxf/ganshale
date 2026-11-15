@@ -1,6 +1,6 @@
 import { brickHours, summarizeBricks, type DayBrick } from './brickStats'
 import { APP_DISPLAY_NAME, APP_ENGLISH_NAME } from '../constants/brand'
-import { brickHoleCount, brickScenePlot, buildBrickColumns, layoutBrickColumns } from './brickChart'
+import { brickDateCaption, brickHoleCount, brickScenePlot, buildBrickColumns, layoutBrickColumns } from './brickChart'
 import { brickHighlights } from './brickHighlights'
 import { brickCharacterSpeech } from './brickCharacterSpeech'
 import { brickRestDay } from './brickRestDay'
@@ -11,6 +11,14 @@ export type BrickHit = BrickRect & { date: string; id:string }
 export type BrickExportRatio = '16:9' | '9:16'
 export const BRICK_EXPORT_SIZES = { '16:9': { width: 1920, height: 1080 }, '9:16': { width: 1080, height: 1920 } } as const
 const ink = '#292e29', copper = '#6d7667'
+const gold='#97651d',terracotta='#b45f49',rule='#a783555e'
+function archiveIcon(ctx:CanvasRenderingContext2D,kind:'calendar'|'clock'|'trophy',x:number,y:number,size:number){
+  ctx.save();ctx.translate(x,y);ctx.scale(size/24,size/24);ctx.strokeStyle=gold;ctx.lineWidth=1.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath()
+  if(kind==='clock'){ctx.arc(12,12,9,0,Math.PI*2);ctx.moveTo(12,6);ctx.lineTo(12,12);ctx.lineTo(16,14)}
+  else if(kind==='calendar'){ctx.roundRect(3,5,18,16,2);ctx.moveTo(3,10);ctx.lineTo(21,10);ctx.moveTo(8,3);ctx.lineTo(8,7);ctx.moveTo(16,3);ctx.lineTo(16,7)}
+  else{ctx.moveTo(7,3);ctx.lineTo(17,3);ctx.lineTo(17,10);ctx.bezierCurveTo(17,18,7,18,7,10);ctx.closePath();ctx.moveTo(7,5);ctx.lineTo(3,5);ctx.bezierCurveTo(2,11,5,12,7,12);ctx.moveTo(17,5);ctx.lineTo(21,5);ctx.bezierCurveTo(22,11,19,12,17,12);ctx.moveTo(12,16);ctx.lineTo(12,21);ctx.moveTo(8,21);ctx.lineTo(16,21)}
+  ctx.stroke();ctx.restore()
+}
 const appFont = () => getComputedStyle(document.body).fontFamily
 const text = (ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color = ink, weight = '400') => { ctx.fillStyle = color; ctx.font = `${weight} ${size}px ${appFont()}`; ctx.fillText(value, x, y) }
 function wordmark(ctx:CanvasRenderingContext2D,x:number,y:number,size:number){
@@ -82,13 +90,18 @@ export function drawHourlyHoles(ctx:CanvasRenderingContext2D,box:BrickRect,secon
 }
 /** Chronological hourly/monthly brick columns, shared by the client and export. */
 export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], assets: BrickAssets, box: BrickRect, mode: 'month' | 'year', selected = '', fillStage = false): BrickHit[] {
-  const columns=buildBrickColumns(days,mode),workerSpace=box.w*.22,baseSize=180,sceneScale=.5,faceRatio=.52
-  const plot=brickScenePlot(box)
-  const cells=layoutBrickColumns(columns,plot),bottom=plot.y+plot.h
+  const columns=buildBrickColumns(days,mode),workerSpace=box.w*(mode==='month'?.10:.22),baseSize=180,sceneScale=.5,faceRatio=.52
+  const plot=brickScenePlot(box,mode)
+  const cells=layoutBrickColumns(columns,plot,mode),bottom=plot.y+plot.h
   ctx.save()
   ctx.textAlign='center'
   const first=cells[0],pitch=mode==='year'?(first?.w??plot.w/12):plot.w/columns.length,labelLeft=mode==='year'?plot.x+(plot.w-pitch*12)/2:plot.x
-  columns.forEach((column,index)=>text(ctx,mode==='month'?column.label.replace('日',''):column.label,labelLeft+pitch*(index+.5),bottom+18,Math.min(12,Math.max(7,pitch*.30)),'#59432e'))
+  columns.forEach((column,index)=>{
+    const caption=column.date?brickDateCaption(column.date):null
+    const color=caption?.red?'#b6382e':'#59432e',x=labelLeft+pitch*(index+.5),size=Math.min(12,Math.max(7,pitch*.30))
+    text(ctx,mode==='month'?column.label.replace('日',''):column.label,x,bottom+18,size,color)
+    if(mode==='month'&&caption)text(ctx,caption.weekday,x,bottom+33,size*.9,color)
+  })
   const hits:BrickHit[]=[]
   // One grounded shadow per column rather than a floating shadow on every brick.
   ctx.save();ctx.fillStyle='#64391d2e';ctx.shadowColor='#57351e50';ctx.shadowBlur=5
@@ -102,7 +115,7 @@ export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], 
   for(const cell of cells)brickDepth(ctx,assets.fronts,cell,exposedTops.has(cell.id))
   for(const cell of cells){
     face(ctx,assets.fronts,0,{...cell,x:cell.x+.25,y:cell.y+.15,w:Math.max(.5,cell.w-.5),h:Math.max(.5,cell.h-.3)})
-    if(cell.h>=8){
+    if(mode==='year'&&cell.h>=8){
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle'
       text(ctx,String(Number(cell.day.date.slice(8))),cell.x+cell.w/2,cell.y+cell.h*.52,Math.min(cell.h*.65,cell.w*.42),'#26150f','700')
       ctx.restore()
@@ -113,6 +126,14 @@ export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], 
       ctx.shadowBlur=10;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(cell.x,cell.y,cell.w,cell.h,Math.min(4,cell.h*.15));ctx.stroke();ctx.stroke();ctx.restore()
     }
     hits.push({x:cell.x,y:cell.y,w:cell.w,h:cell.h,date:cell.day.date,id:cell.id})
+  }
+  if(mode==='month'){
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='bottom'
+    for(const column of columns){
+      const top=cells.find(cell=>cell.id===column.bricks.at(-1)?.id)
+      if(top)text(ctx,String(column.bricks.length),top.x+top.w/2,top.y-8,Math.min(14,Math.max(9,pitch*.4)),'#875b22','600')
+    }
+    ctx.restore()
   }
   const total = days.reduce((sum, day) => sum + day.seconds, 0) / 3600
   const tired = total >= (mode === 'month' ? 80 : 900), exhausted = total >= (mode === 'month' ? 160 : 1800)
@@ -134,15 +155,24 @@ export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], 
   ctx.restore()
   const stats=summarizeBricks(days),font=Math.max(9,Math.min(22,box.w*.014)),left=box.x+box.w*.018,right=box.x+box.w*.79,rightW=box.w*.19
   ctx.textAlign='left'
-  text(ctx,mode==='year'?'年度工时档案':'月度工时档案',left,box.y+font*2,font,'#715d49')
-  text(ctx,(stats.total/3600).toFixed(1).replace(/\.0$/,''),left,box.y+font*5,Math.min(64,box.w*.044),'#33281f','600')
-  text(ctx,'累计投入（小时）',left,box.y+font*6.4,font*.85,'#715d49')
-  text(ctx,`${days.length} 个记录日`,left,box.y+font*9,font*1.3,'#33281f','600')
-  text(ctx,`日均 ${brickHours(stats.average)}`,left,box.y+font*10.7,font,'#715d49')
-  text(ctx,mode==='year'?'本年之最':'本月之最',right,box.y+font*2,font*1.2,'#33281f','600')
-  const row=Math.min(100,Math.max(48,(box.h-font*4)/5))
+  archiveIcon(ctx,'calendar',left,box.y+font*.9,font)
+  text(ctx,mode==='year'?'年度工时档案':'月度工时档案',left+font*1.4,box.y+font*2,font,'#33281f','600')
+  text(ctx,mode==='year'?'ANNUAL WORK ARCHIVE':'MONTHLY WORK ARCHIVE',left,box.y+font*3,font*.5,gold,'600')
+  ctx.strokeStyle=rule;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,box.y+font*3.4);ctx.lineTo(left+box.w*.17,box.y+font*3.4);ctx.stroke()
+  text(ctx,(stats.total/3600).toFixed(1).replace(/\.0$/,''),left,box.y+font*6,Math.min(64,box.w*.044),gold,'600')
+  text(ctx,'累计投入（小时）',left,box.y+font*7.4,font*.85,'#715d49')
+  ctx.beginPath();ctx.moveTo(left,box.y+font*8.3);ctx.lineTo(left+box.w*.17,box.y+font*8.3);ctx.stroke()
+  ctx.fillStyle=terracotta;ctx.fillRect(left,box.y+font*9,3,font*1.2)
+  text(ctx,`${days.length} 个记录日`,left+10,box.y+font*10,font*1.3,terracotta,'600')
+  archiveIcon(ctx,'clock',left,box.y+font*10.7,font*.85)
+  text(ctx,`日均 ${brickHours(stats.average)}`,left+font*1.2,box.y+font*11.4,font*.85,'#715d49')
+  archiveIcon(ctx,'trophy',right,box.y+font*.9,font*1.2)
+  text(ctx,mode==='year'?'本年之最':'本月之最',right+font*1.6,box.y+font*2,font*1.2,'#33281f','600')
+  text(ctx,mode==='year'?'YEAR IN HIGHLIGHTS':'MONTH IN HIGHLIGHTS',right+font*1.6,box.y+font*3,font*.48,gold,'600')
+  ctx.strokeStyle=rule;ctx.beginPath();ctx.moveTo(right-font,box.y+font);ctx.lineTo(right-font,bottom);ctx.stroke()
+  const row=Math.min(120,Math.max(48,(box.h-font*5)/5))
   brickHighlights(days,mode).forEach((item,index)=>{
-    const y=box.y+font*4+index*row
+    const y=box.y+font*5+index*row
     ctx.strokeStyle='#96775755';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(right,y-font*.9);ctx.lineTo(right+rightW,y-font*.9);ctx.stroke()
     // Clock / calendar outline glyphs share the existing thin-stroke icon vocabulary.
     const s=font*.7,cx=right+s/2,cy=y-font*.35
@@ -150,8 +180,10 @@ export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], 
     if(index===2||index===3){ctx.arc(cx,cy,s/2,0,Math.PI*2);ctx.moveTo(cx,cy-s*.25);ctx.lineTo(cx,cy);ctx.lineTo(cx+s*.2,cy)}
     else{ctx.roundRect(right,cy-s/2,s,s,1);ctx.moveTo(right,cy-s*.15);ctx.lineTo(right+s,cy-s*.15)}ctx.stroke()
     text(ctx,item.label,right+font,y,font*.85,'#715d49')
-    text(ctx,item.value,right,y+font*1.55,font*1.2,'#33281f','600')
-    text(ctx,item.detail,right,y+font*2.8,font*.72,'#715d49')
+    const captions=['LONGEST DAY',mode==='year'?'BUSIEST MONTH':'BUSIEST WEEK','EARLIEST START','LATEST FINISH','LONGEST STREAK']
+    text(ctx,captions[index],right+font,y+font*.65,font*.4,gold,'500')
+    text(ctx,item.value,right,y+font*2,font*1.2,index%2===0?gold:terracotta,'600')
+    text(ctx,item.detail,right,y+font*3.1,font*.72,'#715d49')
   })
   ctx.restore(); return hits
 }
@@ -166,12 +198,14 @@ export function renderBrickPoster(days:DayBrick[],assets:BrickAssets,period:stri
   }
   ctx.fillStyle='#fff8ed30';ctx.fillRect(0,0,1920,1080)
   ctx.drawImage(assets.logo,54,38,64,64);wordmark(ctx,132,67,30)
-  ctx.strokeStyle='#96775766';ctx.beginPath();ctx.moveTo(280,36);ctx.lineTo(280,112);ctx.stroke()
+  ctx.strokeStyle=gold;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(280,36);ctx.lineTo(280,128);ctx.stroke()
   text(ctx,'我搬砖，也能盖出点名堂',320,72,42,'#33281f','600')
   text(ctx,'每一天的投入，都有一块属于自己的位置。',322,110,22,'#715d49')
+  text(ctx,'EVERY DAY LEAVES A TRACE',322,138,12,gold,'600')
+  ctx.strokeStyle=rule;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(54,153);ctx.lineTo(1866,153);ctx.stroke()
   ctx.textAlign='right';text(ctx,period,1866,76,30,'#33281f','600');ctx.textAlign='left'
   drawBrickTower(ctx,days,assets,{x:36,y:156,w:1848,h:844},mode,selected,true)
-  text(ctx,mode==='month'?'一小时内一块砖 · 砖面数字为日号':'一天一块砖 · 砖面数字为日号',54,1042,19,'#715d49')
+  text(ctx,mode==='month'?'一小时内一块砖':'一天一块砖 · 砖面数字为日号',54,1042,19,'#715d49')
   ctx.textAlign='right';text(ctx,'时长记录投入，不定义工作的价值。',1866,1042,19,'#715d49')
   return node
 }

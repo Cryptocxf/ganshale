@@ -38,7 +38,7 @@ const nav: { key: NavKey; label: string; icon: typeof Calendar }[] = [
   { key: 'todos', label: '待办', icon: ListTodo },
   { key: 'data', label: '数据', icon: Database },
   { key: 'settings', label: '设置', icon: Settings2 },
-  { key: 'bricks', label: '工时积木', icon: BrickWall },
+  { key: 'bricks', label: '工时汇总', icon: BrickWall },
 ]
 
 interface AppChromeProps {

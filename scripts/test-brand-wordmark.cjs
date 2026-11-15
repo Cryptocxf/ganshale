@@ -27,7 +27,7 @@ app.whenReady().then(async()=>{
     const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');localStorage.setItem('ganshale-work-records:'+key,JSON.stringify([{id:'story-summary',source:'manual',saved:true,content:'完成模型服务接口开发与联调，排查部署与调用异常，优化请求处理流程。整理技术文档、测试记录与问题清单，验证修复效果并同步当天进展。'}]))
     for(let i=1;i<d.getDate()&&i<=8;i++){const dayKey=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');localStorage.setItem('ganshale-work-records:'+dayKey,localStorage.getItem('ganshale-work-records:'+key))}
   })()`)
-  await win.webContents.executeJavaScript(`([...document.querySelectorAll('nav button')].find(b=>b.textContent==='工时积木')).click()`)
+  await win.webContents.executeJavaScript(`([...document.querySelectorAll('nav button')].find(b=>b.textContent==='工时汇总')).click()`)
   await wait(1000)
 
   assert.ok(await win.webContents.executeJavaScript(`!document.querySelector('.brick-story')&&!document.querySelector('.brick-catalog')&&!document.querySelector('.brick-catalog-link')`),'story hidden by default, old catalogue removed')
@@ -41,7 +41,7 @@ app.whenReady().then(async()=>{
   async function clickCanvas(id){
     const info=await win.webContents.executeJavaScript(`(()=>{const c=document.querySelector('.brick-scroll canvas'),r=c.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height}})()`)
     const days=keys.map(date=>({date,seconds:groups[date]*3600,grade:0,apps:[],summary:''}))
-    const cell=layoutBrickColumns(buildBrickColumns(days,'month'),brickScenePlot({x:0,y:0,w:info.w,h:info.h})).find(c=>c.id===id)
+    const cell=layoutBrickColumns(buildBrickColumns(days,'month'),brickScenePlot({x:0,y:0,w:info.w,h:info.h},'month'),'month').find(c=>c.id===id)
     assert.ok(cell)
     await win.webContents.executeJavaScript(`document.querySelector('.brick-scroll canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:${info.x+cell.x+cell.w/2},clientY:${info.y+cell.y+cell.h/2}}))`)
     await wait(150)
@@ -79,6 +79,10 @@ app.whenReady().then(async()=>{
   let copied
   for(let i=0;i<60;i++){copied=await win.webContents.executeJavaScript('window.__copied');if(copied)break;await wait(100)}
   assert.equal(copied,exported,'copy exactly matches download')
+  await wait(100)
+  const toast=await win.webContents.executeJavaScript(`(()=>{const r=document.querySelector('.brick-copy-note').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,w:innerWidth,h:innerHeight}})()`)
+  assert.ok(Math.abs(toast.x-toast.w/2)<2&&Math.abs(toast.y-toast.h/2)<2,'copy notification centered in window')
+  fs.writeFileSync(path.join(root,'.private','brick-copy-centered-preview.png'),(await capture()).toPNG())
   const posterText=await win.webContents.executeJavaScript('window.__posterText')
   for(const expected of ['我搬砖，也能盖出点名堂','本年之最','最长工作日','最忙月份','最早开始','最晚结束','最长连续记录'])assert.ok(posterText.includes(expected),expected)
   assert.ok(!posterText.includes('工作剪影'),'obsolete bottom strip removed')

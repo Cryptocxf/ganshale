@@ -23,7 +23,7 @@ const pageTitle: Record<NavKey, string> = {
   daily: '每日',
   weekly: '每周',
   monthly: '每月',
-  bricks: '工时积木',
+  bricks: '工时汇总',
   todos: '待办',
   data: '数据',
   settings: '设置',
