@@ -1,0 +1,1145 @@
+electron/main.cjs
+  2be409d5e43d44a4 13-14,1137,1142-1160
+  bae7ca5f99a83cd9 1138-1141
+src/context/DataProvider.tsx
+  2be409d5e43d44a4 80,88,99,142,432
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.8",
+  "base_commit_sha": "793186fe662d5edf3af97a09ef5ac361200078b1",
+  "prompts": {
+    "2be409d5e43d44a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcabb-a62a-7a40-b143-cda6c10314a7",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 481,
+      "total_deletions": 256,
+      "accepted_lines": 347,
+      "overriden_lines": 0
+    },
+    "39f66ec542c0e647": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcac0-440b-7781-83d5-7a7e57b289df",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 6,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "49a3d85055e73859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fca85-6b45-7523-9fbf-d0f42b5fa568",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 20,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    },
+    "56e5f632f91ea0d9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcac6-fe05-79c1-9f17-85a2bd8d2a7f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 6,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "8edfc302c22171ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc69a-d0e9-7563-82d1-3a7185504df6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 2141,
+      "total_deletions": 2164,
+      "accepted_lines": 1982,
+      "overriden_lines": 2
+    },
+    "a940d6cd96470661": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0190f-41e1-71a2-a8f1-331b80642efc",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 13,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    },
+    "bae7ca5f99a83cd9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dcc1-4737-7823-8548-320c2907ec52",
+        "model": "unknown"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 7,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "commit_stats": {
+    "git_diff_added_lines": 3265,
+    "git_diff_deleted_lines": 1460,
+    "ai_additions": 31,
+    "ai_accepted": 31,
+    "BYMC": 3228,
+    "mixed_additions": 0,
+    "BYAC": 31,
+    "BYRC": 0,
+    "per_file": {
+      "AGENTS.md": {
+        "BYMC": [
+          "1-8"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "RELEASE-CHECK-v2.0.0.md": {
+        "BYMC": [
+          "1-32"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "RELEASE-NOTES-v2.0.0.md": {
+        "BYMC": [
+          "1-14"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-approved-implementation.md": {
+        "BYMC": [
+          "1-39"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-archive-implementation.md": {
+        "BYMC": [
+          "1-30"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-background-switching.md": {
+        "BYMC": [
+          "1-45"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-chronological-chart.md": {
+        "BYMC": [
+          "1-28"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-design-dna.md": {
+        "BYMC": [
+          "1-23"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-drafting-background.md": {
+        "BYMC": [
+          "1-9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-front-assets.md": {
+        "BYMC": [
+          "1-9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-header-ranking-update.md": {
+        "BYMC": [
+          "1-14"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-hour-holes.md": {
+        "BYMC": [
+          "1-9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-landscape-export.md": {
+        "BYMC": [
+          "1-13"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-masonry-finish.md": {
+        "BYMC": [
+          "1-7"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-metal-assets.md": {
+        "BYMC": [
+          "1-17"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-premium-assets.md": {
+        "BYMC": [
+          "1-21"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-rest-day-highlights.md": {
+        "BYMC": [
+          "1-16"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-story-compact.md": {
+        "BYMC": [
+          "1-8"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-sunlit-background.md": {
+        "BYMC": [
+          "1-9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/brick-three-column-layout.md": {
+        "BYMC": [
+          "1-15"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/didly-wordmark.md": {
+        "BYMC": [
+          "1-13"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/release-check-2026-11-15.md": {
+        "BYMC": [
+          "1-53"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "electron/brickClipboard.cjs": {
+        "BYMC": [
+          "1-30"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "electron/main.cjs": {
+        "BYMC": [],
+        "BYAC": [
+          "13-14",
+          "1137-1160"
+        ],
+        "BYRC": []
+      },
+      "electron/preload.cjs": {
+        "BYMC": [
+          "8-9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "package.json": {
+        "BYMC": [
+          "4",
+          "29",
+          "39",
+          "51-53",
+          "58",
+          "72-79"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/LICENSE-vscode-icons.txt": {
+        "BYMC": [
+          "1-21"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/NOTICE.md": {
+        "BYMC": [
+          "1-15"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/chrome.svg": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/excel.svg": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/vscode.svg": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/wechat.svg": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "public/app-icons/word.svg": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-background-recording.cjs": {
+        "BYMC": [
+          "92-189"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brand-wordmark.cjs": {
+        "BYMC": [
+          "1-94"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-chart.cjs": {
+        "BYMC": [
+          "1-28"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-copy-fallback.cjs": {
+        "BYMC": [
+          "1-21"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-highlights.cjs": {
+        "BYMC": [
+          "1-13"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-native-clipboard.cjs": {
+        "BYMC": [
+          "1-43"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-stats.cjs": {
+        "BYMC": [
+          "1-55"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-daily-catchup.cjs": {
+        "BYMC": [
+          "1-29"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-timing.cjs": {
+        "BYMC": [
+          "14"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "skills/project-prompt-refiner/SKILL.md": {
+        "BYMC": [
+          "1-72"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/App.tsx": {
+        "BYMC": [
+          "16",
+          "26",
+          "77"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/AboutSettings.tsx": {
+        "BYMC": [
+          "11",
+          "28"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/AiAutoSummaryActiveBadge.tsx": {
+        "BYMC": [
+          "43"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/AppDurationCompare.tsx": {
+        "BYMC": [
+          "167",
+          "173"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/BrickDashboard.tsx": {
+        "BYMC": [
+          "1-139"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/CategoryDetailModal.tsx": {
+        "BYMC": [
+          "210",
+          "226",
+          "341",
+          "349"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyDashboard.tsx": {
+        "BYMC": [
+          "47-48",
+          "64",
+          "99",
+          "138",
+          "311"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyDatePicker.tsx": {
+        "BYMC": [
+          "46-49",
+          "51"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyReportAiPanel.tsx": {
+        "BYMC": [
+          "217-220",
+          "231"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyReportHistoryModal.tsx": {
+        "BYMC": [
+          "104",
+          "249-251"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyReportResultModal.tsx": {
+        "BYMC": [
+          "2",
+          "46-49",
+          "51"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/DailyWorkRecordPanel.tsx": {
+        "BYMC": [
+          "166",
+          "415"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/EditableAppDisplayName.tsx": {
+        "BYMC": [
+          "64"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/LoginPage.tsx": {
+        "BYMC": [
+          "4",
+          "139",
+          "150",
+          "167",
+          "177"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonitoredAppsModal.tsx": {
+        "BYMC": [
+          "1",
+          "77-84"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonthlyDashboard.tsx": {
+        "BYMC": [
+          "113-114",
+          "117",
+          "136-144",
+          "156",
+          "184"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonthlyDatePicker.tsx": {
+        "BYMC": [
+          "81-86",
+          "88-89"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonthlyKpiRow.tsx": {
+        "BYMC": [
+          "9-11"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonthlyReportHistoryModal.tsx": {
+        "BYMC": [
+          "104",
+          "227-229"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/MonthlyReportResultModal.tsx": {
+        "BYMC": [
+          "2",
+          "48-51",
+          "53"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/PlaceholderView.tsx": {
+        "BYMC": [
+          "5"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/Sidebar.tsx": {
+        "BYMC": [
+          "10-11",
+          "35"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyDailyDurationDistribution.tsx": {
+        "BYMC": [
+          "1-2",
+          "98-99",
+          "103",
+          "106"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyDailyReportDetailsPanel.tsx": {
+        "BYMC": [
+          "42",
+          "53",
+          "65",
+          "223-225"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyDailyWorkDetailPanel.tsx": {
+        "BYMC": [
+          "42"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyDashboard.tsx": {
+        "BYMC": [
+          "45-47",
+          "60-62",
+          "92",
+          "107"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyDatePicker.tsx": {
+        "BYMC": [
+          "256-261",
+          "263-264"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyReportHistoryModal.tsx": {
+        "BYMC": [
+          "103",
+          "226-228"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyReportResultModal.tsx": {
+        "BYMC": [
+          "2",
+          "48-51",
+          "53"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WeeklyWorkDurationDisplay.tsx": {
+        "BYMC": [
+          "1",
+          "10"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WindowDwellPrompt.tsx": {
+        "BYMC": [
+          "54",
+          "125",
+          "136-139",
+          "164"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WindowLogModal.tsx": {
+        "BYMC": [
+          "2",
+          "16",
+          "64",
+          "83",
+          "85",
+          "87-89",
+          "154",
+          "219-221"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WorkRecordSettingsPopover.tsx": {
+        "BYMC": [
+          "2",
+          "40-43",
+          "45"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/WorkdayTimeline.tsx": {
+        "BYMC": [
+          "33"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/brand/BrandWordmark.tsx": {
+        "BYMC": [
+          "1-10"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/brand/SplashScreen.tsx": {
+        "BYMC": [
+          "3",
+          "160",
+          "162"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/brand/brandWordmark.css": {
+        "BYMC": [
+          "1-3"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/brickDashboard.css": {
+        "BYMC": [
+          "1-196"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/data/DataRecordDetailModal.tsx": {
+        "BYMC": [
+          "2",
+          "34-37",
+          "39"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/shell/AppChrome.tsx": {
+        "BYMC": [
+          "6",
+          "41",
+          "71",
+          "76",
+          "144",
+          "195"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/todo/TodoDayModal.tsx": {
+        "BYMC": [
+          "2",
+          "57-62",
+          "66-67"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/visual/AppAssociationGraph.tsx": {
+        "BYMC": [
+          "1",
+          "52-55",
+          "58"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/windowEventTable.tsx": {
+        "BYMC": [
+          "8",
+          "17",
+          "20",
+          "30"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/constants/brand.ts": {
+        "BYMC": [
+          "6",
+          "9-10"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/AppearanceProvider.tsx": {
+        "BYMC": [
+          "2-3",
+          "5",
+          "7",
+          "26",
+          "28",
+          "46",
+          "62",
+          "69",
+          "77",
+          "108",
+          "115"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/AppearanceProviderView.tsx": {
+        "BYMC": [
+          "1-43"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/AuthContext.tsx": {
+        "BYMC": [
+          "1",
+          "9",
+          "15",
+          "17",
+          "19"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/AuthProviderView.tsx": {
+        "BYMC": [
+          "1-20"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/DailyReportContext.tsx": {
+        "BYMC": [
+          "2-3",
+          "6",
+          "9",
+          "11",
+          "20",
+          "57"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/DailyReportProviderView.tsx": {
+        "BYMC": [
+          "1-443"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/DataProvider.tsx": {
+        "BYMC": [],
+        "BYAC": [
+          "80",
+          "88",
+          "99",
+          "142",
+          "432"
+        ],
+        "BYRC": []
+      },
+      "src/context/DataRecordsContext.tsx": {
+        "BYMC": [
+          "2-3",
+          "6-9",
+          "45",
+          "47"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/DataRecordsProviderView.tsx": {
+        "BYMC": [
+          "1-276"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/MonthlyReportContext.tsx": {
+        "BYMC": [
+          "2-3",
+          "6",
+          "28"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/MonthlyReportProviderView.tsx": {
+        "BYMC": [
+          "1-223"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/WeeklyReportContext.tsx": {
+        "BYMC": [
+          "2-3",
+          "22"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/context/WeeklyReportProviderView.tsx": {
+        "BYMC": [
+          "1-191"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/data/mock.ts": {
+        "BYMC": [
+          "1"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/hooks/useDashboardClock.ts": {
+        "BYMC": [
+          "4-5",
+          "8",
+          "10",
+          "12"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/hooks/useMonotonicOfficeSec.ts": {
+        "BYMC": [
+          "7-8"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/aiWorkRecordSummary.ts": {
+        "BYMC": [
+          "56"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/appBrandIcons.ts": {
+        "BYMC": [
+          "131",
+          "133-146"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/appCategoryConfig.ts": {
+        "BYMC": [
+          "215"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/appInfo.ts": {
+        "BYMC": [
+          "3"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickAppPresentation.ts": {
+        "BYMC": [
+          "1-4"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickArtwork.ts": {
+        "BYMC": [
+          "1-177"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickBackgrounds.ts": {
+        "BYMC": [
+          "1-5"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickCharacterSpeech.ts": {
+        "BYMC": [
+          "1-18"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickChart.ts": {
+        "BYMC": [
+          "1-26"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickClipboard.ts": {
+        "BYMC": [
+          "1-12"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickHighlights.ts": {
+        "BYMC": [
+          "1-24"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickMaterialInk.ts": {
+        "BYMC": [
+          "1-16"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickRestDay.ts": {
+        "BYMC": [
+          "1-21"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickStats.ts": {
+        "BYMC": [
+          "1-82"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/clientSessionClock.ts": {
+        "BYMC": [
+          "133"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/dailyReportAutoSchedule.ts": {
+        "BYMC": [
+          "5-11",
+          "60"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/dailyReportHistoryStore.ts": {
+        "BYMC": [
+          "70-72"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/dailyReportPrefs.ts": {
+        "BYMC": [
+          "192"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/dailyReportTileSummary.ts": {
+        "BYMC": [
+          "84"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/dataRecordsQuery.ts": {
+        "BYMC": [
+          "130",
+          "153-154"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/llmConfig.ts": {
+        "BYMC": [
+          "74"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/llmOpenAI.ts": {
+        "BYMC": [
+          "161"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/todoTitleOptimize.ts": {
+        "BYMC": [
+          "90"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/workRecordSettings.ts": {
+        "BYMC": [
+          "174"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/workdayTimelineSegments.ts": {
+        "BYMC": [
+          "1-32"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/main.tsx": {
+        "BYMC": [
+          "5-7",
+          "9-11"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/vite-env.d.ts": {
+        "BYMC": [
+          "6",
+          "28-29"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      }
+    }
+  },
+  "commit_timestamp": 1794716955,
+  "requirement_id": ""
+}
