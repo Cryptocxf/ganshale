@@ -1,0 +1,210 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.8",
+  "base_commit_sha": "6051b1691e4df13b2ce8a3d553084c2e1b297d98",
+  "prompts": {
+    "2be409d5e43d44a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcabb-a62a-7a40-b143-cda6c10314a7",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 481,
+      "total_deletions": 256,
+      "accepted_lines": 347,
+      "overriden_lines": 0
+    },
+    "39f66ec542c0e647": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcac0-440b-7781-83d5-7a7e57b289df",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 6,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "49a3d85055e73859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fca85-6b45-7523-9fbf-d0f42b5fa568",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 20,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    },
+    "56e5f632f91ea0d9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fcac6-fe05-79c1-9f17-85a2bd8d2a7f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 6,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "8edfc302c22171ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc69a-d0e9-7563-82d1-3a7185504df6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 2141,
+      "total_deletions": 2164,
+      "accepted_lines": 1982,
+      "overriden_lines": 2
+    },
+    "a940d6cd96470661": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0190f-41e1-71a2-a8f1-331b80642efc",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 13,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    },
+    "bae7ca5f99a83cd9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1dcc1-4737-7823-8548-320c2907ec52",
+        "model": "unknown"
+      },
+      "human_author": "chenxiaofeng <chenxiaofeng@cmhi.chinamobile.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 7,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "commit_stats": {
+    "git_diff_added_lines": 113,
+    "git_diff_deleted_lines": 32,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "BYMC": 112,
+    "mixed_additions": 0,
+    "BYAC": 0,
+    "BYRC": 0,
+    "per_file": {
+      "RELEASE-NOTES-v2.0.1.md": {
+        "BYMC": [
+          "1-12"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "docs/release-v2.0.1.md": {
+        "BYMC": [
+          "1-11"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "package.json": {
+        "BYMC": [
+          "4"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brand-wordmark.cjs": {
+        "BYMC": [
+          "30",
+          "44",
+          "82-85"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "scripts/test-brick-chart.cjs": {
+        "BYMC": [
+          "3-7",
+          "26-31"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/App.tsx": {
+        "BYMC": [
+          "26"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/brickDashboard.css": {
+        "BYMC": [
+          "1-4",
+          "33"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/components/shell/AppChrome.tsx": {
+        "BYMC": [
+          "41"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/constants/brand.ts": {
+        "BYMC": [
+          "9"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickArtwork.ts": {
+        "BYMC": [
+          "3",
+          "14-21",
+          "93-95",
+          "99-104",
+          "118",
+          "130-136",
+          "158-173",
+          "175",
+          "183-186",
+          "201",
+          "204-205",
+          "208"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      },
+      "src/lib/brickChart.ts": {
+        "BYMC": [
+          "2",
+          "4-8",
+          "20",
+          "23-24",
+          "26",
+          "28-29"
+        ],
+        "BYAC": [],
+        "BYRC": []
+      }
+    }
+  },
+  "commit_timestamp": 1794727790,
+  "requirement_id": ""
+}
