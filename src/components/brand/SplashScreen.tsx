@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BRAND_LOGO_APP_SRC } from '../../constants/brand'
+import { BrandWordmark } from './BrandWordmark'
 
 interface SplashScreenProps {
   onComplete: () => void
@@ -156,24 +157,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
             color: 'transparent',
           }}
         >
-          干啥了
+          <BrandWordmark/>
         </h1>
-        <p
-          style={{
-            margin: '6px 0 0',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.28em',
-            fontStyle: 'italic',
-            background: 'linear-gradient(90deg, #60a5fa 0%, #818cf8 100%)',
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            color: 'transparent',
-            fontFamily: 'Georgia, "Times New Roman", serif',
-          }}
-        >
-          GanShaLe
-        </p>
+
         <p
           style={{
             margin: '48px auto 0',

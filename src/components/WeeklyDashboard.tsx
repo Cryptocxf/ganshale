@@ -42,8 +42,9 @@ export function WeeklyDashboard() {
   useEffect(() => {
     setWeekStart(startOfWeekMondayLocal(new Date()))
   }, [setWeekStart])
-  const { ready: dataReady, liveForeground, windowTrackingPaused } = useGanshaleData()
-  const clockMs = useDashboardClockMs()
+  const { ready: dataReady, windowTrackingPaused } = useGanshaleData()
+  const liveForeground = null
+  const clockMs = useDashboardClockMs(60_000)
   const clockLive = useDashboardClockLive()
   const patterns = useMonitoredAppPatterns()
   const [currentWeekEvents, setCurrentWeekEvents] = useState<Awaited<
@@ -56,10 +57,12 @@ export function WeeklyDashboard() {
   const [liveTick, setLiveTick] = useState(0)
   const weekKind = useMemo(() => compareLocalCalendarWeek(weekStart), [weekStart])
   const weekNo = useMemo(() => isoWeekNumberLocal(weekStart), [weekStart])
+  const weekLoadKey = weekStart.getTime()
+  const [previousLoadKey, setPreviousLoadKey] = useState(weekLoadKey)
+  if(previousLoadKey!==weekLoadKey){setPreviousLoadKey(weekLoadKey);setWorktimeReady(false)}
 
   useEffect(() => {
     let cancelled = false
-    setWorktimeReady(false)
     const prevStart = addWeeksMondayLocal(weekStart, -1)
     Promise.all([
       loadWindowEventsForWeekRange(weekStart, 1),
@@ -86,7 +89,7 @@ export function WeeklyDashboard() {
 
   useEffect(() => {
     if (weekKind !== 'current' || !clockLive) return
-    const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
+    const id = window.setInterval(() => setLiveTick((n) => n + 1), 60_000)
     return () => clearInterval(id)
   }, [weekKind, clockLive])
 
@@ -101,7 +104,7 @@ export function WeeklyDashboard() {
         .then((events) => { if (!cancelled) setCurrentWeekEvents(events) })
         .catch(() => {})
         .finally(() => { loading = false })
-    }, 2500)
+    }, 60_000)
     return () => { cancelled = true; clearInterval(id) }
   }, [weekKind, weekStart, dataReady, clockLive])
 

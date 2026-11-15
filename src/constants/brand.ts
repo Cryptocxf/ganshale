@@ -3,10 +3,11 @@ export const PRODUCT_TAGLINE = '一款拯救你于日报、周报、月报水火
 
 /** 产品展示名（窗口标题、关于页等） */
 export const APP_DISPLAY_NAME = '干啥了'
+export const APP_ENGLISH_NAME = 'Didly'
 
 /** 当前发布版本与最近更新时间（用于顶栏和窗口标题）。 */
-export const APP_VERSION_LABEL = 'v1.1.8'
-export const APP_LAST_UPDATED = '2026-11-12'
+export const APP_VERSION_LABEL = 'v2.0.0'
+export const APP_LAST_UPDATED = '2026-11-15'
 
 /** 窗口标题栏 / 浏览器标签 */
 export const APP_WINDOW_TITLE = APP_DISPLAY_NAME

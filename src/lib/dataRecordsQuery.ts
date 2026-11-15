@@ -127,6 +127,7 @@ export function buildCategoryFilterOptions(): { id: string; label: string }[] {
 }
 
 export function defaultDataRecordsFilters(_now = new Date()): DataRecordsFilterState {
+  void _now
   return {
     recordKind: 'window',
     filterYear: 0,
@@ -149,7 +150,8 @@ export function defaultDataRecordsFilters(_now = new Date()): DataRecordsFilterS
 export function normalizeTimeFilterParts(
   filters: Pick<DataRecordsFilterState, 'filterYear' | 'filterMonth' | 'filterDay'>,
 ): Pick<DataRecordsFilterState, 'filterYear' | 'filterMonth' | 'filterDay'> {
-  let { filterYear, filterMonth, filterDay } = filters
+  const { filterYear, filterMonth } = filters
+  let { filterDay } = filters
   if (!filterYear) {
     return { filterYear: 0, filterMonth: 0, filterDay: 0 }
   }

@@ -3,6 +3,7 @@
 import type { LiveForegroundSample } from './lib/liveForeground'
 import type { AwEvent } from './lib/awTypes'
 
+declare global {
 interface ImportMetaEnv {
   readonly VITE_LLM_BASE_URL?: string
   /** 仅 dev：`/__llm` 代理转发的目标（默认 http://127.0.0.1:15678） */
@@ -12,6 +13,7 @@ interface ImportMetaEnv {
    * JSON：按下拉项 `id` 覆盖发给网关的 `model`（如 `{"qwen3.5":"qwen3.5-hy"}`）。
    */
   readonly VITE_LLM_MODEL_MAP?: string
+}
 }
 
 /** 注册表 Uninstall 归一化后的已安装应用条目 */
@@ -23,6 +25,8 @@ interface InstalledAppRow {
 }
 
 interface GanshaleDesktopBridge {
+  exportBrickImage?: () => Promise<{ ok: boolean; dataUrl?: string; width?: number; height?: number; error?: string }>
+  copyBrickImage?: (dataUrl:string) => Promise<{ok:boolean;error?:string}>
   getUpdateState: () => Promise<{ status: string; message: string; version: string; percent: number; packaged?: boolean }>
   checkUpdate: GanshaleDesktopBridge['getUpdateState']
   downloadUpdate: GanshaleDesktopBridge['getUpdateState']

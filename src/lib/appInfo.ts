@@ -1,6 +1,6 @@
 /** 应用展示信息（版本号由 Vite 在构建时注入） */
 export { APP_DISPLAY_NAME } from '../constants/brand'
-export const APP_PRODUCT_NAME = 'Ganshale'
+export { APP_ENGLISH_NAME as APP_PRODUCT_NAME } from '../constants/brand'
 export const APP_TAGLINE = '一款拯救你于日报、周报、月报水火的工具'
 
 export const APP_VERSION = __APP_VERSION__

@@ -67,6 +67,9 @@ export function appendDailyReportHistory(day: Date, text: string): DailyReportHi
   }
   const prev = loadDailyReportHistory(day)
   saveDailyReportHistory(day, [...prev, entry])
+  if (!loadDailyReportHistory(day).some(saved => saved.id === entry.id)) {
+    throw new Error('日报历史保存失败，请检查本机存储空间后重试')
+  }
   return entry
 }
 

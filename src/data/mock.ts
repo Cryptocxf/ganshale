@@ -1,4 +1,4 @@
-export type NavKey = 'daily' | 'weekly' | 'monthly' | 'todos' | 'data' | 'settings'
+export type NavKey = 'daily' | 'weekly' | 'monthly' | 'bricks' | 'todos' | 'data' | 'settings'
 
 export interface TimelineSegment {
   id: string

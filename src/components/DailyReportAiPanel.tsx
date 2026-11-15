@@ -214,14 +214,10 @@ export function DailyReportAiPanel({
   const streamingRef = useRef(false)
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const p = loadDailyReportPrefs()
-    setPromptPresetId(p.promptPresetId)
-    setPromptConcise(p.promptConcise)
-    setPromptDetailed(p.promptDetailed)
-  }, [])
-
-  useEffect(() => {
+  const chatResetKey = `${day.getTime()}:${embedded}:${isSummary}`
+  const [previousChatKey, setPreviousChatKey] = useState<string | null>(null)
+  if(previousChatKey!==chatResetKey){
+    setPreviousChatKey(chatResetKey)
     try {
       const lines = loadChatLines(day)
       setMessages(lines)
@@ -232,7 +228,7 @@ export function DailyReportAiPanel({
       setExtraNote('')
       setLayoutActive(isSummary || embedded)
     }
-  }, [day, embedded, isSummary])
+  }
 
   useEffect(() => {
     saveChatLines(day, messages)

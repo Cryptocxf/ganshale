@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { brandOrNeutralHex } from '../../lib/appBrandIcons'
 
 export interface GraphAppBubble {
@@ -49,10 +49,13 @@ export function AppAssociationGraph({
   )
   const [pending, setPending] = useState<string | null>(null)
 
-  useEffect(() => {
+  const resetKey = storageKey
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
     setEdges(typeof window !== 'undefined' ? loadEdges(storageKey) : [])
     setPending(null)
-  }, [storageKey])
+  }
 
   const layout = useMemo(() => {
     const list = [...nodes]

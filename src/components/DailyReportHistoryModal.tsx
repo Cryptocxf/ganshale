@@ -101,7 +101,7 @@ function HistoryRowActions({
   )
 }
 
-export function DailyReportHistoryModal({
+function DailyReportHistoryModalContent({
   open,
   day,
   onClose,
@@ -127,7 +127,6 @@ export function DailyReportHistoryModal({
 
   useEffect(() => {
     if (!open) return
-    reload()
     const onChange = () => reload()
     window.addEventListener(DAILY_REPORT_HISTORY_CHANGED_EVENT, onChange)
     return () => window.removeEventListener(DAILY_REPORT_HISTORY_CHANGED_EVENT, onChange)
@@ -246,4 +245,8 @@ export function DailyReportHistoryModal({
         </div>
     </DashboardModalRoot>
   )
+}
+
+export function DailyReportHistoryModal(props:Parameters<typeof DailyReportHistoryModalContent>[0]){
+  return props.open ? <DailyReportHistoryModalContent key={props.day.getTime()} {...props}/> : null
 }

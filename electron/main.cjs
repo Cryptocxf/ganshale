@@ -10,6 +10,8 @@ const {
   nativeImage,
   powerMonitor,
   safeStorage,
+  clipboard,
+  ClipboardItem,
 } = require('electron')
 const path = require('path')
 const fs = require('fs')
@@ -1129,6 +1131,30 @@ ipcMain.handle('ganshale:open-installed-apps-settings', async () => {
       ok: false,
       error: err instanceof Error ? err.message : String(err),
     }
+  }
+})
+
+// 只截取本应用的搬砖页，不接受任意窗口、路径或脚本输入。
+ipcMain.handle('ganshale:copy-brick-image',require('./brickClipboard.cjs').createBrickClipboardHandler(
+  {clipboard,ClipboardItem,nativeImage},()=>mainBrowserWindow,
+  error=>console.warn('[brick-clipboard]',process.versions.electron,error instanceof Error?error.message:'unknown'),
+))
+
+ipcMain.handle('ganshale:export-brick-image', async (event) => {
+  try {
+    if (!mainBrowserWindow || mainBrowserWindow.isDestroyed() || event.sender !== mainBrowserWindow.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error('不允许导出此窗口')
+    const rect = await event.sender.executeJavaScript(`(() => {
+      const page=document.querySelector('.brick-page');
+      if(!page||document.querySelector('.brick-catalog-dialog'))return null;
+      const r=page.getBoundingClientRect();
+      return {x:Math.max(0,Math.floor(r.left)),y:Math.max(0,Math.floor(r.top)),width:Math.floor(Math.min(r.right,innerWidth)-Math.max(0,r.left)),height:Math.floor(Math.min(r.bottom,innerHeight)-Math.max(0,r.top))};
+    })()`)
+    if (!rect || !Object.values(rect).every(Number.isFinite) || rect.width < 1 || rect.height < 1) throw new Error('请先打开搬砖页面并关闭图鉴详情')
+    const image = await event.sender.capturePage(rect)
+    if (image.isEmpty()) throw new Error('未能生成图片，请保持窗口可见后重试')
+    return { ok: true, dataUrl: image.toDataURL(), ...image.getSize() }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
 })
 

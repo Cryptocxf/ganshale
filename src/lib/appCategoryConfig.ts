@@ -212,7 +212,7 @@ export function seedDefaultKeywords(categories: AppCategoryDef[]): AppCategoryDe
 export function loadAppCategoryConfig(): AppCategoryDef[] {
   if (typeof window === 'undefined') return structuredClone(DEFAULT_APP_CATEGORIES)
   try {
-    let raw = localStorage.getItem(APP_CATEGORY_STORAGE_KEY)
+    const raw = localStorage.getItem(APP_CATEGORY_STORAGE_KEY)
     if (!raw) {
       const fromV2 = migrateFromV2()
       if (fromV2) {

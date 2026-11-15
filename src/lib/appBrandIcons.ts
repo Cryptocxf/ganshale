@@ -128,7 +128,22 @@ export function getBrandForApp(app: string): Brand | null {
   return DOC_TYPE_BRANDS[key] ?? BRANDS[key] ?? null
 }
 
+const offlineIcon = (name: string) => BRAND_LOGO_APP_SRC.replace(/[^/]*$/, `app-icons/${name}.svg`)
 const BUNDLED_ICON_BY_KEY: Record<string, string> = {
+  'code.exe': offlineIcon('vscode'),
+  code: offlineIcon('vscode'),
+  vscode: offlineIcon('vscode'),
+  'vs code': offlineIcon('vscode'),
+  'chrome.exe': offlineIcon('chrome'),
+  chrome: offlineIcon('chrome'),
+  'weixin.exe': offlineIcon('wechat'),
+  weixin: offlineIcon('wechat'),
+  wechat: offlineIcon('wechat'),
+  '微信': offlineIcon('wechat'),
+  word: offlineIcon('word'),
+  'winword.exe': offlineIcon('word'),
+  excel: offlineIcon('excel'),
+  'excel.exe': offlineIcon('excel'),
   ganshale: BRAND_LOGO_APP_SRC,
   'ganshale.exe': BRAND_LOGO_APP_SRC,
   openclaw: OPENCLAW_ICON_SRC,

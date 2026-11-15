@@ -4,5 +4,7 @@ export function useMonotonicOfficeSec(
   _enabled: boolean,
   _resetKey?: string,
 ): number {
+  void _enabled
+  void _resetKey
   return Number.isFinite(rawSec) ? Math.max(0, Math.floor(rawSec)) : 0
 }

@@ -44,7 +44,8 @@ import {
   DASHBOARD_PAGE_CLASS,
   DASHBOARD_TOP_CARD_BODY_CLASS,
 } from './dashboardLayout'
-import { WorkdayTimeline, workdayTimelineFromSegments } from './WorkdayTimeline'
+import { WorkdayTimeline } from './WorkdayTimeline'
+import { workdayTimelineFromSegments } from '../lib/workdayTimelineSegments'
 import { DashboardHeaderActionSlot } from './DashboardHeaderActionSlot'
 import { OfficeDurationHmsDisplay } from './OfficeDurationHmsDisplay'
 import {
@@ -60,7 +61,7 @@ import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
 import {
   WindowEventTableBody,
   WindowTableHead,
-  WINDOW_TABLE_PREVIEW_COLGROUP,
+  WindowTablePreviewColgroup,
 } from './windowEventTable'
 import { WindowLogModal } from './WindowLogModal'
 
@@ -95,7 +96,7 @@ export function DailyDashboard() {
   const [windowLogModalOpen, setWindowLogModalOpen] = useState(false)
 
   const compareQueue = useMemo(
-    () => loadAppDurationCompareQueue(day),
+    () => { void compareRev; return loadAppDurationCompareQueue(day) },
     [day, compareRev],
   )
   const compareQueueSet = useMemo(() => new Set(compareQueue), [compareQueue])
@@ -134,7 +135,7 @@ export function DailyDashboard() {
 
   const timeline = useMemo(
     () =>
-      officeTotalExtrapolate
+      (void nameRev, officeTotalExtrapolate)
         ? timelineFromWindowEventsLive(
             day,
             windowEventsNet,
@@ -307,7 +308,7 @@ export function DailyDashboard() {
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <div className={DASHBOARD_WINDOW_TABLE_SCROLL_CLASS}>
                       <table className="w-full table-fixed border-collapse text-left">
-                        {WINDOW_TABLE_PREVIEW_COLGROUP}
+                        <WindowTablePreviewColgroup/>
                         <WindowTableHead showCompareColumn />
                         <WindowEventTableBody
                           rows={windowPreviewRows}

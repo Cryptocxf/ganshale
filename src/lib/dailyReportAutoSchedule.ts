@@ -2,6 +2,13 @@ import { formatClockHm, loadReportScheduleSettings } from './reportScheduleSetti
 import { toYmdLocal } from './timeutil'
 
 const AUTO_REPORT_FIRED_PREFIX = 'ganshale-daily-report-auto:'
+// 只记录本次客户端运行的尝试；不写localStorage，重启后允许补试。
+const sessionAttempts = new Set<string>()
+export function claimAutoDailyReportAttempt(slot: string): boolean {
+  if (sessionAttempts.has(slot)) return false
+  sessionAttempts.add(slot)
+  return true
+}
 
 function firedStorageKey(day: Date): string {
   return `${AUTO_REPORT_FIRED_PREFIX}${toYmdLocal(day)}`
@@ -39,7 +46,6 @@ function shouldFireAtMinute(
   lastFiredSlots: string[],
   hour: number,
   minute: number,
-  windowMinutes = 2,
 ): { fire: boolean; nextSlots: string[] } {
   const ymd = toYmdLocal(day)
   if (!isSameLocalDay(now, day)) {
@@ -51,7 +57,7 @@ function shouldFireAtMinute(
   }
   const nowMin = now.getHours() * 60 + now.getMinutes()
   const targetMin = hour * 60 + minute
-  if (nowMin >= targetMin && nowMin < targetMin + windowMinutes) {
+  if (nowMin >= targetMin) {
     return { fire: true, nextSlots: [...lastFiredSlots, key] }
   }
   return { fire: false, nextSlots: lastFiredSlots }

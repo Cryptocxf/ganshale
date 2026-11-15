@@ -3,6 +3,7 @@ import {
   Calendar,
   CalendarDays,
   CalendarRange,
+  BrickWall,
   Database,
   ListTodo,
   Settings2,
@@ -37,6 +38,7 @@ const nav: { key: NavKey; label: string; icon: typeof Calendar }[] = [
   { key: 'todos', label: '待办', icon: ListTodo },
   { key: 'data', label: '数据', icon: Database },
   { key: 'settings', label: '设置', icon: Settings2 },
+  { key: 'bricks', label: '工时积木', icon: BrickWall },
 ]
 
 interface AppChromeProps {
@@ -66,11 +68,12 @@ export function AppChrome({
   }, [])
 
   const overviewCompact =
-    active === 'daily' || active === 'weekly' || active === 'monthly'
+    active === 'daily' || active === 'weekly' || active === 'monthly' || active === 'bricks'
   const settingsPage = active === 'settings'
   const dataPage = active === 'data'
   const todosPage = active === 'todos'
   const compactContentPage =
+    active === 'bricks' ||
     active === 'settings' ||
     active === 'weekly' ||
     active === 'monthly' ||
@@ -138,6 +141,7 @@ export function AppChrome({
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 md:shrink-0">
+              {active === 'bricks' ? <div id="brick-navigation-tools" /> : null}
               {active === 'daily' ? (
                 <>
                   <DailyDatePicker
@@ -188,7 +192,7 @@ export function AppChrome({
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200/90 pb-5 md:mb-8 md:pb-6">
             <div>
               <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-ganshale-sky">
-                Ganshale
+                Didly
               </p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-ganshale-text md:text-[1.65rem]">
                 {pageTitle}

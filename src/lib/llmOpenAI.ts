@@ -158,7 +158,7 @@ export async function chatCompletion(options: {
     return text
   } catch (e) {
     if (e instanceof Error && e.message !== '模型未返回有效正文') throw e
-    throw new Error(raw.slice(0, 300) || '无法解析网关响应')
+    throw new Error(raw.slice(0, 300) || '无法解析网关响应', { cause: e })
   }
 }
 

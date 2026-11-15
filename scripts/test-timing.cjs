@@ -11,7 +11,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 const savedEvents = []
 const originalLoad = Module._load
 Module._load = function (id, parent, ...rest) {
-  if (id.endsWith('/constants/brand')) return { APP_DISPLAY_NAME: '干啥了' }
+  if (id.endsWith('/constants/brand')) return { APP_DISPLAY_NAME: '干啥了', APP_ENGLISH_NAME: 'Didly', BRAND_LOGO_APP_SRC: './ganshale-logo-app.png', OPENCLAW_ICON_SRC: './openclaw-favicon-32.png' }
   if (id === './idbStore' && parent.filename.endsWith('heartbeat.ts')) {
     return {
       getLastEvent: async () => savedEvents.at(-1),

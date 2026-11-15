@@ -101,7 +101,7 @@ function HistoryRowActions({
   )
 }
 
-export function MonthlyReportHistoryModal({
+function MonthlyReportHistoryModalContent({
   open,
   monthAnchor,
   onClose,
@@ -126,7 +126,6 @@ export function MonthlyReportHistoryModal({
 
   useEffect(() => {
     if (!open) return
-    reload()
     const onChange = () => reload()
     window.addEventListener(MONTHLY_REPORT_HISTORY_CHANGED_EVENT, onChange)
     return () => window.removeEventListener(MONTHLY_REPORT_HISTORY_CHANGED_EVENT, onChange)
@@ -224,4 +223,8 @@ export function MonthlyReportHistoryModal({
       </div>
     </DashboardModalRoot>
   )
+}
+
+export function MonthlyReportHistoryModal(props:Parameters<typeof MonthlyReportHistoryModalContent>[0]){
+  return props.open ? <MonthlyReportHistoryModalContent key={props.monthAnchor.getTime()} {...props}/> : null
 }

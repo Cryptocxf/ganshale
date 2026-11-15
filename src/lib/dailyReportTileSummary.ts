@@ -81,7 +81,7 @@ async function generateForDay(day: Date, force: boolean): Promise<string | null>
     return summary
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    throw new Error(expandLlmNetworkError(msg))
+    throw new Error(expandLlmNetworkError(msg), { cause: e })
   }
 }
 

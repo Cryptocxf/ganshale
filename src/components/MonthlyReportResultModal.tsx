@@ -1,5 +1,5 @@
 import { Check, Copy, Download, FileText, Loader2, Square, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   DASHBOARD_DETAIL_MODAL_BODY_CLASS,
   DASHBOARD_DETAIL_MODAL_SIZE_CLASS,
@@ -45,9 +45,12 @@ export function MonthlyReportResultModal({
   const [copyBusy, setCopyBusy] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
+  const resetKey = open
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
     if (!open) setCopied(false)
-  }, [open])
+  }
 
   const handleCopy = useCallback(async () => {
     const body = text.trim()

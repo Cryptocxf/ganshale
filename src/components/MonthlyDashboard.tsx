@@ -110,10 +110,11 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
   const { monthAnchor, setSummaryState } = useMonthlyReport()
 
-  const { ready: dataReady, setDay, liveForeground, windowTrackingPaused } = useGanshaleData()
+  const { ready: dataReady, setDay, windowTrackingPaused } = useGanshaleData()
+  const liveForeground = null
   const patterns = useMonitoredAppPatterns()
 
-  const clockMs = useDashboardClockMs()
+  const clockMs = useDashboardClockMs(3_600_000)
 
   const clockLive = useDashboardClockLive()
 
@@ -132,6 +133,15 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
   )
 
   const [liveTick, setLiveTick] = useState(0)
+  const monthLoadKey = monthAnchor.getTime()
+  const [previousMonthKey, setPreviousMonthKey] = useState(monthLoadKey)
+  if(previousMonthKey!==monthLoadKey){
+    setPreviousMonthKey(monthLoadKey)
+    const previous=addMonthsLocal(monthAnchor,-1)
+    setEvents(cachedMonthEvents(monthAnchor))
+    setPrevEvents(cachedMonthEvents(previous))
+    setEventsReady(monthEventsCached(monthAnchor,previous))
+  }
 
 
 
@@ -143,7 +153,7 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
     if (monthKind !== 'current' || !clockLive) return
 
-    const id = window.setInterval(() => setLiveTick((n) => n + 1), 1000)
+    const id = window.setInterval(() => setLiveTick((n) => n + 1), 3_600_000)
 
     return () => clearInterval(id)
 
@@ -171,7 +181,7 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
         .finally(() => { loading = false })
 
-    }, 2500)
+    }, 3_600_000)
 
     return () => { cancelled = true; clearInterval(id) }
 
@@ -193,11 +203,8 @@ export function MonthlyDashboard({ onNavigate }: { onNavigate: (key: NavKey) => 
 
     const prevCached = peekCachedWindowEventsForMonth(prevMonth)
 
-    if (curCached) setEvents(curCached)
 
-    if (prevCached) setPrevEvents(prevCached)
 
-    setEventsReady(Boolean(curCached && prevCached))
 
 
 

@@ -1,7 +1,7 @@
 {
   "name": "ganshale",
   "private": true,
-  "version": "1.1.8",
+  "version": "2.0.0",
   "author": {
     "name": "Chen Xiaofeng"
   },
@@ -26,8 +26,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
-    "xlsx": "^0.18.5"
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -37,7 +36,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.0",
-    "electron": "^34.2.0",
+    "electron": "^45.3.1",
     "electron-builder": "^26.0.12",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -49,11 +48,14 @@
     "vite": "^8.0.12",
     "wait-on": "^8.0.3"
   },
+  "overrides": {
+    "tar": "^7.5.23"
+  },
   "build": {
     "appId": "net.ganshale.desktop",
     "productName": "干啥了",
     "copyright": "Copyright © 2026 Chen Xiaofeng",
-    "artifactName": "${productName}-v${version}-2026-11-12-Setup.${ext}",
+    "artifactName": "${productName}-v${version}-2026-11-15-Setup.${ext}",
     "icon": "build/icon.ico",
     "directories": {
       "output": "release"
@@ -67,7 +69,14 @@
       "package.json"
     ],
     "npmRebuild": false,
-    "publish": [{ "provider": "github", "owner": "Cryptocxf", "repo": "ganshale", "releaseType": "release" }],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Cryptocxf",
+        "repo": "ganshale",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "target": [
         "nsis"

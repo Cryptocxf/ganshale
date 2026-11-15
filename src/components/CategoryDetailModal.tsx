@@ -81,7 +81,6 @@ function AppPickSelect({
 
   useLayoutEffect(() => {
     if (!open) {
-      setMenuRect(null)
       return
     }
     updateMenuRect()
@@ -208,7 +207,7 @@ export function CategoryDetailModal({
   const optionState = useMemo(() => {
     if (!modalDraft) return []
     return durationApps.map((row) => {
-      const inDraft = isInCurrentDraft(row)
+      const inDraft = modalDraft.keywords.some((k) => assignmentKeyMatches(k, row.app, row.identityKey))
       const host = findCategoryHostingApp(categories, categoryId, row.app, row.identityKey)
       const disabled = inDraft || host != null
       let suffix = ''
@@ -224,12 +223,7 @@ export function CategoryDetailModal({
     [optionState],
   )
 
-  useEffect(() => {
-    if (!pickApp) return
-    if (!pickableApps.some((o) => o.row.identityKey === pickApp)) {
-      setPickApp('')
-    }
-  }, [pickApp, pickableApps])
+  const validPickApp = pickableApps.some((o) => o.row.identityKey === pickApp) ? pickApp : ''
 
   const configuredApps = useMemo(() => {
     if (!modalDraft) return []
@@ -344,7 +338,7 @@ export function CategoryDetailModal({
           <span className="text-[10px] font-medium text-ganshale-subtle">添加应用</span>
           <div className="mt-1.5 flex gap-1">
             <AppPickSelect
-              value={pickApp}
+              value={validPickApp}
               onChange={setPickApp}
               options={pickableApps.map(({ row, label }) => ({ row, label }))}
               disabled={pickableApps.length === 0}
@@ -352,7 +346,7 @@ export function CategoryDetailModal({
             <button
               type="button"
               onClick={draftAddApp}
-              disabled={!pickApp}
+              disabled={!validPickApp}
               className={`shrink-0 ${DASHBOARD_HEADER_ACTION_BTN_CLASS}`}
             >
               添加

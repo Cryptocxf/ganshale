@@ -17,10 +17,6 @@ export function EditableAppDisplayName({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!editing) setDraft(displayName)
-  }, [displayName, editing])
-
-  useEffect(() => {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
@@ -65,7 +61,7 @@ export function EditableAppDisplayName({
   return (
     <button
       type="button"
-      onClick={() => setEditing(true)}
+      onClick={() => { setDraft(displayName); setEditing(true) }}
       className={[
         'min-w-0 truncate text-left text-[11px] font-medium text-ganshale-text',
         'rounded px-0.5 transition hover:bg-ganshale-page hover:underline',

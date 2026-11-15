@@ -171,7 +171,7 @@ function migrateFromV1(): WorkRecordSettings | null {
 
 export function loadWorkRecordSettings(): WorkRecordSettings {
   try {
-    let raw = localStorage.getItem(STORAGE_KEY_V2)
+    const raw = localStorage.getItem(STORAGE_KEY_V2)
     if (!raw) {
       const migrated = migrateFromV1()
       if (migrated) {

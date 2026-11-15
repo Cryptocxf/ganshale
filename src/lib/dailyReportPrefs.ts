@@ -189,7 +189,7 @@ export function loadDailyReportPrefs(): DailyReportPrefs {
   const fallback = defaultPrefs()
   if (typeof window === 'undefined') return fallback
   try {
-    let raw = localStorage.getItem(STORAGE_KEY_V2)
+    const raw = localStorage.getItem(STORAGE_KEY_V2)
     if (!raw) {
       const legacy = localStorage.getItem(STORAGE_KEY_V1)
       if (legacy) {

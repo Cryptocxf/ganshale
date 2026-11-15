@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useDashboardClockMs } from '../hooks/useDashboardClock'
 import { BarChart3 } from 'lucide-react'
 import { aggregateByAppCategories } from '../lib/appCategoryAggregate'
 import {
-  APP_CATEGORY_CONFIG_CHANGED_EVENT,
   loadAppCategoryConfig,
   UNCATEGORIZED_ID,
-  type AppCategoryDef,
 } from '../lib/appCategoryConfig'
 import { useAppCategoryConfigRevision } from '../hooks/useAppCategoryConfigRevision'
 import {
@@ -96,24 +95,15 @@ export function WeeklyDailyDurationDistribution({
   const weekKind = compareLocalCalendarWeek(weekStart)
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
   const categoryRev = useAppCategoryConfigRevision()
-  const [categories, setCategories] = useState<AppCategoryDef[]>(() => loadAppCategoryConfig())
-
-  useEffect(() => {
-    const sync = () => setCategories(loadAppCategoryConfig())
-    window.addEventListener(APP_CATEGORY_CONFIG_CHANGED_EVENT, sync)
-    return () => window.removeEventListener(APP_CATEGORY_CONFIG_CHANGED_EVENT, sync)
-  }, [])
-
-  useEffect(() => {
-    setCategories(loadAppCategoryConfig())
-  }, [categoryRev])
+  const categories = useMemo(() => { void categoryRev; return loadAppCategoryConfig() }, [categoryRev])
+  const nowMs = useDashboardClockMs(60_000)
 
   const eventsForUi = useMemo(() => {
     if (!extrapolateToday) return events
-    const { event, seconds } = currentForegroundSegmentLive(events, live, Date.now(), true)
+    const { event, seconds } = currentForegroundSegmentLive(events, live, nowMs, true)
     if (!event) return events
     return events.map((ev) => (ev.id === event.id ? { ...ev, duration: seconds } : ev))
-  }, [events, live, extrapolateToday])
+  }, [events, live, extrapolateToday, nowMs])
 
   const dayStacks = useMemo((): DayStack[] => {
     const now = new Date()

@@ -1,5 +1,5 @@
 ﻿import { Check, Copy, FileText, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { DataRecordRow } from '../../lib/dataRecordsQuery'
 import { formatDuration } from '../../lib/aggregations'
 import { formatDatetimeZhWithWeekday } from '../../lib/timeutil'
@@ -31,9 +31,12 @@ export function DataRecordDetailModal({
   const [copyBusy, setCopyBusy] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
+  const resetKey = row
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
     if (!row) setCopied(false)
-  }, [row])
+  }
 
   const handleCopyReport = useCallback(async () => {
     const body = row?.reportText?.trim() ?? ''

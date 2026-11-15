@@ -71,6 +71,7 @@ export function assertLlmConfigured(user?: LlmUserConfig): void {
 
 /** @deprecated 请使用 getConfiguredGatewayModel；保留签名兼容旧调用 */
 export function getResolvedApiModel(_modelId?: DailyReportModelId): string {
+  void _modelId
   return getConfiguredGatewayModel()
 }
 

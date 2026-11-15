@@ -5,7 +5,7 @@ import { formatClock, parseIso } from '../lib/timeutil'
 import { AppBrandIcon } from './AppBrandIcon'
 import { DASHBOARD_PAIR_ICON_SIZE, DASHBOARD_PAIR_ROW_HEIGHT_PX } from './dashboardLayout'
 
-export const WINDOW_TABLE_MODAL_COLGROUP = (
+export function WindowTableModalColgroup(){return (
   <colgroup>
     <col className="w-[6%]" />
     <col className="w-[11%]" />
@@ -14,10 +14,10 @@ export const WINDOW_TABLE_MODAL_COLGROUP = (
     <col className="w-[43%]" />
     <col className="w-[16%]" />
   </colgroup>
-)
+)}
 
 /** 日看板预览：图标列固定宽度，标题列略窄以免与应用列重叠 */
-export const WINDOW_TABLE_PREVIEW_COLGROUP = (
+export function WindowTablePreviewColgroup(){return (
   <colgroup>
     <col className="w-[6%]" />
     <col className="w-[10%]" />
@@ -27,7 +27,7 @@ export const WINDOW_TABLE_PREVIEW_COLGROUP = (
     <col className="w-[10%]" />
     <col className="w-[10%]" />
   </colgroup>
-)
+)}
 
 const WINDOW_TABLE_BODY_INSET_CLASS = 'pl-2 sm:pl-2.5'
 const thCompact =

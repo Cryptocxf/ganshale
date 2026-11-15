@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { useGanshaleData } from '../context/useGanshaleData'
 import { excludeGanshaleSelfWindowEvents } from '../lib/selfWindowFilter'
@@ -74,10 +74,14 @@ export function MonitoredAppsModal({
     return uniqueAppsFromWindowEvents(net)
   }, [windowEventsToday])
 
-  useEffect(() => {
-    if (!open) return
-    setDraft(loadMonitoredAppPatterns())
-  }, [open])
+  const resetKey = open
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
+    if (open) {
+setDraft(loadMonitoredAppPatterns())
+}
+  }
 
   const isSelected = (app: string, patternHint: string) =>
     draft.some(

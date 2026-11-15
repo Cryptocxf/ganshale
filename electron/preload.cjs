@@ -5,6 +5,8 @@ const { contextBridge, ipcRenderer } = require('electron')
  */
 
 contextBridge.exposeInMainWorld('ganshaleDesktop', {
+  exportBrickImage: () => ipcRenderer.invoke('ganshale:export-brick-image'),
+  copyBrickImage: (dataUrl) => ipcRenderer.invoke('ganshale:copy-brick-image',dataUrl),
   platform: process.platform,
   getUpdateState: () => ipcRenderer.invoke('ganshale:update-state'),
   checkUpdate: () => ipcRenderer.invoke('ganshale:check-update'),

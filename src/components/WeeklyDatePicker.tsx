@@ -253,11 +253,15 @@ export function WeeklyDatePicker({
     }
   }, [open, updatePopoverPosition])
 
-  useEffect(() => {
-    if (!open) return
-    setDraftKey(currentWeekKey)
+  const resetKey = String(open) + ':' + currentWeekKey
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
+    if (open) {
+setDraftKey(currentWeekKey)
     setViewMonth(startOfMonthLocal(new Date()))
-  }, [open, currentWeekKey])
+}
+  }
 
   useEffect(() => {
     if (!open) return

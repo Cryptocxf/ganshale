@@ -2,14 +2,13 @@ import { Info } from 'lucide-react'
 import { UpdateSettings } from './UpdateSettings'
 import { APP_LAST_UPDATED } from '../constants/brand'
 import {
-  APP_DISPLAY_NAME,
   APP_FEATURES,
-  APP_PRODUCT_NAME,
   APP_TAGLINE,
   APP_VERSION,
   describeAppRuntime,
 } from '../lib/appInfo'
 import { GanshaleLogoMark } from './brand/GanshaleLogoMark'
+import { BrandWordmark } from './brand/BrandWordmark'
 import {
   SETTINGS_FIELD_LABEL_CLASS,
   SETTINGS_PAGE_TITLE_CLASS,
@@ -26,10 +25,7 @@ export function AboutSettings() {
           <GanshaleLogoMark variant="app" size={72} className="rounded-xl" />
           <div className="min-w-0 flex-1 space-y-1">
             <h3 className="font-display text-base font-bold text-ganshale-text">
-              {APP_DISPLAY_NAME}
-              <span className="ml-1.5 text-sm font-medium text-ganshale-muted">
-                {APP_PRODUCT_NAME}
-              </span>
+              <BrandWordmark/>
             </h3>
             <p className="text-xs leading-relaxed text-ganshale-muted">{APP_TAGLINE}</p>
             <dl className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">

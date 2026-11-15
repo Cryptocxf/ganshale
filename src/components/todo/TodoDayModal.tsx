@@ -1,5 +1,5 @@
 import { CheckCircle2, Circle, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   buildTodoCountdown,
   countdownBadgeClass,
@@ -54,13 +54,17 @@ export function TodoDayModal({
     return items.filter((t) => matchesCell(t, cell, period))
   }, [items, cell, period])
 
-  useEffect(() => {
-    if (!open) return
-    setDraft('')
+  const resetKey = String(open) + ':' + cell?.key
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
+    if (open) {
+setDraft('')
     setDeadline('')
     setReminder('')
     setPriority(1)
-  }, [open, cell?.key])
+}
+  }
 
   if (!cell) return null
 

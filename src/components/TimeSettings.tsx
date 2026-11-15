@@ -136,7 +136,6 @@ export function TimeSettings() {
   }, [])
 
   useEffect(() => {
-    syncFromStorage()
     window.addEventListener(REPORT_SCHEDULE_SETTINGS_CHANGED_EVENT, syncFromStorage)
     return () =>
       window.removeEventListener(REPORT_SCHEDULE_SETTINGS_CHANGED_EVENT, syncFromStorage)

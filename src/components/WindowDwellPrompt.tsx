@@ -51,6 +51,7 @@ export function WindowDwellPrompt() {
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [prompt, setPrompt] = useState<PromptState | null>(null)
   const [idleTick, setIdleTick] = useState(0)
+  const [idleRemaining, setIdleRemaining] = useState(Math.ceil(WINDOW_DWELL_IDLE_CLOSE_MS / 1000))
   const [hovering, setHovering] = useState(false)
 
   const firedRef = useRef<Set<string>>(new Set())
@@ -121,7 +122,7 @@ export function WindowDwellPrompt() {
       setPrompt({ event, milestoneSec: m, draft: '' })
       break
     }
-  }, [ready, liveSeg.event?.id, liveSeg.seconds, prompt])
+  }, [ready, liveSeg, prompt])
 
   useEffect(() => {
     if (!prompt) return
@@ -132,7 +133,10 @@ export function WindowDwellPrompt() {
 
   useEffect(() => {
     if (!prompt) return
-    const id = window.setInterval(() => setIdleTick((x) => x + 1), 1000)
+    const id = window.setInterval(() => {
+      setIdleTick((x) => x + 1)
+      setIdleRemaining(Math.max(0, Math.ceil((WINDOW_DWELL_IDLE_CLOSE_MS - (Date.now() - lastIdleAtRef.current)) / 1000)))
+    }, 1000)
     return () => clearInterval(id)
   }, [prompt])
 
@@ -157,16 +161,7 @@ export function WindowDwellPrompt() {
     lastIdleAtRef.current = Date.now()
   }, [])
 
-  const idleLeftSec = useMemo(() => {
-    if (!prompt || hovering) return null
-    void idleTick
-    return Math.max(
-      0,
-      Math.ceil(
-        (WINDOW_DWELL_IDLE_CLOSE_MS - (Date.now() - lastIdleAtRef.current)) / 1000,
-      ),
-    )
-  }, [prompt, hovering, idleTick])
+  const idleLeftSec = prompt && !hovering ? idleRemaining : null
 
   if (!prompt) return null
 

@@ -78,11 +78,15 @@ export function MonthlyDatePicker({
     return () => window.removeEventListener(MONTHLY_REPORT_HISTORY_CHANGED_EVENT, sync)
   }, [])
 
-  useEffect(() => {
-    if (!open) return
-    setDraftYear(monthAnchor.getFullYear())
+  const resetKey = String(open) + ':' + monthAnchor.getTime()
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
+    if (open) {
+setDraftYear(monthAnchor.getFullYear())
     setDraftMonth(monthAnchor.getMonth())
-  }, [open, monthAnchor])
+}
+  }
 
   const updatePopoverPosition = useCallback(() => {
     const btn = triggerRef.current

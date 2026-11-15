@@ -2,6 +2,7 @@ import type { NavKey } from '../data/mock'
 
 const titles: Record<NavKey, { title: string; desc: string }> = {
   daily: { title: '', desc: '' },
+  bricks: { title: '搬砖', desc: '每天一块砖，记录投入。' },
   weekly: {
     title: '每周',
     desc: '按自然周汇总窗口活跃与应用排行。',

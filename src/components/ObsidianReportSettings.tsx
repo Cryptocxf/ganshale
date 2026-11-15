@@ -23,7 +23,6 @@ export function ObsidianReportSettings() {
   }, [])
 
   useEffect(() => {
-    syncFromStorage()
     window.addEventListener('storage', syncFromStorage)
     window.addEventListener(OBSIDIAN_REPORT_SETTINGS_CHANGED_EVENT, syncFromStorage)
     return () => {

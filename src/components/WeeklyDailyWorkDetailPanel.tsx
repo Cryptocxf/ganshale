@@ -39,6 +39,7 @@ export function WeeklyDailyWorkDetailPanel({ weekStart }: { weekStart: Date }) {
   void rev
 
   const rows = useMemo((): DayDetailRow[] => {
+    void rev
     return daysInLocalWeek(weekStart).map((day) => {
       const workRows = loadWorkRecords(day).filter((r) => r.content.trim())
       const reports = loadDailyReportHistory(day)

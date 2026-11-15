@@ -43,9 +43,12 @@ export function DailyDatePicker({
   const [viewMonth, setViewMonth] = useState(() => startOfMonthLocal(day))
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  const resetKey = String(open) + ':' + day.getTime()
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
     if (open) setViewMonth(startOfMonthLocal(day))
-  }, [open, day])
+  }
 
   useEffect(() => {
     if (!open) return

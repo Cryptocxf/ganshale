@@ -1,9 +1,8 @@
 ﻿import { Settings2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   AI_SUMMARY_PERIOD_OPTIONS,
   isAiAutoSummaryActive,
-  loadWorkRecordSettings,
   type SystemRecordPeriodId,
   type WorkRecordSettings,
 } from '../lib/workRecordSettings'
@@ -38,9 +37,12 @@ export function WorkRecordSettingsModal({
 }) {
   const [draft, setDraft] = useState<WorkRecordSettings>(initial)
 
-  useEffect(() => {
+  const resetKey = initial
+  const [previousResetKey, setPreviousResetKey] = useState(resetKey)
+  if (previousResetKey !== resetKey) {
+    setPreviousResetKey(resetKey)
     setDraft(initial)
-  }, [initial])
+  }
 
   const aiActive = isAiAutoSummaryActive(draft)
 
@@ -148,6 +150,3 @@ export function WorkRecordSettingsModal({
   )
 }
 
-export function loadWorkRecordSettingsDraft(): WorkRecordSettingsDraft {
-  return loadWorkRecordSettings()
-}

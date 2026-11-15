@@ -40,7 +40,7 @@ export function AiAutoSummaryActiveBadge({ day, busy, onStart }: { day: Date; bu
   useEffect(() => {
     if (!isAiAutoSummaryActive(settings) || !isAiSummaryScheduleDay(day)) return
     ensureAiSummaryAnchoredForSession(day, settings, Date.now())
-  }, [day, settings.aiAutoSummaryEnabled, settings.systemRecordPeriod])
+  }, [day, settings])
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)

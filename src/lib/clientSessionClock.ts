@@ -130,6 +130,7 @@ function getFrozenTimerSecForYmd(ymd: string): number | undefined {
  * 上界为当日 23:59:59.999。不再因「下班了」或设置的下班时刻而提前截止。
  */
 export function getTodayLiveWorkdayElapsedSec(_collectionPausedByUser = false): number {
+  void _collectionPausedByUser
   const today = new Date()
   const now = Date.now()
   const dayStartMs = startOfLocalDay(today).getTime()

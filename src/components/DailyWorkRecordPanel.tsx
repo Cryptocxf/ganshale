@@ -163,8 +163,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
   const aiSummaryAbortRef = useRef<AbortController | null>(null)
   const isToday = useMemo(() => compareLocalCalendarDay(day) === 'today', [day])
 
-  eventsRef.current = events
-  dayRef.current = day
+  useEffect(() => { eventsRef.current = events; dayRef.current = day }, [events, day])
 
   const reloadRowsFromStorage = useCallback(() => {
     const d = dayRef.current
@@ -413,7 +412,7 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
         return prev.filter((r) => r.id !== id)
       })
     },
-    [day, events],
+    [day],
   )
 
   const saveRow = useCallback(

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { GanshaleLogoMark } from './brand/GanshaleLogoMark'
-import { APP_DISPLAY_NAME } from '../constants/brand'
+import { BrandWordmark } from './brand/BrandWordmark'
 import { useAuth, type WechatUser } from '../context/AuthContext'
 
 // ── QR code SVG (visual mock, replace src with real WeChat QR API) ──────────
@@ -136,7 +136,7 @@ export function LoginPage() {
           <GanshaleLogoMark size={100} variant="app" />
 
           <h1 className="mt-8 font-display text-4xl font-bold tracking-tight text-white leading-tight">
-            {APP_DISPLAY_NAME}
+            <BrandWordmark/>
           </h1>
 
           <p className="mt-8 text-[15px] leading-[1.9] text-slate-400">
@@ -147,7 +147,7 @@ export function LoginPage() {
             </span>
           </p>
           <p className="mt-5 text-[14px] leading-relaxed text-slate-500">
-            Ganshale 替你把每一分钟都记下来，<br />
+            Didly 替你把每一分钟都记下来，<br />
             让日报、周报、月报从此告别灵魂拷问。
           </p>
 
@@ -164,7 +164,7 @@ export function LoginPage() {
         </div>
 
         <p className="absolute bottom-6 text-[11px] text-slate-700">
-          © {new Date().getFullYear()} Ganshale. 保留所有权利。
+          © {new Date().getFullYear()} Didly. 保留所有权利。
         </p>
       </div>
 
@@ -174,7 +174,7 @@ export function LoginPage() {
         {/* Mobile logo */}
         <div className="mb-8 flex flex-col items-center md:hidden">
           <GanshaleLogoMark size={64} variant="app" />
-          <h1 className="mt-3 font-display text-xl font-bold text-ganshale-text">{APP_DISPLAY_NAME}</h1>
+          <h1 className="mt-3 font-display text-xl font-bold text-ganshale-text"><BrandWordmark/></h1>
         </div>
 
         <div className="w-full max-w-[300px]">

@@ -77,7 +77,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const [windowTrackingActive, setWindowTrackingActive] = useState(false)
   const [windowTrackingSupported, setWindowTrackingSupported] = useState(false)
   const [windowTrackingPaused, setWindowTrackingPaused] = useState(false)
-  const [recordingHealthTick, setRecordingHealthTick] = useState(0)
+  const [recordingHealthTick, setRecordingHealthTick] = useState(() => Date.now())
   const [collectionPausedByUser, setCollectionPausedByUser] = useState(false)
   const lastLocalYmdRef = useRef(toYmdLocal(new Date()))
   const lastIndexedRefreshRef = useRef(0)
@@ -85,7 +85,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   /** 离开可统计前台后，下次心跳须新开事件，避免把中间空白时间并入上一条 */
   const splitNextCountableHeartbeatRef = useRef(false)
   const dayRef = useRef(day)
-  dayRef.current = day
+  useEffect(() => { dayRef.current = day }, [day])
   const lastRecoveryAtRef = useRef(0)
   const lastForegroundIdentityKeyRef = useRef<string | null>(null)
   const screenLockedRef = useRef(false)
@@ -96,7 +96,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   const windowRecordingHealthy = useMemo(() => {
     void recordingHealthTick
     if (!windowTrackingActive) return true
-    return !isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)
+    return !isHeartbeatStale(recordingHealthTick, WINDOW_HEARTBEAT_STALE_MS)
   }, [windowTrackingActive, recordingHealthTick])
 
   const load = useCallback(async () => {
@@ -139,7 +139,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   }, [day])
 
   const loadRef = useRef(load)
-  loadRef.current = load
+  useEffect(() => { loadRef.current = load }, [load])
 
   const initialHydrateRef = useRef(false)
 
@@ -429,7 +429,7 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
     const watchdog = window.setInterval(() => {
       if (cancelled) return
       if (screenLockedRef.current) return
-      setRecordingHealthTick((t) => t + 1)
+      setRecordingHealthTick(Date.now())
       if (!isHeartbeatStale(Date.now(), WINDOW_HEARTBEAT_STALE_MS)) return
       const now = Date.now()
       if (now - lastRecoveryAtRef.current < WINDOW_TRACKING_RECOVERY_COOLDOWN_MS) return
@@ -563,7 +563,6 @@ export function GanshaleDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return
     clearWorkdayClockOutPersist()
-    setCollectionPausedByUser(false)
   }, [ready])
 
   const value = useMemo(

@@ -7,7 +7,8 @@ import {
   Settings2,
 } from 'lucide-react'
 import { GanshaleLogoMark } from './brand/GanshaleLogoMark'
-import { APP_DISPLAY_NAME, PRODUCT_TAGLINE } from '../constants/brand'
+import { PRODUCT_TAGLINE } from '../constants/brand'
+import { BrandWordmark } from './brand/BrandWordmark'
 import type { NavKey } from '../data/mock'
 
 const items: { key: NavKey; label: string; icon: typeof LayoutDashboard }[] = [
@@ -31,7 +32,7 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
         <GanshaleLogoMark size={44} className="shrink-0 text-zinc-600 drop-shadow-sm" />
         <div className="min-w-0">
           <p className="font-display text-base font-semibold tracking-tight text-ganshale-text">
-            {APP_DISPLAY_NAME}
+            <BrandWordmark/>
           </p>
           <p className="mt-2 text-[11px] leading-snug text-ganshale-muted">
             {PRODUCT_TAGLINE}

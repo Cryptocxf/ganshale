@@ -13,6 +13,7 @@ import { useTodoReminderScheduler } from './hooks/useTodoReminders'
 import { markClientWorkSessionStart } from './lib/clientSessionClock'
 import { APP_WINDOW_TITLE } from './constants/brand'
 import type { NavKey } from './data/mock'
+import { BrickDashboard } from './components/BrickDashboard'
 
 function isDesktopClient(): boolean {
   return typeof window !== 'undefined' && Boolean(window.ganshaleDesktop)
@@ -22,6 +23,7 @@ const pageTitle: Record<NavKey, string> = {
   daily: '每日',
   weekly: '每周',
   monthly: '每月',
+  bricks: '工时积木',
   todos: '待办',
   data: '数据',
   settings: '设置',
@@ -72,6 +74,7 @@ function ActivePage({
       {active === 'todos' ? <TodoDashboard /> : null}
       {active === 'data' ? <DataRecordsView /> : null}
       {active === 'settings' ? <SettingsView /> : null}
+      {active === 'bricks' ? <BrickDashboard /> : null}
     </>
   )
 }

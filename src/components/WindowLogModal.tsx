@@ -1,5 +1,5 @@
 import { AppWindow, Download, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { AwEvent } from '../lib/awTypes'
 import { formatClock, parseIso, toYmdLocal } from '../lib/timeutil'
 import {
@@ -13,7 +13,7 @@ import {
 import { DashboardModalRoot } from './DashboardModalRoot'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
 import {
-  WINDOW_TABLE_MODAL_COLGROUP,
+  WindowTableModalColgroup,
   WindowEventTableBody,
   WindowTableHead,
 } from './windowEventTable'
@@ -61,7 +61,7 @@ function buildWindowLogCsv(rows: AwEvent[], liveSegment: { eventId: string; seco
   return lines.join('\n')
 }
 
-export function WindowLogModal({
+function WindowLogModalContent({
   open,
   day,
   rows,
@@ -80,19 +80,13 @@ export function WindowLogModal({
   const total = rows.length
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  useEffect(() => {
-    if (!open) return
-    setPage(1)
-    setJumpInput('1')
-  }, [open, day, total])
+  
 
-  useEffect(() => {
-    setPage((p) => Math.min(Math.max(1, p), pageCount))
-  }, [pageCount])
+  
 
-  useEffect(() => {
-    setJumpInput(String(page))
-  }, [page])
+  
+
+  if(page>pageCount){setPage(pageCount);setJumpInput(String(pageCount))}
 
   const pageRows = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE
@@ -157,7 +151,7 @@ export function WindowLogModal({
             <p className="py-8 text-center text-xs text-ganshale-muted">暂无窗口记录</p>
           ) : (
             <table className="w-full table-fixed border-collapse text-left">
-              {WINDOW_TABLE_MODAL_COLGROUP}
+              <WindowTableModalColgroup/>
               <WindowTableHead />
               <WindowEventTableBody rows={pageRows} titleLines={2} liveSegment={liveSegment} />
             </table>
@@ -221,4 +215,8 @@ export function WindowLogModal({
         ) : null}
     </DashboardModalRoot>
   )
+}
+
+export function WindowLogModal(props:Parameters<typeof WindowLogModalContent>[0]){
+  return props.open ? <WindowLogModalContent key={props.day.getTime()} {...props}/> : null
 }

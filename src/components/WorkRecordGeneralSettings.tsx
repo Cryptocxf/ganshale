@@ -21,7 +21,6 @@ export function WorkRecordGeneralSettings() {
   }, [])
 
   useEffect(() => {
-    syncFromStorage()
     window.addEventListener('storage', syncFromStorage)
     window.addEventListener(WORK_RECORD_SETTINGS_CHANGED_EVENT, syncFromStorage)
     return () => {

@@ -6,7 +6,9 @@ import { DASHBOARD_SECTION_DESCRIPTIONS } from '../lib/dashboardSectionDescripti
 import { formatHoursCompact, formatMonthDayShort } from '../lib/monthlyWorktime'
 import type { WeekCompareTone } from '../lib/weeklyWorktime'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
-import { OfficeDurationHmsDisplay } from './OfficeDurationHmsDisplay'
+function OfficeDurationHmsDisplay({ totalSec }: { totalSec: number; size?: 'sm'; live?: boolean }) {
+  return <p className="text-2xl font-semibold tabular-nums text-ganshale-text">{Math.floor(Math.max(0, totalSec) / 3600)}<span className="ml-1 text-xs font-normal text-ganshale-muted">小时</span></p>
+}
 import { MONTHLY_KPI_SECTION_CLASS } from './dashboardLayout'
 
 const COMPARE_TONE_CLASS: Record<WeekCompareTone, string> = {

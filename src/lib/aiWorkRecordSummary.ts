@@ -53,6 +53,6 @@ export async function summarizeWindowEventsWithLlm(
     return raw.replace(/\s+/g, ' ').trim()
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    throw new Error(expandLlmNetworkError(msg))
+    throw new Error(expandLlmNetworkError(msg), { cause: e })
   }
 }

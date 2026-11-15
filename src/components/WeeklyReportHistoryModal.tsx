@@ -100,7 +100,7 @@ function HistoryRowActions({
   )
 }
 
-export function WeeklyReportHistoryModal({
+function WeeklyReportHistoryModalContent({
   open,
   weekStart,
   onClose,
@@ -125,7 +125,6 @@ export function WeeklyReportHistoryModal({
 
   useEffect(() => {
     if (!open) return
-    reload()
     const onChange = () => reload()
     window.addEventListener(WEEKLY_REPORT_HISTORY_CHANGED_EVENT, onChange)
     return () => window.removeEventListener(WEEKLY_REPORT_HISTORY_CHANGED_EVENT, onChange)
@@ -223,4 +222,8 @@ export function WeeklyReportHistoryModal({
         </div>
     </DashboardModalRoot>
   )
+}
+
+export function WeeklyReportHistoryModal(props:Parameters<typeof WeeklyReportHistoryModalContent>[0]){
+  return props.open ? <WeeklyReportHistoryModalContent key={props.weekStart.getTime()} {...props}/> : null
 }

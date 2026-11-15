@@ -164,12 +164,13 @@ export function AppDurationCompare({
   const nameRev = useAppDisplayNamesRevision()
   const totals = useMemo(
     () =>
-      weekStartMonday != null
+      (void nameRev, weekStartMonday != null)
         ? appTotalsForWeek(weekStartMonday, events)
         : appTotalsForDay(day, events),
     [weekStartMonday, day, events, nameRev],
   )
   const rows = useMemo(() => {
+    void nameRev
     if (compareQueue != null) {
       return rowsForCompareQueue(compareQueue, totals, events)
     }

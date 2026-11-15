@@ -39,7 +39,7 @@ function resolveTileSummaryLabel(day: Date, entries: DailyReportHistoryEntry[]):
   return '摘要生成中…'
 }
 
-export function WeeklyDailyReportDetailsPanel({ weekStart }: { weekStart: Date }) {
+function WeeklyDailyReportDetailsPanelContent({ weekStart }: { weekStart: Date }) {
   const weekDays = useMemo(() => daysInLocalWeek(weekStart), [weekStart])
 
   const [rows, setRows] = useState<WorkdayRow[]>(() => buildRows(weekDays))
@@ -50,9 +50,7 @@ export function WeeklyDailyReportDetailsPanel({ weekStart }: { weekStart: Date }
     setRows(buildRows(weekDays))
   }, [weekDays])
 
-  useEffect(() => {
-    reload()
-  }, [reload])
+  
 
   useEffect(() => {
     const onChange = () => reload()
@@ -64,10 +62,7 @@ export function WeeklyDailyReportDetailsPanel({ weekStart }: { weekStart: Date }
     }
   }, [reload])
 
-  useEffect(() => {
-    setSelectedYmd(null)
-    setExpandedId(null)
-  }, [weekStart])
+  
 
   useEffect(() => {
     for (const day of weekDays) {
@@ -224,4 +219,8 @@ function buildRows(workdays: Date[]): WorkdayRow[] {
       tileSummary: resolveTileSummaryLabel(day, entries),
     }
   })
+}
+
+export function WeeklyDailyReportDetailsPanel(props:Parameters<typeof WeeklyDailyReportDetailsPanelContent>[0]){
+  return <WeeklyDailyReportDetailsPanelContent key={props.weekStart.getTime()} {...props}/>
 }
