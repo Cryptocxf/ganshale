@@ -47,7 +47,7 @@ import {
 import { WorkdayTimeline } from './WorkdayTimeline'
 import { workdayTimelineFromSegments } from '../lib/workdayTimelineSegments'
 import { DashboardHeaderActionSlot } from './DashboardHeaderActionSlot'
-import { OfficeDurationHmsDisplay } from './OfficeDurationHmsDisplay'
+import { OfficeWaterClock } from './OfficeWaterClock'
 import {
   addToAppDurationCompareQueue,
   loadAppDurationCompareQueue,
@@ -207,11 +207,11 @@ export function DailyDashboard() {
   const nowDate = useMemo(() => new Date(clockMs), [clockMs])
 
   return (
-    <div className={DASHBOARD_PAGE_CLASS}>
-      <section className={DASHBOARD_BOTTOM_SECTION_CLASS}>
+    <div className={`${DASHBOARD_PAGE_CLASS} daily-glass-cards`}>
+      <section className={`${DASHBOARD_BOTTOM_SECTION_CLASS} daily-top-grid`}>
         <div
           className={[
-            'gs-card relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-2 sm:p-2.5',
+            'gs-card office-water-card relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-2 sm:p-2.5',
             selectedDayKind === 'today'
               ? 'gs-office-duration-card'
               : selectedDayKind === 'past'
@@ -241,7 +241,7 @@ export function DailyDashboard() {
               'relative z-[1] items-center justify-center text-center',
             ].join(' ')}
           >
-            <OfficeDurationHmsDisplay
+            <OfficeWaterClock
               totalSec={displayElapsedSec}
               live={officeTimerLive}
             />
@@ -270,7 +270,7 @@ export function DailyDashboard() {
         timelineWorkday={timelineWorkday}
       />
 
-      <section className={DASHBOARD_PAIR_SECTION_CLASS}>
+      <section className={`${DASHBOARD_PAIR_SECTION_CLASS} daily-bottom-grid`}>
         <div className="gs-card flex h-full min-h-0 flex-col overflow-hidden">
           <div className={DASHBOARD_PAIR_CARD_HEADER_CLASS}>
             <div className="min-w-0">
@@ -307,7 +307,7 @@ export function DailyDashboard() {
                 <div className={DASHBOARD_WINDOW_TABLE_FRAME_CLASS}>
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <div className={DASHBOARD_WINDOW_TABLE_SCROLL_CLASS}>
-                      <table className="w-full table-fixed border-collapse text-left">
+                      <table className="window-event-table w-full table-fixed border-collapse text-left">
                         <WindowTablePreviewColgroup/>
                         <WindowTableHead showCompareColumn />
                         <WindowEventTableBody

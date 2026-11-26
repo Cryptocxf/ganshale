@@ -7,32 +7,32 @@ import { DASHBOARD_PAIR_ICON_SIZE, DASHBOARD_PAIR_ROW_HEIGHT_PX } from './dashbo
 
 export function WindowTableModalColgroup(){return (
   <colgroup>
-    <col className="w-[6%]" />
-    <col className="w-[11%]" />
-    <col className="w-[11%]" />
-    <col className="w-[11%]" />
-    <col className="w-[43%]" />
-    <col className="w-[16%]" />
+    <col style={{width:40}} />
+    <col style={{width:'18%'}} />
+    <col style={{width:56}} />
+    <col style={{width:56}} />
+    <col />
+    <col style={{width:112}} />
   </colgroup>
 )}
 
-/** 日看板预览：图标列固定宽度，标题列略窄以免与应用列重叠 */
+/** Reserve intrinsic space for icons/time/actions; the title takes remaining width. */
 export function WindowTablePreviewColgroup(){return (
   <colgroup>
-    <col className="w-[6%]" />
-    <col className="w-[10%]" />
-    <col className="w-[10%]" />
-    <col className="w-[10%]" />
-    <col className="w-[35%]" />
-    <col className="w-[10%]" />
-    <col className="w-[10%]" />
+    <col style={{width:40}} />
+    <col style={{width:'16%'}} />
+    <col style={{width:52}} />
+    <col style={{width:52}} />
+    <col />
+    <col style={{width:96}} />
+    <col style={{width:60}} />
   </colgroup>
 )}
 
 const WINDOW_TABLE_BODY_INSET_CLASS = 'pl-2 sm:pl-2.5'
 const thCompact =
   'whitespace-nowrap px-1 py-0 text-left text-[11px] font-medium h-7 align-middle sm:px-1.5'
-const tdCompact = 'whitespace-nowrap px-1 py-0 align-middle text-left text-[11px] sm:px-1.5'
+const tdCompact = 'overflow-hidden whitespace-nowrap px-1 py-0 align-middle text-left text-[11px] sm:px-1.5'
 
 export function WindowTableHead({ showCompareColumn = false }: { showCompareColumn?: boolean }) {
   return (
@@ -107,7 +107,7 @@ export function WindowEventTableBody({
               </span>
             </td>
             <td className={`${td} font-mono tabular-nums text-ganshale-muted`}>
-              {formatDuration(durationSec)}
+              <span className="block truncate" title={formatDuration(durationSec)}>{formatDuration(durationSec)}</span>
             </td>
             {compareQueueSet != null ? (
               <td className={`${td} text-center`}>

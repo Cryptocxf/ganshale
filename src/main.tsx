@@ -8,7 +8,6 @@ import { DailyReportProvider } from './context/DailyReportProviderView.tsx'
 import { GanshaleDataProvider } from './context/DataProvider.tsx'
 import { WeeklyReportProvider } from './context/WeeklyReportProviderView.tsx'
 import { MonthlyReportProvider } from './context/MonthlyReportProviderView.tsx'
-import { DataRecordsProvider } from './context/DataRecordsProviderView.tsx'
 
 applyAppearanceFromStorage()
 
@@ -19,9 +18,7 @@ createRoot(document.getElementById('root')!).render(
           <DailyReportProvider>
             <WeeklyReportProvider>
               <MonthlyReportProvider>
-                <DataRecordsProvider>
-                  <App />
-                </DataRecordsProvider>
+                <App />
               </MonthlyReportProvider>
             </WeeklyReportProvider>
           </DailyReportProvider>

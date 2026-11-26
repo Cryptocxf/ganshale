@@ -260,7 +260,8 @@ function CategoryBarChart({
   return (
     <div
       className={[
-        'flex w-full overflow-x-auto',
+        'flex w-full',
+        compact ? 'overflow-hidden' : 'overflow-x-auto',
         compact ? 'w-full max-h-full -ml-2 pl-0.5 pr-0.5' : '-ml-4 pb-0.5',
       ].join(' ')}
       role="img"
@@ -300,7 +301,7 @@ function CategoryBarChart({
           <div style={{ height: pctReserve }} aria-hidden />
           <div
             className="gs-category-bar-plot relative overflow-visible border-b border-l"
-            style={{ height: plotInnerH }}
+            style={{ height: plotInnerH, background: 'transparent' }}
           >
             <div
               className="gs-category-bar-plot__grid pointer-events-none absolute inset-x-0 border-t border-dashed"
@@ -319,7 +320,7 @@ function CategoryBarChart({
                   className={[
                     'relative flex h-full max-w-[3.25rem] flex-1 items-end justify-center rounded-sm transition',
                     compact ? 'min-w-[1.75rem]' : 'min-w-[2.25rem]',
-                    active ? 'gs-category-bar-hover' : 'gs-category-bar-hover hover:opacity-100',
+                    'bg-transparent hover:bg-transparent',
                   ].join(' ')}
                   style={columnStyle}
                   onMouseEnter={() => onHoverId(s.id)}
@@ -733,11 +734,6 @@ export function AppCategoryDistribution({
             >
               添加类
             </button>
-            <CategoryChartModeToggle
-              mode={chartMode}
-              onChange={setChartMode}
-              disabled={!ready}
-            />
           </div>
         ) : null}
       </div>
@@ -759,12 +755,12 @@ export function AppCategoryDistribution({
               'flex h-full min-h-0 w-full flex-1 flex-col rounded-md',
               chartMode === 'bar'
                 ? 'items-center justify-end overflow-visible pb-px pl-0.5 pt-0'
-                : 'items-center justify-center overflow-hidden py-0.5 pl-2 sm:flex-row sm:items-center sm:gap-2 sm:pl-3',
+                : 'category-pie-preview items-center justify-center overflow-hidden py-0.5',
             ].join(' ')}
           >
             {chartMode === 'pie' ? (
               <>
-                <div className="flex shrink-0 items-center justify-center">
+                <div className="category-pie-preview-ring flex min-h-0 min-w-0 items-center justify-center">
                   <CategoryPieChart
                     slices={chartSlicesPreview}
                     preset="compact"
@@ -798,6 +794,12 @@ export function AppCategoryDistribution({
           </div>
         )}
       </div>
+
+      {!isFutureDay ? (
+        <div className="flex shrink-0 justify-end pt-1">
+          <CategoryChartModeToggle mode={chartMode} onChange={setChartMode} disabled={!ready} />
+        </div>
+      ) : null}
 
       {chartModalOpen && ready ? (
         <DashboardModalRoot

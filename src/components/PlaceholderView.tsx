@@ -2,6 +2,11 @@ import type { NavKey } from '../data/mock'
 
 const titles: Record<NavKey, { title: string; desc: string }> = {
   daily: { title: '', desc: '' },
+  models: {title:'模型配置',desc:''},
+  prompts: {title:'提示词',desc:''},
+  time: {title:'时间',desc:''},
+  theme: {title:'主题',desc:''},
+  about: {title:'关于',desc:''},
   bricks: { title: '搬砖', desc: '每天一块砖，记录投入。' },
   weekly: {
     title: '每周',
@@ -14,10 +19,6 @@ const titles: Record<NavKey, { title: string; desc: string }> = {
   todos: {
     title: '待办',
     desc: '待办事项、截止时间与倒计时。',
-  },
-  data: {
-    title: '数据',
-    desc: '桶与事件浏览、JSON 导入导出。',
   },
   settings: {
     title: '设置',

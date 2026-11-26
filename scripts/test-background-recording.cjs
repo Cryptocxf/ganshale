@@ -89,6 +89,9 @@ app.whenReady().then(async () => {
   })()`)
   assert.ok(restored.sessions >= 2, 'restoring UI replays main-process records into actual IndexedDB')
   assert.ok(restored.state.pending < 5, 'persisted events are acknowledged')
+  // Legacy exhibition assertions are kept for historical comparison; the
+  // current UI/export suite lives in test-brand-wordmark.cjs.
+  if (process.env.GANSHALE_BACKGROUND_ONLY !== '1') {
   await win.webContents.executeJavaScript(`(async () => {
     const dialog = document.querySelector('[role="dialog"]'); if (dialog) dialog.querySelector('button[aria-label="关闭"]')?.click();
     const db = await new Promise((resolve,reject)=>{const r=indexedDB.open('ganshale_aw');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
@@ -187,6 +190,7 @@ app.whenReady().then(async () => {
   }
   console.log('PASS: download menu exports exact 1920x1080 and 1080x1920 reflowed posters')
   console.log('PASS: brick navigation, story panel and PNG encoding')
+  }
   blockAcknowledgements = true
   win.close()
   await wait(1800)

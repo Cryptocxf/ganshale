@@ -1246,6 +1246,13 @@ ipcMain.handle('ganshale:write-obsidian-report', async (_event, payload) => {
   }
 })
 
+ipcMain.handle('ganshale:title-bar-colors',(event,color,symbolColor)=>{
+  if(!mainBrowserWindow||event.sender!==mainBrowserWindow.webContents)return false
+  if(![color,symbolColor].every(value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)))return false
+  // Keep the native controls transparent on every page, including the splash.
+  // Theme updates only change icon contrast; never paint an opaque rectangle.
+  try{mainBrowserWindow.setTitleBarOverlay({color:'#00000000',symbolColor,height:32});return true}catch{return false}
+})
 function createWindow() {
   mainWindowHasShown = false
   const win = new BrowserWindow({
@@ -1255,6 +1262,8 @@ function createWindow() {
     minHeight: 760,
     show: false,
     title: '干啥了',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#00000000', symbolColor: '#34454a', height: 32 },
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     icon: resolveAppIconPath(),

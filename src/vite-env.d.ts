@@ -27,6 +27,7 @@ interface InstalledAppRow {
 interface GanshaleDesktopBridge {
   exportBrickImage?: () => Promise<{ ok: boolean; dataUrl?: string; width?: number; height?: number; error?: string }>
   copyBrickImage?: (dataUrl:string) => Promise<{ok:boolean;error?:string}>
+  setTitleBarColors?: (color:string,symbolColor:string) => Promise<boolean>
   getUpdateState: () => Promise<{ status: string; message: string; version: string; percent: number; packaged?: boolean }>
   checkUpdate: GanshaleDesktopBridge['getUpdateState']
   downloadUpdate: GanshaleDesktopBridge['getUpdateState']

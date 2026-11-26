@@ -33,12 +33,13 @@ const navActive =
   'bg-slate-900 font-medium text-white shadow-[0_1px_3px_rgb(15_23_42_/_0.15)]'
 const navIdle = 'text-ganshale-muted hover:bg-slate-100 hover:text-ganshale-text'
 
-export function SettingsView() {
-  const [section, setSection] = useState<SettingsSection>('models')
+export function SettingsView({sectionOverride}:{sectionOverride?:SettingsSection}={}) {
+  const [localSection, setSection] = useState<SettingsSection>('models')
+  const section=sectionOverride??localSection
 
   return (
     <div className={SETTINGS_SHELL_CLASS}>
-      <nav className={SETTINGS_NAV_PANEL_CLASS} aria-label="设置分类">
+      {!sectionOverride&&<nav className={SETTINGS_NAV_PANEL_CLASS} aria-label="设置分类">
         <ul className="space-y-0.5">
           {NAV.map(({ id, label, icon: Icon }) => {
             const on = section === id
@@ -57,7 +58,7 @@ export function SettingsView() {
             )
           })}
         </ul>
-      </nav>
+      </nav>}
 
       <div
         className={[

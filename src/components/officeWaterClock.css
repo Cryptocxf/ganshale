@@ -1,0 +1,39 @@
+.office-water-card>div:first-child{position:relative;z-index:3}
+:root .daily-glass-cards .gs-card{
+  background-color:color-mix(in srgb,var(--color-ganshale-surface) 68%,transparent);
+  background-image:linear-gradient(125deg,color-mix(in srgb,var(--color-ganshale-surface) 85%,transparent) 0%,color-mix(in srgb,var(--color-ganshale-surface) 25%,transparent) 22%,transparent 45%,color-mix(in srgb,var(--color-ganshale-accent) 7%,transparent) 100%);
+  border:1px solid color-mix(in srgb,var(--color-ganshale-surface) 85%,var(--color-ganshale-border));
+  backdrop-filter:blur(16px) saturate(1.15);
+  -webkit-backdrop-filter:blur(16px) saturate(1.15);
+  box-shadow:inset 0 2px 1px color-mix(in srgb,var(--color-ganshale-surface) 95%,transparent),inset 1px 0 1px color-mix(in srgb,var(--color-ganshale-surface) 75%,transparent),inset -1px -2px 2px color-mix(in srgb,var(--color-ganshale-text) 9%,transparent),0 5px 14px color-mix(in srgb,var(--color-ganshale-text) 9%,transparent);
+}
+:root .daily-glass-cards .gs-card:hover{box-shadow:inset 0 2px 1px color-mix(in srgb,var(--color-ganshale-surface) 95%,transparent),inset 1px 0 1px color-mix(in srgb,var(--color-ganshale-surface) 75%,transparent),inset -1px -2px 2px color-mix(in srgb,var(--color-ganshale-text) 9%,transparent),0 5px 14px color-mix(in srgb,var(--color-ganshale-text) 9%,transparent)}
+.office-water-card>div:nth-child(2){position:static}
+.office-water-clock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.office-water-vessel{position:relative;width:min(100%,340px);height:100%;max-height:210px;min-height:80px;isolation:isolate;overflow:hidden;border:1px solid color-mix(in srgb,var(--color-ganshale-accent) 32%,transparent);border-top:3px solid color-mix(in srgb,var(--color-ganshale-accent) 22%,transparent);border-radius:9px 9px 38px 38px;background:linear-gradient(110deg,color-mix(in srgb,var(--color-ganshale-surface) 70%,transparent),transparent 35%,color-mix(in srgb,var(--color-ganshale-accent) 5%,transparent));box-shadow:inset 5px 0 12px color-mix(in srgb,var(--color-ganshale-surface) 60%,transparent),inset -5px 0 12px color-mix(in srgb,var(--color-ganshale-accent) 5%,transparent)}
+.office-water-fill{position:absolute;bottom:0;left:0;right:0;height:var(--water-level);background:linear-gradient(180deg,#46b5df66,#167fa6aa 55%,#12618cb3);border-top:1px solid #8bdcf1aa}
+.office-water-surface{position:absolute;left:-25%;top:-7px;width:150%;height:14px;border-radius:45%;background:#55bcdf55;transform-origin:center bottom}
+.office-water-surface--back{top:-4px;height:10px;background:#b0e9f34d;opacity:.65}
+.office-water-impact{position:absolute;left:15%;top:-6px;width:70%;height:12px;pointer-events:none;z-index:1}
+.office-water-impact i{position:absolute;inset:0;border:1.5px solid #d0f2ff;border-radius:50%;opacity:0;box-shadow:0 2px 2px #003f6480}
+.office-water-reading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;text-shadow:0 1px var(--color-ganshale-surface)}
+.office-water-reference{position:absolute;left:8px;right:8px;bottom:30px;text-align:center;font-size:10px;color:var(--color-ganshale-muted);z-index:2}
+.office-water-drop{position:absolute;top:0;left:50%;width:5px;height:8px;border-radius:50% 50% 60% 60%;background:#4daed4;opacity:0}
+.office-water-motion{position:absolute;left:8px;bottom:6px;z-index:4;font-size:10px;color:var(--color-ganshale-muted);border:0;background:transparent;padding:3px 8px;cursor:pointer}
+.office-water-card .office-water-vessel{position:absolute;inset:0;width:100%;height:100%;max-height:none;min-height:0;border:0;border-radius:0;background:none;box-shadow:none}
+.office-click-ripple{position:absolute;width:0;height:0;z-index:3;pointer-events:none}
+.office-click-ripple i{position:absolute;width:var(--ripple-size);height:var(--ripple-size);left:0;top:0;border:2px solid #e0f8ff;border-radius:50%;background:radial-gradient(circle, #d4f4ff20 55%,#dcf7ff70 90%,#ffffffa0 98%);opacity:0;box-shadow:0 2px 5px #07577766,inset 0 1px 3px #ffffff90;animation:office-click-spread 3s ease-out both}
+@keyframes office-click-spread{0%{transform:translate(-50%,-50%) scale(.005);opacity:.9}55%{opacity:.55}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+.office-water-card .office-water-reading :is(.gs-duration-num,span),.office-water-card>p{color:#082b45!important;text-shadow:0 1px 1px #ffffffcc,0 0 4px #ffffff80}
+@media(prefers-reduced-motion:reduce){.office-click-ripple i{animation-duration:.15s;animation-delay:0s!important}}
+@media(prefers-reduced-motion:no-preference){
+ .office-water-fill{transition:height 1s linear}
+ .office-water-clock[data-running=true] .office-water-surface{animation:office-water-ripple 4.7s ease-in-out infinite}
+ .office-water-clock[data-running=true] .office-water-surface--back{animation:office-water-ripple 6.3s ease-in-out infinite reverse;animation-delay:-2s}
+ .office-water-impact i{animation:office-water-impact 1s cubic-bezier(.16,.65,.3,1) .68s both}
+ .office-water-impact i+i{animation-delay:.83s}
+ .office-water-drop{animation:office-water-fall .85s cubic-bezier(.4,0,.8,.5) both}
+ @keyframes office-water-ripple{0%,100%{transform:translate(-2%,1px) rotate(-.5deg) scaleY(.7)}50%{transform:translate(2%,-1px) rotate(.5deg) scaleY(1.1)}}
+ @keyframes office-water-impact{0%{opacity:0;transform:scale(.04,.2)}10%{opacity:.95}65%{opacity:.55}100%{opacity:0;transform:scale(1,.8)}}
+ @keyframes office-water-fall{0%{top:0;opacity:0;transform:scale(.5)}12%{opacity:.8}80%{top:var(--fall);opacity:.8;transform:scale(.8,1.2)}100%{top:var(--fall);opacity:0;transform:scale(3,.2)}}
+}

@@ -125,7 +125,6 @@ export function BrickDashboard() {
   const nextBackground=()=>{setBackgroundIndex(index=>(index+1)%BRICK_BACKGROUNDS.length)}
   return <div className="brick-page brick-immersive">
 
-
     {copyNote&&<p className="brick-copy-note" role="status">{copyNote}</p>}{error&&<p role="alert">{error}</p>}{(loading||loaded.key!==key)&&<p role="status">正在按月读取记录…</p>}
 <main className="brick-main" data-story-open={Boolean(chosen)} data-scene={background.id} style={{backgroundImage:`url("${base}${background.file}")`,'--brick-stage-texture':`url("${base}${background.file}")`} as CSSProperties}>    <header className="brick-header"><div className="brick-brand"><img className="brick-logo" src={logoUrl} alt="干啥了 logo"/><BrandWordmark/></div><div className="brick-heading-copy"><h1>我搬砖，也能盖出点名堂</h1><p>每一天的投入，都有一块属于自己的位置。</p></div>
 

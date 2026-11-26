@@ -5,7 +5,7 @@ import { brickHighlights } from './brickHighlights'
 import { brickCharacterSpeech } from './brickCharacterSpeech'
 import { brickRestDay } from './brickRestDay'
 
-export type BrickAssets = { fronts: HTMLImageElement; characters: HTMLImageElement; logo: HTMLImageElement; icons?: Map<string,HTMLImageElement>; background?: HTMLImageElement }
+export type BrickAssets = { theme?: 'light'|'dark'; fronts: HTMLImageElement; characters: HTMLImageElement; logo: HTMLImageElement; icons?: Map<string,HTMLImageElement>; background?: HTMLImageElement }
 export type BrickRect = { x: number; y: number; w: number; h: number }
 export type BrickHit = BrickRect & { date: string; id:string }
 export type BrickExportRatio = '16:9' | '9:16'
@@ -19,8 +19,9 @@ function archiveIcon(ctx:CanvasRenderingContext2D,kind:'calendar'|'clock'|'troph
   else{ctx.moveTo(7,3);ctx.lineTo(17,3);ctx.lineTo(17,10);ctx.bezierCurveTo(17,18,7,18,7,10);ctx.closePath();ctx.moveTo(7,5);ctx.lineTo(3,5);ctx.bezierCurveTo(2,11,5,12,7,12);ctx.moveTo(17,5);ctx.lineTo(21,5);ctx.bezierCurveTo(22,11,19,12,17,12);ctx.moveTo(12,16);ctx.lineTo(12,21);ctx.moveTo(8,21);ctx.lineTo(16,21)}
   ctx.stroke();ctx.restore()
 }
-const appFont = () => getComputedStyle(document.body).fontFamily
-const text = (ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color = ink, weight = '400') => { ctx.fillStyle = color; ctx.font = `${weight} ${size}px ${appFont()}`; ctx.fillText(value, x, y) }
+const appFont = () => "'Segoe UI', 'Microsoft YaHei', sans-serif"
+const darkContexts=new WeakSet<CanvasRenderingContext2D>()
+const text = (ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color = ink, weight = '400') => { ctx.fillStyle = darkContexts.has(ctx) ? (color==='#59432e'||color==='#26150f'?color:color==='#b6382e'?'#f1978c':color===gold||color===terracotta?'#83c8ba':'#d8e5e1') : color; ctx.font = `${weight} ${size}px ${appFont()}`; ctx.fillText(value, x, y) }
 function wordmark(ctx:CanvasRenderingContext2D,x:number,y:number,size:number){
   text(ctx,APP_DISPLAY_NAME,x,y,size,ink,'600')
   const width=ctx.measureText(APP_DISPLAY_NAME).width,englishSize=Math.max(8,size-4)
@@ -34,23 +35,33 @@ function face(ctx: CanvasRenderingContext2D, asset: HTMLImageElement, grade: num
   ctx.save()
   // Fill the face to its contact boundary: atlas transparency must not become a gap.
   ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.clip()
-  ctx.fillStyle='#bd572a';ctx.fillRect(x,y,w,h)
-  ctx.drawImage(asset,grade%4*sw+sw*.07,Math.floor(grade/4)*sh+sh*.32,sw*.86,sh*.46,x,y,w,h)
+  ctx.fillStyle='#b96b3c';ctx.fillRect(x,y,w,h)
+  // Sample only the clay grain; the chosen geometric frame is resolution-independent.
+  ctx.globalAlpha=.04
+  ctx.drawImage(asset,grade%4*sw+sw*.36,Math.floor(grade/4)*sh+sh*.46,sw*.12,sh*.10,x,y,w,h)
+  ctx.globalAlpha=1
   const bevel=ctx.createLinearGradient(x,y,x,y+h)
   bevel.addColorStop(0,'#ffe5b56b');bevel.addColorStop(.12,'#ffce8b16');bevel.addColorStop(.65,'#71301200');bevel.addColorStop(1,'#54250c70')
   ctx.fillStyle=bevel;ctx.fillRect(x,y,w,h)
   const volume=ctx.createLinearGradient(x,y,x+w,y+h*.3)
-  volume.addColorStop(0,'#ffce8b22');volume.addColorStop(.55,'#76300e00');volume.addColorStop(1,'#59230f55')
+  volume.addColorStop(0,'#ffce8b22');volume.addColorStop(.55,'#71301200');volume.addColorStop(1,'#59230f55')
   ctx.fillStyle=volume;ctx.fillRect(x,y,w,h)
-  // Recessed clay rim and restrained corner stamps, not separate sticker borders.
-  const inset=Math.max(.8,h*.075),corner=Math.min(w*.11,h*.24)
-  ctx.lineWidth=edge;ctx.strokeStyle='#6e2e186b'
-  ctx.beginPath();ctx.roundRect(x+inset,y+inset,w-inset*2,h-inset*2,Math.max(.5,r));ctx.stroke()
-  for(const [cx,cy,sx,sy] of [[x+inset,y+inset,1,1],[x+w-inset,y+inset,-1,1],[x+inset,y+h-inset,1,-1],[x+w-inset,y+h-inset,-1,-1]]){
-    ctx.beginPath();ctx.moveTo(cx+sx*corner,cy);ctx.quadraticCurveTo(cx+sx*corner,cy+sy*corner,cx,cy+sy*corner)
-    ctx.strokeStyle='#7a351c80';ctx.stroke()
-    ctx.beginPath();ctx.moveTo(cx+sx*(corner+edge),cy+sy*edge);ctx.quadraticCurveTo(cx+sx*(corner+edge),cy+sy*(corner+edge),cx+sx*edge,cy+sy*(corner+edge))
-    ctx.strokeStyle='#ffd2a378';ctx.stroke()
+  // Stepped double frame and square corner recesses: 02 clay colour + 07 geometry.
+  const inset=h*.13,corner=h*.17
+  const frame=()=>{
+    const l=x+inset,t=y+inset,rr=x+w-inset,b=y+h-inset,c=corner
+    ctx.beginPath();ctx.moveTo(l+c,t);ctx.lineTo(rr-c,t);ctx.lineTo(rr-c,t+c);ctx.lineTo(rr,t+c)
+    ctx.lineTo(rr,b-c);ctx.lineTo(rr-c,b-c);ctx.lineTo(rr-c,b);ctx.lineTo(l+c,b)
+    ctx.lineTo(l+c,b-c);ctx.lineTo(l,b-c);ctx.lineTo(l,t+c);ctx.lineTo(l+c,t+c);ctx.closePath()
+  }
+  ctx.lineJoin='miter';ctx.lineWidth=Math.max(.5,h*.035);ctx.strokeStyle='#713b24';frame();ctx.stroke()
+  ctx.save();ctx.translate(0,h*.024);ctx.lineWidth=Math.max(.35,h*.018);ctx.strokeStyle='#efb37c';frame();ctx.stroke();ctx.restore()
+  if(h>=10){
+    const size=corner*.52
+    for(const [cx,cy] of [[x+inset,y+inset],[x+w-inset-size,y+inset],[x+inset,y+h-inset-size],[x+w-inset-size,y+h-inset-size]]){
+      ctx.fillStyle='#874627';ctx.fillRect(cx,cy,size,size)
+      ctx.strokeStyle='#edb17b';ctx.lineWidth=Math.max(.35,h*.018);ctx.strokeRect(cx,cy,size,size)
+    }
   }
   // The dark contact seam belongs to the supporting brick, with a lit upper lip.
   ctx.fillStyle='#60271391';ctx.fillRect(x,y+h-edge,w,edge)
@@ -60,16 +71,16 @@ function face(ctx: CanvasRenderingContext2D, asset: HTMLImageElement, grade: num
 /** Narrow exposed planes retain a straight-on front and touching stack boundaries. */
 function brickDepth(ctx:CanvasRenderingContext2D,asset:HTMLImageElement,box:BrickRect,exposeTop:boolean){
   const {x,y,w,h}=box,dx=Math.min(w*.13,h*.23),dy=dx*.62
-  const sw=asset.naturalWidth/4,sh=asset.naturalHeight/4
+  void asset
   ctx.save()
   ctx.beginPath();ctx.moveTo(x+w,y);ctx.lineTo(x+w+dx,y-dy);ctx.lineTo(x+w+dx,y+h-dy);ctx.lineTo(x+w,y+h);ctx.closePath()
-  ctx.save();ctx.clip();ctx.drawImage(asset,sw*.72,sh*.32,sw*.16,sh*.46,x+w,y-dy,dx,h+dy)
+  ctx.save();ctx.clip();ctx.fillStyle='#9a522e';ctx.fillRect(x+w,y-dy,dx,h+dy)
   const side=ctx.createLinearGradient(x+w,y,x+w+dx,y)
   side.addColorStop(0,'#79311280');side.addColorStop(1,'#48200dc9');ctx.fillStyle=side;ctx.fillRect(x+w,y-dy,dx,h+dy);ctx.restore()
   ctx.strokeStyle='#67301794';ctx.lineWidth=Math.max(.35,h*.02);ctx.stroke()
   if(exposeTop){
     ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y-dy);ctx.lineTo(x+w+dx,y-dy);ctx.lineTo(x+w,y);ctx.closePath()
-    ctx.save();ctx.clip();ctx.drawImage(asset,sw*.07,sh*.32,sw*.86,sh*.13,x,y-dy,w+dx,dy)
+    ctx.save();ctx.clip();ctx.fillStyle='#c98651';ctx.fillRect(x,y-dy,w+dx,dy)
     ctx.fillStyle='#ffd09670';ctx.fillRect(x,y-dy,w+dx,dy);ctx.restore()
     ctx.strokeStyle='#f4ba7cbb';ctx.stroke()
   }
@@ -90,6 +101,7 @@ export function drawHourlyHoles(ctx:CanvasRenderingContext2D,box:BrickRect,secon
 }
 /** Chronological hourly/monthly brick columns, shared by the client and export. */
 export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], assets: BrickAssets, box: BrickRect, mode: 'month' | 'year', selected = '', fillStage = false): BrickHit[] {
+  if(assets.theme==='dark')darkContexts.add(ctx);else darkContexts.delete(ctx)
   const columns=buildBrickColumns(days,mode),workerSpace=box.w*(mode==='month'?.10:.22),baseSize=180,sceneScale=.5,faceRatio=.52
   const plot=brickScenePlot(box,mode)
   const cells=layoutBrickColumns(columns,plot,mode),bottom=plot.y+plot.h
@@ -191,12 +203,14 @@ export function drawBrickTower(ctx: CanvasRenderingContext2D, days: DayBrick[], 
 export function renderBrickPoster(days:DayBrick[],assets:BrickAssets,period:string,mode:'month'|'year',_ratio:BrickExportRatio,selected=''):HTMLCanvasElement{
   const node=document.createElement('canvas');node.width=1920;node.height=1080
   const ctx=node.getContext('2d');if(!ctx)throw new Error('无法创建图片画布')
-  ctx.fillStyle='#f4e5d0';ctx.fillRect(0,0,1920,1080)
-  if(assets.background){
+  if(assets.theme==='dark')darkContexts.add(ctx)
+  ctx.fillStyle=assets.theme==='dark'?'#0c1417':assets.theme==='light'?'#f3f7f5':'#f4e5d0';ctx.fillRect(0,0,1920,1080)
+  if(assets.background&&!assets.theme){
     const scale=Math.max(1920/assets.background.naturalWidth,1080/assets.background.naturalHeight),w=assets.background.naturalWidth*scale,h=assets.background.naturalHeight*scale
     ctx.drawImage(assets.background,(1920-w)/2,(1080-h)/2,w,h)
   }
   ctx.fillStyle='#fff8ed30';ctx.fillRect(0,0,1920,1080)
+  if(assets.theme==='dark'){ctx.fillStyle='#eff5f1';ctx.beginPath();ctx.roundRect(50,34,72,72,12);ctx.fill()}
   ctx.drawImage(assets.logo,54,38,64,64);wordmark(ctx,132,67,30)
   ctx.strokeStyle=gold;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(280,36);ctx.lineTo(280,128);ctx.stroke()
   text(ctx,'我搬砖，也能盖出点名堂',320,72,42,'#33281f','600')

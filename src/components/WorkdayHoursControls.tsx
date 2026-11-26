@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   formatWorkdayClock,
   halfHourSlotKey,
@@ -11,8 +12,6 @@ import {
   type WorkdayHoursSettings,
 } from '../lib/workdayHoursConfig'
 import { DASHBOARD_HEADER_ACTIONS_ROW_CLASS } from './dashboardLayout'
-
-const fieldCls = 'inline-flex items-center gap-1 text-[10px] text-ganshale-muted'
 
 function HalfHourTimeSelect({
   hour,
@@ -29,31 +28,43 @@ function HalfHourTimeSelect({
   options: ReturnType<typeof halfHourTimeOptions>
   onChange: (value: string) => void
 }) {
+  const popup = useRef<HTMLDivElement>(null)
+  const list = useRef<HTMLSelectElement>(null)
+  const [position, setPosition] = useState({left:0,top:0})
   return (
-    <span className="inline-flex items-center gap-0.5">
+    <>
+    <button type="button" className="inline-flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-[10px] text-ganshale-muted" aria-label={ariaLabel} aria-haspopup="listbox" onClick={event => {
+      const rect=event.currentTarget.getBoundingClientRect()
+      setPosition({left:Math.max(8,Math.min(rect.left,window.innerWidth-74)),top:Math.min(rect.bottom+4,window.innerHeight-160)})
+      popup.current?.showPopover()
+      list.current?.focus()
+      requestAnimationFrame(() => list.current?.selectedOptions[0]?.scrollIntoView({block:'center'}))
+    }}>
+      <span>{optionKeyPrefix==='start'?'上班':'下班'}</span>
       <span className="text-[10px] tabular-nums text-ganshale-text">
         {formatWorkdayClock(hour, minute)}
       </span>
       <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-        <select
+        <ChevronDown className="pointer-events-none h-3 w-3 text-ganshale-subtle" strokeWidth={2} aria-hidden />
+      </span>
+    </button>
+    {createPortal(<div ref={popup} popover="auto" className="workday-time-popup" style={{position:'fixed',left:position.left,top:position.top,margin:0,padding:4,border:'1px solid var(--color-ganshale-border)',borderRadius:8,background:'var(--color-ganshale-surface)',color:'var(--color-ganshale-text)',boxShadow:'0 6px 24px #0002'}}>
+        <select ref={list} size={6}
           value={halfHourSlotKey(hour, minute)}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 z-[1] cursor-pointer opacity-0"
+          onChange={(e) => {onChange(e.target.value);popup.current?.hidePopover()}}
+          onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();popup.current?.hidePopover()}}}
+          className="workday-time-options block cursor-pointer border-0 bg-transparent text-ganshale-text outline-none"
+          style={{width:56,height:144,fontSize:14,lineHeight:'24px',padding:0}}
           aria-label={ariaLabel}
         >
           {options.map((opt) => (
-            <option key={`${optionKeyPrefix}-${opt.key}`} value={opt.key}>
+            <option key={`${optionKeyPrefix}-${opt.key}`} value={opt.key} style={{height:24,minHeight:24,padding:'3px 0',lineHeight:'18px'}}>
               {opt.label}
             </option>
           ))}
         </select>
-        <ChevronDown
-          className="pointer-events-none h-3 w-3 text-ganshale-subtle"
-          strokeWidth={2}
-          aria-hidden
-        />
-      </span>
-    </span>
+    </div>,document.body)}
+    </>
   )
 }
 
@@ -109,8 +120,6 @@ export function WorkdayHoursControls() {
 
   return (
     <div className={DASHBOARD_HEADER_ACTIONS_ROW_CLASS} aria-label="上下班时间设定">
-      <label className={fieldCls}>
-        <span className="shrink-0">上班</span>
         <HalfHourTimeSelect
           hour={settings.startHour}
           minute={settings.startMinute}
@@ -119,9 +128,6 @@ export function WorkdayHoursControls() {
           options={allOptions}
           onChange={onStartChange}
         />
-      </label>
-      <label className={fieldCls}>
-        <span className="shrink-0">下班</span>
         <HalfHourTimeSelect
           hour={settings.endHour}
           minute={settings.endMinute}
@@ -130,7 +136,6 @@ export function WorkdayHoursControls() {
           options={endOptions}
           onChange={onEndChange}
         />
-      </label>
     </div>
   )
 }

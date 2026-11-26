@@ -1,7 +1,7 @@
 {
   "name": "ganshale",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "author": {
     "name": "Chen Xiaofeng"
   },
@@ -55,7 +55,7 @@
     "appId": "net.ganshale.desktop",
     "productName": "干啥了",
     "copyright": "Copyright © 2026 Chen Xiaofeng",
-    "artifactName": "${productName}-v${version}-2026-11-15-Setup.${ext}",
+    "artifactName": "${productName}-v${version}-2026-11-26-Setup.${ext}",
     "icon": "build/icon.ico",
     "directories": {
       "output": "release"

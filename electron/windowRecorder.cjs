@@ -20,7 +20,11 @@ function createWindowRecorder({ directory, now = Date.now, writeFile = null } = 
     const saved = JSON.parse(fs.readFileSync(filename, 'utf8'))
     pending = new Map((saved.events || []).map((event) => [event.id, event]))
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error
+    if (error.code !== 'ENOENT') {
+      if (!(error instanceof SyntaxError)) throw error
+      // Preserve damaged pending data for recovery without blocking app startup.
+      fs.copyFileSync(filename, filename + '.corrupt-' + Date.now())
+    }
   }
   const persist = () => {
     const content = JSON.stringify({ version: 1, events: [...pending.values()] })

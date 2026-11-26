@@ -150,7 +150,7 @@ function WindowLogModalContent({
           {total === 0 ? (
             <p className="py-8 text-center text-xs text-ganshale-muted">暂无窗口记录</p>
           ) : (
-            <table className="w-full table-fixed border-collapse text-left">
+            <table className="window-event-table w-full table-fixed border-collapse text-left">
               <WindowTableModalColgroup/>
               <WindowTableHead />
               <WindowEventTableBody rows={pageRows} titleLines={2} liveSegment={liveSegment} />

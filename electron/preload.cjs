@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron')
  */
 
 contextBridge.exposeInMainWorld('ganshaleDesktop', {
+  setTitleBarColors: (color,symbolColor) => ipcRenderer.invoke('ganshale:title-bar-colors',color,symbolColor),
   exportBrickImage: () => ipcRenderer.invoke('ganshale:export-brick-image'),
   copyBrickImage: (dataUrl) => ipcRenderer.invoke('ganshale:copy-brick-image',dataUrl),
   platform: process.platform,

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useState } from 'react'
 import { DailyDashboard } from './components/DailyDashboard'
 import { MonthlyDashboard } from './components/MonthlyDashboard'
-import { DataRecordsView } from './components/data/DataRecordsView'
 import { SettingsView } from './components/SettingsView'
 import { SplashScreen } from './components/brand/SplashScreen'
 import { AppChrome } from './components/shell/AppChrome'
@@ -13,6 +12,7 @@ import { useTodoReminderScheduler } from './hooks/useTodoReminders'
 import { markClientWorkSessionStart } from './lib/clientSessionClock'
 import { APP_WINDOW_TITLE } from './constants/brand'
 import type { NavKey } from './data/mock'
+import { isSettingsSection } from './data/mock'
 import { BrickDashboard } from './components/BrickDashboard'
 
 function isDesktopClient(): boolean {
@@ -25,8 +25,8 @@ const pageTitle: Record<NavKey, string> = {
   monthly: '每月',
   bricks: '工时汇总',
   todos: '待办',
-  data: '数据',
   settings: '设置',
+  models: '模型', prompts: '提示词', time: '时间', theme: '主题', about: '关于',
 }
 
 const OVERVIEW_NAV: NavKey[] = ['daily', 'weekly', 'monthly']
@@ -72,8 +72,8 @@ function ActivePage({
         </div>
       ) : null}
       {active === 'todos' ? <TodoDashboard /> : null}
-      {active === 'data' ? <DataRecordsView /> : null}
       {active === 'settings' ? <SettingsView /> : null}
+      {isSettingsSection(active) ? <SettingsView key={active} sectionOverride={active}/> : null}
       {active === 'bricks' ? <BrickDashboard /> : null}
     </>
   )

@@ -52,7 +52,6 @@ import {
 import { DashboardModalRoot } from './DashboardModalRoot'
 import { DASHBOARD_SECTION_DESCRIPTIONS } from '../lib/dashboardSectionDescriptions'
 import { DashboardSectionTitle } from './DashboardSectionTitle'
-import { DashboardPairPreviewFooter } from './DashboardPairPreviewFooter'
 import { WorkRecordSourceBadge } from './WorkRecordSourceBadge'
 
 const WORK_RECORD_ROW_H_PX = 32
@@ -462,7 +461,6 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
     () => sortedRows.slice(0, DASHBOARD_WORK_RECORD_PREVIEW_ROWS),
     [sortedRows],
   )
-  const showWorkRecordFooter = sortedRows.length > DASHBOARD_WORK_RECORD_PREVIEW_ROWS
 
   const workRecordTableHead = (
     <thead className="gs-dashboard-modal__table-head sticky top-0 z-[1] text-ganshale-subtle">
@@ -558,11 +556,6 @@ export function DailyWorkRecordPanel({ day, events }: { day: Date; events: AwEve
               {workRecordTableBody(previewRows)}
             </table>
           </div>
-          {showWorkRecordFooter ? (
-            <DashboardPairPreviewFooter>
-              仅展示近 {DASHBOARD_WORK_RECORD_PREVIEW_ROWS} 条记录，点击右上角「查看详情」可查看全部记录。
-            </DashboardPairPreviewFooter>
-          ) : null}
         </div>
       </div>
 

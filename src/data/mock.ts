@@ -1,4 +1,6 @@
-export type NavKey = 'daily' | 'weekly' | 'monthly' | 'bricks' | 'todos' | 'data' | 'settings'
+export type SettingsSection = 'models' | 'prompts' | 'time' | 'theme' | 'about'
+export const isSettingsSection = (key: string): key is SettingsSection => ['models','prompts','time','theme','about'].includes(key)
+export type NavKey = 'daily' | 'weekly' | 'monthly' | 'bricks' | 'todos' | 'settings' | SettingsSection
 
 export interface TimelineSegment {
   id: string
